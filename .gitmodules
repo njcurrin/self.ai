@@ -1,0 +1,6 @@
+[submodule "Self.ai-LibreChat"]
+	path = Self.ai-LibreChat
+	url = https://github.com/njcurrin/Self.ai-LibreChat.git
+[submodule "librechat"]
+	path = librechat
+	url = https://github.com/njcurrin/Self.ai-LibreChat.git
