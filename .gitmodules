@@ -25,3 +25,6 @@
 [submodule "mongo"]
 	path = mongo
 	url = https://github.com/njcurrin/Self.ai-mongo.git
+[submodule "nginx"]
+	path = nginx
+	url = https://github.com/njcurrin/Self.ai-nginx.git
