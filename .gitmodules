@@ -4,3 +4,6 @@
 [submodule "librechat"]
 	path = librechat
 	url = https://github.com/njcurrin/Self.ai-LibreChat.git
+[submodule "Self.ai-postgres"]
+	path = Self.ai-postgres
+	url = https://github.com/njcurrin/Self.ai-postgres.git
