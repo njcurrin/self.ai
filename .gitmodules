@@ -7,3 +7,21 @@
 [submodule "Self.ai-postgres"]
 	path = Self.ai-postgres
 	url = https://github.com/njcurrin/Self.ai-postgres.git
+[submodule "postgres"]
+	path = postgres
+	url = https://github.com/njcurrin/Self.ai-postgres.git
+[submodule "ollama"]
+	path = ollama
+	url = https://github.com/njcurrin/Self.ai-ollama.git
+[submodule "firecrawl"]
+	path = firecrawl
+	url = https://github.com/njcurrin/Self.ai-firecrawl.git
+[submodule "search"]
+	path = search
+	url = https://github.com/njcurrin/Self.ai-searxng.git
+[submodule "playwright"]
+	path = playwright
+	url = https://github.com/njcurrin/Self.ai-playwright.git
+[submodule "mongo"]
+	path = mongo
+	url = https://github.com/njcurrin/Self.ai-mongo.git
