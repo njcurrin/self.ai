@@ -1,0 +1,137 @@
+include:
+  - ./self.UI/docker-compose.yaml
+
+services:
+  self-llama-cpp-full-cuda:
+    image: local/llama.cpp:server-cuda
+    build:
+      context: ./self.llama
+      dockerfile: .devops/cuda.Dockerfile
+      target: server
+    container_name: self-llamaCPP
+    volumes:
+      - /srv/ollama/models:/models
+    env_file:
+      - ./self.llama/.env
+    ports:
+      - 8091:8080
+    networks:
+      - llama_internal
+      - proxy_llama
+    gpus: all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  self-swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: swaggerUI
+    environment:
+      SWAGGER_JSON: /tmp/openapi.yaml
+    volumes:
+      - ./openapi.with-code-samples.yml:/tmp/openapi.yaml:ro
+    ports:
+      - 8092:8080
+    restart: unless-stopped
+
+  self-postgres:
+    image: postgres:18
+    restart: unless-stopped
+    container_name: self-postgres
+    env_file: 
+      - ./postgres/.env
+    volumes:
+      - ./postgres/data:/var/lib/postgresql
+    networks:
+      - llama_internal
+
+  adminer:
+    image: adminer:latest
+    container_name: adminer
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - 8094:8080
+    networks:
+      - llama_internal
+      - proxy_llama
+  
+  # redis database for paperless-ngx
+  self-valkey:
+    image: docker.io/valkey/valkey:8
+    container_name: self-valkey
+    restart: unless-stopped
+    env_file: 
+      - ./valkey/.env
+    volumes:
+      - ./valkey/data:/data
+    networks:
+      - llama_internal
+
+  self-traefik:
+    image: traefik:v3.6
+    container_name: self-traefik
+    restart: unless-stopped
+
+#    environment:
+      # Route53 needs a region set (Route53 is “global” but the AWS SDK still wants one)
+      #- AWS_REGION=us-east-1
+    env_file:
+      - /opt/ai-stack/traefik/.env.traefik
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=ai-internal
+
+      # Entrypoints
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+
+      # - --certificatesresolvers.ipa.acme.email=you@mateysmarsh.com
+      # - --certificatesresolvers.ipa.acme.storage=/letsencrypt/ipa-acme.json
+      # - --certificatesresolvers.ipa.acme.caserver=https://ipa-ca.home.mateysmarsh.com/acme/directory
+      # - --certificatesresolvers.ipa.acme.cacertificates=/etc/ssl/certs/ipa-ca.crt
+      # - --certificatesresolvers.ipa.acme.httpchallenge.entrypoint=web
+
+      # # Let's Encrypt (TLS-ALPN challenge over 443)
+      #- --certificatesresolvers.le.acme.dnsChallenge=true
+      #- --certificatesresolvers.le.acme.dnsChallenge.provider=route53
+      #- --certificatesresolvers.le.acme.dnsChallenge=marshmatey@mateysmarsh.com
+      #- --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+
+      # Logging (optional)
+      - --log.level=INFO
+      - --accesslog=true
+      
+      #File Providers
+      - --providers.file.directory=/dynamic
+
+    ports:
+      - "80:80"
+      - "443:443"
+      # Optional: expose dashboard on the host (lock this down if you do)
+      #- "8080:8080"
+
+    volumes:
+      # - /etc/ipa/ca.crt:/etc/ssl/certs/ipa-ca.crt:ro
+
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/letsencrypt:/letsEncrypt:ro
+      - ./traefik/config:/dynamic:ro
+
+    networks:
+      - proxy_llama
+      - llama_internal
+  
+networks:
+  proxy_llama:
+    name: proxy_llama
+  llama_internal:
+    name: llama_internal
+    internal: true
