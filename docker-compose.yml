@@ -1,18 +1,24 @@
-include:
-  - ./self.UI/docker-compose.yaml
-
 services:
+  ollama:
+    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    container_name: ollama
+    pull_policy: always
+    tty: true
+    restart: unless-stopped
+    volumes:
+      - ollama:/root/.ollama
+
   self-llama-cpp-full-cuda:
     image: local/llama.cpp:server-cuda
     build:
-      context: ./self.llama
+      context: ./self.Llama
       dockerfile: .devops/cuda.Dockerfile
       target: server
-    container_name: self-llamaCPP
+    container_name: self-LlamaCPP
     volumes:
       - /srv/ollama/models:/models
     env_file:
-      - ./self.llama/.env
+      - ./self.Llama/.env
     ports:
       - 8091:8080
     networks:
@@ -27,6 +33,29 @@ services:
               count: all
               capabilities: [gpu]
 
+  selfUI:
+    image: local/open-webui:latest
+    pull_policy: build
+    build:
+      context: ./self.UI
+      dockerfile: Dockerfile
+      pull: true
+      #no_cache: true
+    container_name: selfUI
+    volumes:
+      - open-webui:/app/backend/data
+    depends_on:
+      - ollama
+    ports:
+      - ${OPEN_WEBUI_PORT-3000}:8080
+    env_file:
+      - ./self.UI/.env
+    environment:
+      - 'OLLAMA_BASE_URL=http://ollama:11434'
+    # extra_hosts:
+    #   - host.docker.internal:host-gateway
+    restart: unless-stopped
+  
   self-swagger-ui:
     image: swaggerapi/swagger-ui:latest
     container_name: swaggerUI
@@ -135,3 +164,7 @@ networks:
   llama_internal:
     name: llama_internal
     internal: true
+
+volumes:
+  ollama: {}
+  open-webui: {}

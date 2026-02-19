@@ -325,15 +325,15 @@ class SPAStaticFiles(StaticFiles):
 
 print(
     rf"""
-  ___                    __        __   _     _   _ ___
- / _ \ _ __   ___ _ __   \ \      / /__| |__ | | | |_ _|
-| | | | '_ \ / _ \ '_ \   \ \ /\ / / _ \ '_ \| | | || |
-| |_| | |_) |  __/ | | |   \ V  V /  __/ |_) | |_| || |
- \___/| .__/ \___|_| |_|    \_/\_/ \___|_.__/ \___/|___|
-      |_|
+ ____       _  __     _   _ ___
+/ ___|  ___| |/ _|   | | | |_ _|
+\___ \ / _ \ | |_    | | | || |
+ ___) |  __/ |  _| _ | |_| || |
+|____/ \___|_|_|  |_|\___/|___|
 
 
-v{VERSION} - building the best open-source AI user interface.
+
+v{VERSION} - building a self open-source AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
 """
@@ -690,7 +690,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 @app.middleware("http")
 async def commit_session_after_request(request: Request, call_next):
     response = await call_next(request)
-    # log.debug("Commit session after request")
+    
     Session.commit()
     return response
 
@@ -698,6 +698,7 @@ async def commit_session_after_request(request: Request, call_next):
 @app.middleware("http")
 async def check_url(request: Request, call_next):
     start_time = int(time.time())
+    log.debug("Hello There")
     request.state.enable_api_key = app.state.config.ENABLE_API_KEY
     response = await call_next(request)
     process_time = int(time.time()) - start_time
