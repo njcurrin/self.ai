@@ -21,7 +21,7 @@ services:
     depends_on:
       - ollama
     ports:
-      - ${OPEN_WEBUI_PORT-3000}:8080
+      - ${SELFAI_UI_PORT-3000}:8080
     env_file:
       - .env
     environment:

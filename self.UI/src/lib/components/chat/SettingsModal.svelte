@@ -268,7 +268,7 @@
 				'aboutus',
 				'softwareinfo',
 				'timothyjaeryangbaek',
-				'openwebui',
+				'selfai',
 				'release',
 				'updates',
 				'updateinfo',

@@ -114,7 +114,7 @@
 				if (done) {
 					if ($isLastActiveTab) {
 						if ($settings?.notificationEnabled ?? false) {
-							new Notification(`${title} | Open WebUI`, {
+							new Notification(`${title} | Self.AI UI`, {
 								body: content,
 								icon: `${WEBUI_BASE_URL}/static/favicon.png`
 							});
@@ -154,7 +154,7 @@
 			if (type === 'message') {
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
-						new Notification(`${data?.user?.name} (#${event?.channel?.name}) | Open WebUI`, {
+						new Notification(`${data?.user?.name} (#${event?.channel?.name}) | Self.AI UI`, {
 							body: data?.content,
 							icon: data?.user?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`
 						});
@@ -178,8 +178,10 @@
 
 	onMount(async () => {
 		// Listen for messages on the BroadcastChannel
+		
 		bc.onmessage = (event) => {
 			if (event.data === 'active') {
+				
 				isLastActiveTab.set(false); // Another tab became active
 			}
 		};
@@ -202,8 +204,10 @@
 
 		mobile.set(window.innerWidth < BREAKPOINT);
 		const onResize = () => {
+			
 			if (window.innerWidth < BREAKPOINT) {
 				mobile.set(true);
+				
 			} else {
 				mobile.set(false);
 			}

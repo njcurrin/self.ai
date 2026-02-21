@@ -10,6 +10,7 @@ services:
 
   self-llama-cpp-full-cuda:
     image: local/llama.cpp:server-cuda
+    pull_policy: build
     build:
       context: ./self.Llama
       dockerfile: .devops/cuda.Dockerfile
@@ -44,10 +45,10 @@ services:
     container_name: selfUI
     volumes:
       - open-webui:/app/backend/data
-    depends_on:
-      - ollama
+    # depends_on:
+    #   - ollama
     ports:
-      - ${OPEN_WEBUI_PORT-3000}:8080
+      - ${SELFAI_UI_PORT-3000}:8080
     env_file:
       - ./self.UI/.env
     environment:
@@ -106,6 +107,8 @@ services:
     image: traefik:v3.6
     container_name: self-traefik
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 #    environment:
       # Route53 needs a region set (Route53 is “global” but the AWS SDK still wants one)
