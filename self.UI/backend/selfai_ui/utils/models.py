@@ -112,6 +112,7 @@ async def get_all_models(request):
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
             for model in models:
+                ## check if the model id matches, remove any version tags after :
                 if (
                     custom_model.id == model["id"]
                     or custom_model.id == model["id"].split(":")[0]

@@ -413,48 +413,113 @@ def get_model_path(model: str, update_model: bool = False):
 def generate_openai_batch_embeddings(
     model: str, texts: list[str], url: str = "https://api.openai.com/v1", key: str = ""
 ) -> Optional[list[list[float]]]:
+    def validate_embeddings_shape(
+        embeddings: list, endpoint: str
+    ) -> list[list[float]]:
+        if not isinstance(embeddings, list) or len(embeddings) == 0:
+            raise RuntimeError(f"No embeddings returned from {endpoint}")
+
+        first = embeddings[0]
+        if not isinstance(first, list) or len(first) == 0:
+            raise RuntimeError(f"Invalid embeddings format returned by {endpoint}")
+
+        if isinstance(first[0], list):
+            raise RuntimeError(
+                "Embedding server returned token-level nested embeddings. "
+                "Use pooled embeddings (e.g. llama.cpp with --pooling mean or /v1/embeddings)."
+            )
+
+        return embeddings
+
+    r = requests.post(
+        f"{url}/embeddings",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {key}",
+        },
+        json={"input": texts, "model": model},
+    )
     try:
-        r = requests.post(
-            f"{url}/embeddings",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {key}",
-            },
-            json={"input": texts, "model": model},
-        )
         r.raise_for_status()
-        data = r.json()
-        if "data" in data:
-            return [elem["embedding"] for elem in data["data"]]
-        else:
-            raise "Something went wrong :/"
     except Exception as e:
-        print(e)
-        return None
+        error_detail = r.text
+        try:
+            body = r.json()
+            if isinstance(body, dict):
+                error_detail = (
+                    body.get("error", {}).get("message")
+                    if isinstance(body.get("error"), dict)
+                    else body.get("error", body.get("message", r.text))
+                )
+        except Exception:
+            pass
+        raise RuntimeError(
+            f"Embedding request failed at {url}/embeddings: {error_detail}"
+        ) from e
+
+    data = r.json()
+
+    # OpenAI-compatible response shape.
+    if isinstance(data, dict) and "data" in data:
+        embeddings = [elem["embedding"] for elem in data["data"]]
+        return validate_embeddings_shape(embeddings, f"{url}/embeddings")
+
+    # llama.cpp non-OAI /embeddings response shape (array of objects).
+    if isinstance(data, list):
+        try:
+            embeddings = [elem["embedding"] for elem in data]
+            return validate_embeddings_shape(embeddings, f"{url}/embeddings")
+        except Exception as e:
+            raise RuntimeError(
+                "Invalid non-OAI embeddings response format returned by embedding server"
+            ) from e
+
+    # Some providers return an embeddings key directly.
+    if isinstance(data, dict) and "embeddings" in data:
+        embeddings = data["embeddings"]
+        return validate_embeddings_shape(embeddings, f"{url}/embeddings")
+
+    raise RuntimeError(
+        f"Unexpected embeddings response format from {url}/embeddings: {type(data).__name__}"
+    )
 
 
 def generate_ollama_batch_embeddings(
     model: str, texts: list[str], url: str, key: str = ""
 ) -> Optional[list[list[float]]]:
+    r = requests.post(
+        f"{url}/api/embed",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {key}",
+        },
+        json={"input": texts, "model": model},
+    )
     try:
-        r = requests.post(
-            f"{url}/api/embed",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {key}",
-            },
-            json={"input": texts, "model": model},
-        )
         r.raise_for_status()
-        data = r.json()
-
-        if "embeddings" in data:
-            return data["embeddings"]
-        else:
-            raise "Something went wrong :/"
     except Exception as e:
-        print(e)
-        return None
+        error_detail = r.text
+        try:
+            body = r.json()
+            if isinstance(body, dict):
+                error_detail = (
+                    body.get("error", {}).get("message")
+                    if isinstance(body.get("error"), dict)
+                    else body.get("error", body.get("message", r.text))
+                )
+        except Exception:
+            pass
+        raise RuntimeError(
+            f"Embedding request failed at {url}/api/embed: {error_detail}"
+        ) from e
+
+    data = r.json()
+    if isinstance(data, dict) and "embeddings" in data:
+        return data["embeddings"]
+
+    raise RuntimeError(
+        f"Unexpected embeddings response format from {url}/api/embed: {type(data).__name__}"
+    )
 
 
 def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **kwargs):
@@ -470,13 +535,16 @@ def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **
             embeddings = generate_ollama_batch_embeddings(
                 **{"model": model, "texts": [text], "url": url, "key": key}
             )
+        if embeddings is None or len(embeddings) == 0:
+            raise RuntimeError("No embeddings returned by ollama embedding endpoint")
         return embeddings[0] if isinstance(text, str) else embeddings
     elif engine == "openai":
         if isinstance(text, list):
             embeddings = generate_openai_batch_embeddings(model, text, url, key)
         else:
             embeddings = generate_openai_batch_embeddings(model, [text], url, key)
-
+        if embeddings is None or len(embeddings) == 0:
+            raise RuntimeError("No embeddings returned by openai embedding endpoint")
         return embeddings[0] if isinstance(text, str) else embeddings
 
 

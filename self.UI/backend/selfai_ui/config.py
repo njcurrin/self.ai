@@ -541,12 +541,12 @@ CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
 
 if CUSTOM_NAME:
     try:
-        r = requests.get(f"")
+        r = requests.get(f"https://api.selfdotai.com/api/v1/custom/{CUSTOM_NAME}")
         data = r.json()
         if r.ok:
             if "logo" in data:
                 WEBUI_FAVICON_URL = url = (
-                    f""
+                    f"{WEBUI_URL}/static/favicon.ico"
                     if data["logo"][0] == "/"
                     else data["logo"]
                 )

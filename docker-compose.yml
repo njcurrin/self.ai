@@ -1,21 +1,21 @@
 services:
-  ollama:
+  self-ollama:
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
-    container_name: ollama
-    pull_policy: always
+    container_name: self-ollama
     tty: true
     restart: unless-stopped
     volumes:
       - ollama:/root/.ollama
 
-  self-llama-cpp-full-cuda:
+  self-llama:
     image: local/llama.cpp:server-cuda
-    pull_policy: build
+    #pull_policy: build
     build:
       context: ./self.Llama
       dockerfile: .devops/cuda.Dockerfile
       target: server
-    container_name: self-LlamaCPP
+      pull: false
+    container_name: self-llama
     volumes:
       - /srv/ollama/models:/models
     env_file:
@@ -35,7 +35,7 @@ services:
               capabilities: [gpu]
 
   selfUI:
-    image: local/open-webui:latest
+    image: local/self.ai-ui:latest
     pull_policy: build
     build:
       context: ./self.UI
@@ -45,21 +45,32 @@ services:
     container_name: selfUI
     volumes:
       - open-webui:/app/backend/data
-    # depends_on:
-    #   - ollama
+    depends_on:
+      #Databases
+      #- self-postgres
+      - self-valkey
+      - self-qdrant
+      #Inference
+      - self-llama
+      - self-ollama
+      #HTTPS Proxy
+      - self-traefik
     ports:
       - ${SELFAI_UI_PORT-3000}:8080
     env_file:
       - ./self.UI/.env
-    environment:
-      - 'OLLAMA_BASE_URL=http://ollama:11434'
     # extra_hosts:
     #   - host.docker.internal:host-gateway
     restart: unless-stopped
+    networks:
+      - proxy_llama
+      - llama_internal
   
   self-swagger-ui:
     image: swaggerapi/swagger-ui:latest
     container_name: swaggerUI
+    profiles:
+      - development
     environment:
       SWAGGER_JSON: /tmp/openapi.yaml
     volumes:
@@ -68,19 +79,21 @@ services:
       - 8092:8080
     restart: unless-stopped
 
-  self-postgres:
-    image: postgres:18
-    restart: unless-stopped
-    container_name: self-postgres
-    env_file: 
-      - ./postgres/.env
-    volumes:
-      - ./postgres/data:/var/lib/postgresql
-    networks:
-      - llama_internal
+  # self-postgres:
+  #   image: postgres:18
+  #   restart: unless-stopped
+  #   container_name: self-postgres
+  #   env_file: 
+  #     - ./postgres/.env
+  #   volumes:
+  #     - ./postgres/data:/var/lib/postgresql
+  #   networks:
+  #     - llama_internal
 
   adminer:
     image: adminer:latest
+    profiles:
+      - troubleshoot
     container_name: adminer
     restart: unless-stopped
     environment:
@@ -100,6 +113,8 @@ services:
       - ./valkey/.env
     volumes:
       - ./valkey/data:/data
+      - ./valkey/conf/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro
+    command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
     networks:
       - llama_internal
 
@@ -160,7 +175,54 @@ services:
     networks:
       - proxy_llama
       - llama_internal
+    
+  self-qdrant:
+    image: qdrant/qdrant:latest
+    restart: always
+    container_name: self-qdrant
+    # ports:
+    #   - 6333:6333
+    #   - 6334:6334
+    # configs:
+    #   - source: qdrant_config
+    #     target: /qdrant/config/production.yaml
+    volumes:
+      - /opt/ai-stack/qdrant/data:/qdrant/storage
+      - /opt/ai-stack/qdrant/configs:/qdrant/config
+    networks:
+      - llama_internal
   
+
+  wyoming-whisper:
+    image: rhasspy/wyoming-whisper
+    container_name: wyoming-whisper
+    #entrypoint: ["script/run"]
+    command:
+      - --model
+      - tiny-int8
+      - --language
+      - en
+      - --uri
+      - tcp://0.0.0.0:10300
+      - --data-dir
+      - /data
+      - --download-dir
+      - /data
+    ports:
+      - "10300:10300"
+    volumes:
+      - ./wyoming-whisper/data:/data
+    stdin_open: true
+    tty: true
+    gpus: all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+   
 networks:
   proxy_llama:
     name: proxy_llama
@@ -171,3 +233,4 @@ networks:
 volumes:
   ollama: {}
   open-webui: {}
+  qdrant_config: {}
