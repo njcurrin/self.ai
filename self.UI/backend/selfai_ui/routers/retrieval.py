@@ -1,7 +1,9 @@
+import asyncio
 import json
 import logging
 import mimetypes
 import os
+import re
 import shutil
 
 import uuid
@@ -10,6 +12,7 @@ from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Union
 
 from fastapi import (
+    BackgroundTasks,
     Depends,
     FastAPI,
     File,
@@ -28,7 +31,7 @@ import tiktoken
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_core.documents import Document
 
-from selfai_ui.models.files import FileModel, Files
+from selfai_ui.models.files import FileForm, FileModel, Files
 from selfai_ui.models.knowledge import Knowledges
 from selfai_ui.storage.provider import Storage
 
@@ -41,7 +44,8 @@ from selfai_ui.retrieval.loaders.youtube import YoutubeLoader
 
 # Web search engines
 from selfai_ui.retrieval.web.main import SearchResult
-from selfai_ui.retrieval.web.utils import get_web_loader
+from selfai_ui.retrieval.web.utils import get_web_loader, validate_url
+from selfai_ui.retrieval.web.firecrawl import SafeFirecrawlLoader
 from selfai_ui.retrieval.web.brave import search_brave
 from selfai_ui.retrieval.web.kagi import search_kagi
 from selfai_ui.retrieval.web.mojeek import search_mojeek
@@ -89,6 +93,32 @@ from selfai_ui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
+
+CRAWL_JOBS_DIR = Path(UPLOAD_DIR) / "crawl_jobs"
+CRAWL_JOBS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _job_file(job_id: str) -> Path:
+    return CRAWL_JOBS_DIR / f"{job_id}.json"
+
+
+def _persist_job(job_state: dict) -> None:
+    """Write job metadata to disk after each meaningful state change.
+
+    Pages are saved as {url, title} with empty content — the content field
+    can be many MB and is not needed for resume. Empty-content placeholders
+    let the frontend's lastProcessedPageIndex stay aligned after a restart.
+    """
+    try:
+        data = {k: v for k, v in job_state.items() if k not in ("pages", "content")}
+        data["pages"] = [
+            {"url": p["url"], "title": p.get("title", ""), "content": ""}
+            for p in job_state.get("pages", [])
+        ]
+        _job_file(job_state["job_id"]).write_text(json.dumps(data))
+    except Exception as e:
+        log.warning(f"_persist_job failed for {job_state.get('job_id')}: {e}")
+
 
 ##########################################
 #
@@ -167,6 +197,20 @@ class CollectionNameForm(BaseModel):
 
 class ProcessUrlForm(CollectionNameForm):
     url: str
+
+
+class ProcessWebCrawlForm(CollectionNameForm):
+    url: str
+    limit: Optional[int] = 10
+    max_depth: Optional[int] = None
+    delay: Optional[int] = 2
+    poll_interval: Optional[int] = 2
+    max_consecutive_403s: Optional[int] = None
+    include_paths: Optional[List[str]] = None
+    exclude_paths: Optional[List[str]] = None
+    regex_on_full_url: Optional[bool] = None
+    crawl_entire_domain: Optional[bool] = None
+    batch_size: Optional[int] = 10
 
 
 class SearchForm(CollectionNameForm):
@@ -348,6 +392,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "status": True,
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
         "enable_google_drive_integration": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
+        "web_loader_engine": request.app.state.config.RAG_WEB_LOADER_ENGINE,
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
@@ -913,7 +958,7 @@ def process_file(
                 ]
             text_content = " ".join([doc.page_content for doc in docs])
 
-        log.debug(f"text_content: {text_content}")
+        log.debug(f"text_content for '{file.filename}': {len(text_content)} chars")
         Files.update_file_data_by_id(
             file.id,
             {"content": text_content},
@@ -988,7 +1033,7 @@ def process_text(
         )
     ]
     text_content = form_data.content
-    log.debug(f"text_content: {text_content}")
+    log.debug(f"text_content for '{form_data.name}': {len(text_content)} chars")
 
     result = save_docs_to_vector_db(request, docs, collection_name)
     if result:
@@ -1021,7 +1066,7 @@ def process_youtube_video(
 
         docs = loader.load()
         content = " ".join([doc.page_content for doc in docs])
-        log.debug(f"text_content: {content}")
+        log.debug(f"text_content for '{form_data.url}': {len(content)} chars")
 
         save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
 
@@ -1059,11 +1104,14 @@ def process_web(
             form_data.url,
             verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+            engine=request.app.state.config.RAG_WEB_LOADER_ENGINE,
+            firecrawl_api_key=request.app.state.config.FIRECRAWL_API_KEY,
+            firecrawl_api_url=request.app.state.config.FIRECRAWL_API_BASE_URL,
         )
         docs = loader.load()
         content = " ".join([doc.page_content for doc in docs])
 
-        log.debug(f"text_content: {content}")
+        log.debug(f"text_content for '{form_data.url}': {len(content)} chars")
         save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
 
         return {
@@ -1085,6 +1133,371 @@ def process_web(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
+
+
+def _sync_process_page_to_knowledge(request, page: dict, collection_name: str, user_id: str) -> str:
+    """Create a file record for one crawled page and embed it into the knowledge collection.
+
+    Uses process_file PATH 1 (content= + collection_name=) to bypass the file.data
+    pre-check and embed directly into the knowledge collection in one step.
+    Returns the created file_id. Raises on failure.
+    """
+    markdown = page.get("content", "")
+    title = page.get("title", "") or page.get("url", "page")
+    url = page.get("url", "")
+
+    safe_name = re.sub(r'[/\\:*?"<>|]', '_', title)[:100] or "page"
+    file_id = str(uuid.uuid4())
+
+    file_item = Files.insert_new_file(
+        user_id,
+        FileForm(
+            id=file_id,
+            filename=f"{safe_name}.md",
+            path="",
+            data={"content": markdown},
+            meta={
+                "content_type": "text/markdown",
+                "url": url,
+                "size": len(markdown),
+                "name": f"{safe_name}.md",
+            },
+        ),
+    )
+    if not file_item:
+        raise RuntimeError(f"Failed to create file record for {url}")
+
+    # PATH 1: content= + collection_name= → embeds directly into knowledge collection
+    process_file(request, ProcessFileForm(file_id=file_id, content=markdown, collection_name=collection_name))
+
+    # Link file_id to the knowledge base record
+    knowledge = Knowledges.get_knowledge_by_id(collection_name)
+    if knowledge:
+        data = knowledge.data or {}
+        file_ids = data.get("file_ids", [])
+        if file_id not in file_ids:
+            file_ids.append(file_id)
+            Knowledges.update_knowledge_data_by_id(collection_name, {**data, "file_ids": file_ids})
+
+    return file_id
+
+
+async def _embed_one_page(request, job_state: dict, collection_name: str, user_id: str, page: dict) -> None:
+    """Embed a single crawled page into the knowledge collection."""
+    try:
+        await asyncio.to_thread(
+            _sync_process_page_to_knowledge, request, page, collection_name, user_id
+        )
+        job_state["saved_count"] = job_state.get("saved_count", 0) + 1
+        total = len(job_state.get("pages", []))
+        log.info(f"_embed_one_page: saved '{page.get('title', page.get('url', '?'))}' ({job_state['saved_count']}/{total})")
+    except Exception as e:
+        log.error(f"Failed to save page {page.get('url')}: {e}", exc_info=True)
+        job_state.setdefault("save_errors", []).append(
+            {"url": page.get("url"), "error": str(e)}
+        )
+
+
+async def _flush_embed_cache(request, job_state: dict, collection_name: str, user_id: str, batch_size: int, force: bool = False) -> None:
+    """Embed pages from the cache when a full batch is ready.
+
+    Pages accumulate in job_state["pages"] as Firecrawl scrapes them.
+    _embed_cursor tracks how many have been embedded so far.
+    This only processes full batches unless force=True (used after the crawl
+    finishes to flush the remaining partial batch).
+    """
+    pages = job_state.get("pages", [])
+    cursor = job_state.get("_embed_cursor", 0)
+    pending = len(pages) - cursor
+
+    while pending >= batch_size or (force and pending > 0):
+        batch = pages[cursor:cursor + batch_size]
+        log.info(f"_flush_embed_cache: embedding batch of {len(batch)} (pages {cursor+1}–{cursor+len(batch)} of {len(pages)})")
+        for page in batch:
+            if page.get("content", "").strip():
+                await _embed_one_page(request, job_state, collection_name, user_id, page)
+            cursor += 1
+        job_state["_embed_cursor"] = cursor
+        _persist_job(job_state)
+        pending = len(pages) - cursor
+
+
+async def _run_crawl_background(request, job_state: dict, form_data: ProcessWebCrawlForm, collection_name: str, user_id: str):
+    """Background task: crawls pages via Firecrawl and embeds them in batches.
+
+    Pages accumulate in job_state["pages"] as Firecrawl delivers them.
+    Each poll cycle, if batch_size pages have accumulated in the cache,
+    they are embedded immediately. After the crawl finishes, any remaining
+    pages that didn't fill a full batch are flushed.
+    """
+    batch_size = form_data.batch_size or 10
+
+    async def _on_progress(js):
+        """Called each poll cycle — embeds a batch only when the cache is full."""
+        await _flush_embed_cache(request, js, collection_name, user_id, batch_size)
+
+    _persist_job(job_state)
+    try:
+        api_base = request.app.state.config.FIRECRAWL_API_BASE_URL or None
+        loader = SafeFirecrawlLoader(
+            urls=form_data.url,
+            api_key=request.app.state.config.FIRECRAWL_API_KEY,
+            api_base_url=api_base,
+        )
+        await loader.crawl_with_progress(
+            job_state,
+            limit=form_data.limit,
+            max_depth=form_data.max_depth,
+            delay=form_data.delay,
+            poll_interval=form_data.poll_interval,
+            max_consecutive_403s=form_data.max_consecutive_403s,
+            include_paths=form_data.include_paths,
+            exclude_paths=form_data.exclude_paths,
+            regex_on_full_url=form_data.regex_on_full_url,
+            crawl_entire_domain=form_data.crawl_entire_domain,
+            on_progress=_on_progress,
+        )
+
+        if job_state.get("cancelled"):
+            job_state["status"] = "cancelled"
+            _persist_job(job_state)
+            log.info(f"_run_crawl_background: job {job_state['job_id']} was cancelled")
+            return
+
+        # Flush any remaining pages that didn't fill a full batch
+        await _flush_embed_cache(request, job_state, collection_name, user_id, batch_size, force=True)
+
+        job_state["status"] = "completed"
+        _persist_job(job_state)
+        log.info(f"_run_crawl_background: job {job_state['job_id']} completed, {job_state.get('saved_count', 0)} pages saved")
+    except Exception as e:
+        log.error(f"_run_crawl_background: job {job_state['job_id']} failed: {e}", exc_info=True)
+        job_state["status"] = "failed"
+        job_state["error"] = str(e)
+        _persist_job(job_state)
+
+
+class _RequestShim:
+    """Minimal stand-in for a FastAPI Request so embedding helpers can access app.state.
+
+    At startup there is no real Request object, but the embedding pipeline only
+    touches request.app.state.config.* and request.app.state.ef / EMBEDDING_FUNCTION.
+    This shim bridges that gap.
+    """
+
+    class _AppShim:
+        def __init__(self, state):
+            self.state = state
+
+    def __init__(self, app_state):
+        self.app = self._AppShim(app_state)
+
+
+async def _resume_crawl_background(app_state, job_state: dict, saved: dict) -> None:
+    """Resume polling an existing Firecrawl job after a container restart.
+
+    Now embeds pages in batches as they arrive, just like _run_crawl_background.
+    """
+    collection_name = saved.get("collection_name")
+    user_id = saved.get("user_id")
+    batch_size = saved.get("batch_size", 10)
+    request_shim = _RequestShim(app_state)
+
+    try:
+        api_base = app_state.config.FIRECRAWL_API_BASE_URL or None
+        loader = SafeFirecrawlLoader(
+            urls=saved["url"],
+            api_key=app_state.config.FIRECRAWL_API_KEY,
+            api_base_url=api_base,
+        )
+
+        if collection_name and user_id:
+            async def _on_progress(js):
+                await _flush_embed_cache(request_shim, js, collection_name, user_id, batch_size)
+
+            await loader.crawl_with_progress(
+                job_state,
+                poll_interval=saved.get("poll_interval", 2),
+                resume_crawl_id=saved["crawl_id"],
+                resume_processed=saved.get("_firecrawl_processed", 0),
+                on_progress=_on_progress,
+            )
+        else:
+            log.warning(f"_resume_crawl_background: job {job_state['job_id']} missing collection_name or user_id, skipping embedding")
+            await loader.crawl_with_progress(
+                job_state,
+                poll_interval=saved.get("poll_interval", 2),
+                resume_crawl_id=saved["crawl_id"],
+                resume_processed=saved.get("_firecrawl_processed", 0),
+                on_progress=_persist_job,
+            )
+
+        if job_state.get("cancelled"):
+            job_state["status"] = "cancelled"
+            _persist_job(job_state)
+            return
+
+        # Flush any remaining pages that didn't fill a full batch
+        if collection_name and user_id:
+            await _flush_embed_cache(request_shim, job_state, collection_name, user_id, batch_size, force=True)
+
+        job_state["status"] = "completed"
+        _persist_job(job_state)
+        log.info(f"_resume_crawl_background: job {job_state['job_id']} completed, {job_state.get('saved_count', 0)} pages embedded")
+    except Exception as e:
+        log.error(f"_resume_crawl_background: job {job_state['job_id']} failed: {e}", exc_info=True)
+        job_state["status"] = "failed"
+        job_state["error"] = str(e)
+        _persist_job(job_state)
+
+
+async def resume_crawl_jobs_on_startup(app_state) -> None:
+    """Called at startup. Reconnects to any Firecrawl jobs that were running when the container stopped."""
+    if not hasattr(app_state, "crawl_jobs"):
+        app_state.crawl_jobs = {}
+
+    for f in CRAWL_JOBS_DIR.glob("*.json"):
+        try:
+            data = json.loads(f.read_text())
+        except Exception as e:
+            log.warning(f"resume_crawl_jobs_on_startup: could not read {f}: {e}")
+            continue
+        if data.get("status") != "running":
+            continue
+        if not data.get("crawl_id") or not data.get("url"):
+            continue
+
+        job_id = data["job_id"]
+        log.info(f"resume_crawl_jobs_on_startup: resuming job {job_id} crawl_id={data['crawl_id']}")
+
+        # Restore in-memory state (pages have empty content — placeholders for frontend alignment)
+        job_state = {**data}
+        app_state.crawl_jobs[job_id] = job_state
+
+        asyncio.create_task(_resume_crawl_background(app_state, job_state, data))
+
+
+@router.post("/process/web/crawl")
+async def process_web_crawl(
+    request: Request,
+    form_data: ProcessWebCrawlForm,
+    background_tasks: BackgroundTasks,
+    user=Depends(get_verified_user),
+):
+    log.info(f"process_web_crawl: received request url={form_data.url} limit={form_data.limit}")
+
+    if not request.app.state.config.FIRECRAWL_API_KEY and not request.app.state.config.FIRECRAWL_API_BASE_URL:
+        log.error("process_web_crawl: neither FIRECRAWL_API_KEY nor FIRECRAWL_API_BASE_URL is configured")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Firecrawl is not configured. Set FIRECRAWL_API_KEY or FIRECRAWL_API_BASE_URL.",
+        )
+
+    collection_name = form_data.collection_name or calculate_sha256_string(form_data.url)[:63]
+    validate_url(form_data.url)
+
+    if not hasattr(request.app.state, "crawl_jobs"):
+        request.app.state.crawl_jobs = {}
+
+    job_id = str(uuid.uuid4())
+    job_state = {
+        "job_id": job_id,
+        "url": form_data.url,
+        "poll_interval": form_data.poll_interval,
+        "status": "running",
+        "completed": 0,
+        "total": 0,
+        "crawl_id": None,
+        "cancelled": False,
+        "cancel_reason": None,
+        "collection_name": collection_name,
+        "pages": [],
+        "content": None,
+        "error": None,
+        "_firecrawl_processed": 0,
+        "_embed_cursor": 0,
+        "saved_count": 0,
+        "save_errors": [],
+        "user_id": user.id,
+        "batch_size": form_data.batch_size or 10,
+    }
+    request.app.state.crawl_jobs[job_id] = job_state
+    log.info(f"process_web_crawl: created job {job_id} for collection {collection_name}")
+
+    background_tasks.add_task(_run_crawl_background, request, job_state, form_data, collection_name, user.id)
+
+    return {"job_id": job_id, "status": "started"}
+
+
+@router.get("/process/web/crawl")
+async def list_crawl_jobs(
+    request: Request,
+    collection_name: Optional[str] = None,
+    status_filter: Optional[str] = None,
+    user=Depends(get_verified_user),
+):
+    """List crawl jobs, optionally filtered by collection_name and/or status.
+
+    Merges in-memory jobs with disk-persisted ones so that any device can
+    discover active (or completed) crawl jobs for a given knowledge base.
+    """
+    seen: set[str] = set()
+    results: list[dict] = []
+
+    # 1. In-memory jobs (authoritative for running jobs)
+    for job in getattr(request.app.state, "crawl_jobs", {}).values():
+        if collection_name and job.get("collection_name") != collection_name:
+            continue
+        if status_filter and job.get("status") != status_filter:
+            continue
+        seen.add(job["job_id"])
+        results.append(job)
+
+    # 2. Disk-persisted jobs (catches completed/failed jobs after restart)
+    for f in CRAWL_JOBS_DIR.glob("*.json"):
+        try:
+            data = json.loads(f.read_text())
+        except Exception:
+            continue
+        jid = data.get("job_id")
+        if not jid or jid in seen:
+            continue
+        if collection_name and data.get("collection_name") != collection_name:
+            continue
+        if status_filter and data.get("status") != status_filter:
+            continue
+        results.append(data)
+
+    return results
+
+
+@router.get("/process/web/crawl/{job_id}")
+async def get_crawl_status(request: Request, job_id: str, user=Depends(get_verified_user)):
+    jobs = getattr(request.app.state, "crawl_jobs", {})
+    job = jobs.get(job_id)
+    if not job:
+        # Fall back to disk — covers backend restarts where in-memory state was lost
+        f = _job_file(job_id)
+        if f.exists():
+            try:
+                job = json.loads(f.read_text())
+            except Exception:
+                pass
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    return job
+
+
+@router.delete("/process/web/crawl/{job_id}")
+async def cancel_crawl(request: Request, job_id: str, user=Depends(get_verified_user)):
+    if not hasattr(request.app.state, "crawl_jobs"):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    job = request.app.state.crawl_jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    job["cancelled"] = True
+    log.info(f"cancel_crawl: set cancelled=True for job {job_id}")
+    return {"status": "cancelling", "job_id": job_id}
 
 
 def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
@@ -1270,6 +1683,9 @@ def process_web_search(
             urls,
             verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+            engine=request.app.state.config.RAG_WEB_LOADER_ENGINE,
+            firecrawl_api_key=request.app.state.config.FIRECRAWL_API_KEY,
+            firecrawl_api_url=request.app.state.config.FIRECRAWL_API_BASE_URL,
         )
         docs = loader.load()
         save_docs_to_vector_db(request, docs, collection_name, overwrite=True)

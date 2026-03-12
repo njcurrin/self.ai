@@ -6,6 +6,7 @@
 
 	export let selectedFileId = null;
 	export let files = [];
+	export let crawlItemId: string | null = null;
 
 	export let small = false;
 </script>
@@ -26,7 +27,7 @@
 				loading={file.status === 'uploading'}
 				dismissible
 				on:click={() => {
-					if (file.status === 'uploading') {
+					if (file.status === 'uploading' && file.id !== crawlItemId) {
 						return;
 					}
 

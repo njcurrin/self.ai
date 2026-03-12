@@ -24,7 +24,7 @@
 
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { blobToFile } from '$lib/utils';
-	import { processFile } from '$lib/apis/retrieval';
+	import { processWeb, startWebCrawl, getWebCrawlStatus, cancelWebCrawl, listWebCrawlJobs, getRAGConfig } from '$lib/apis/retrieval';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Files from './KnowledgeBase/Files.svelte';
@@ -32,6 +32,7 @@
 
 	import AddContentMenu from './KnowledgeBase/AddContentMenu.svelte';
 	import AddTextContentModal from './KnowledgeBase/AddTextContentModal.svelte';
+	import AddWebUrlModal from './KnowledgeBase/AddWebUrlModal.svelte';
 
 	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
@@ -64,6 +65,17 @@
 	let showAddTextContentModal = false;
 	let showSyncConfirmModal = false;
 	let showAccessControlModal = false;
+	let showAddWebUrlModal = false;
+	let showAddWebCrawlModal = false;
+	let webLoaderEngine = '';
+	let crawlLoading = false;
+	let crawlJobId: string | null = null;
+	let crawlUrl = '';
+	let crawlProgress: { completed: number; total: number; savedCount?: number } | null = null;
+	let crawlPollTimer: ReturnType<typeof setTimeout> | null = null;
+	let crawlTempItemId: string | null = null;
+	let lastProcessedPageIndex = 0;
+	let crawlLogs: string[] = [];
 
 	let inputFiles = null;
 
@@ -259,6 +271,226 @@
 		} else {
 			console.log('No files to upload.');
 		}
+	};
+
+	const scrapeURLHandler = async () => {
+		showAddWebUrlModal = true;
+	};
+
+	const submitScrapeURLHandler = async (url: string) => {
+		console.log('[scrapeURL] Starting scrape for:', url);
+
+		const tempItemId = uuidv4();
+		const fileItem = {
+			type: 'file',
+			file: '',
+			id: null,
+			url: '',
+			name: url,
+			size: 0,
+			status: 'uploading',
+			error: '',
+			itemId: tempItemId
+		};
+
+		knowledge.files = [...(knowledge.files ?? []), fileItem];
+		console.log('[scrapeURL] Added placeholder to files list, tempItemId:', tempItemId);
+
+		const res = await processWeb(localStorage.token, id, url).catch((e) => {
+			console.error('[scrapeURL] processWeb failed:', e);
+			toast.error(e);
+			return null;
+		});
+
+		console.log('[scrapeURL] processWeb response:', res);
+
+		if (res) {
+			const content = res?.file?.data?.content ?? '';
+			console.log('[scrapeURL] Extracted content length:', content.length, 'chars');
+
+			const blob = new Blob([content], { type: 'text/plain' });
+			const file = blobToFile(blob, `${url}.md`);
+			console.log('[scrapeURL] Created file blob, uploading...');
+
+			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
+				console.error('[scrapeURL] uploadFile failed:', e);
+				toast.error(e);
+				return null;
+			});
+
+			console.log('[scrapeURL] uploadFile response:', uploadedFile);
+
+			if (uploadedFile) {
+				knowledge.files = knowledge.files.map((item) => {
+					if (item.itemId === tempItemId) {
+						item.id = uploadedFile.id;
+					}
+					delete item.itemId;
+					return item;
+				});
+				console.log('[scrapeURL] Updated placeholder with file id:', uploadedFile.id, '— calling addFileHandler');
+				await addFileHandler(uploadedFile.id);
+			} else {
+				console.warn('[scrapeURL] uploadFile returned null, removing placeholder');
+				knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
+				toast.error($i18n.t('Failed to upload scraped content.'));
+			}
+		} else {
+			console.warn('[scrapeURL] processWeb returned null, removing placeholder');
+			knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
+		}
+	};
+
+// ── Crawl polling (top-level so onMount can resume it after a refresh) ──────
+	const startPolling = () => {
+		const pollCrawlStatus = async () => {
+			if (!crawlJobId) return;
+
+			const jobStatus = await getWebCrawlStatus(localStorage.token, crawlJobId).catch((e) => {
+				console.error('[crawlURL] poll failed:', e);
+				return null;
+			});
+
+			console.log('[crawlURL] poll:', jobStatus);
+			if (!jobStatus) {
+				crawlPollTimer = setTimeout(pollCrawlStatus, 2000) as any;
+				return;
+			}
+
+			crawlProgress = {
+				completed: jobStatus.completed ?? 0,
+				total: jobStatus.total ?? 0,
+				savedCount: jobStatus.saved_count ?? 0
+			};
+
+			// Log newly arrived page titles (display only — backend handles embedding)
+			const pages: Array<{ url: string; title: string }> = jobStatus.pages ?? [];
+			const newPages = pages.slice(lastProcessedPageIndex);
+			for (const page of newPages) {
+				crawlLogs = [...crawlLogs, `↳ ${page.title?.trim() || page.url}`];
+				lastProcessedPageIndex++;
+			}
+
+			if (jobStatus.status === 'completed') {
+				crawlPollTimer = null;
+				crawlLoading = false;
+				const savedCount = jobStatus.saved_count ?? 0;
+				crawlLogs = [...crawlLogs, `Done — ${savedCount} page(s) saved.`];
+				showAddWebCrawlModal = false;
+				// Refresh knowledge from the API since the backend added files directly
+				const refreshed = await getKnowledgeById(localStorage.token, id).catch(() => null);
+				if (refreshed) knowledge = refreshed;
+				knowledge.files = (knowledge.files ?? []).filter((item) => item.itemId !== crawlTempItemId);
+				crawlTempItemId = null;
+				if (savedCount === 0) toast.warning($i18n.t('No pages were saved.'));
+				localStorage.removeItem('activeCrawlJob');
+			} else if (jobStatus.status === 'failed') {
+				crawlPollTimer = null;
+				crawlLoading = false;
+				crawlLogs = [...crawlLogs, 'Crawl failed.'];
+				showAddWebCrawlModal = false;
+				knowledge.files = (knowledge.files ?? []).filter((item) => item.itemId !== crawlTempItemId);
+				crawlTempItemId = null;
+				toast.error($i18n.t('Crawl failed.'));
+				localStorage.removeItem('activeCrawlJob');
+			} else if (jobStatus.status === 'cancelled') {
+				crawlPollTimer = null;
+				crawlLoading = false;
+				showAddWebCrawlModal = false;
+				const refreshed = await getKnowledgeById(localStorage.token, id).catch(() => null);
+				if (refreshed) knowledge = refreshed;
+				knowledge.files = (knowledge.files ?? []).filter((item) => item.itemId !== crawlTempItemId);
+				crawlTempItemId = null;
+				localStorage.removeItem('activeCrawlJob');
+				if (jobStatus.cancel_reason) {
+					toast.warning(jobStatus.cancel_reason);
+				}
+			} else {
+				crawlPollTimer = setTimeout(pollCrawlStatus, 2000) as any;
+			}
+		};
+
+		crawlPollTimer = setTimeout(pollCrawlStatus, 2000) as any;
+	};
+
+	const submitCrawlURLHandler = async (url: string, limit: number = 10, maxDepth: number = 3, crawlDelay: number = 2, max403s: number = 5, includePaths: string[] = [], excludePaths: string[] = [], regexOnFullUrl: boolean = false, crawlEntireDomain: boolean = false, batchSize: number = 10) => {
+		console.log('[crawlURL] Starting crawl for:', url, 'limit:', limit);
+		crawlLoading = true;
+		crawlProgress = null;
+		crawlLogs = [];
+
+		const tempItemId = uuidv4();
+		crawlTempItemId = tempItemId;
+		crawlUrl = url;
+		knowledge.files = [
+			...(knowledge.files ?? []),
+			{
+				type: 'file',
+				file: '',
+				id: null,
+				url: '',
+				name: url,
+				size: 0,
+				status: 'uploading',
+				error: '',
+				itemId: tempItemId
+			}
+		];
+		console.log('[crawlURL] Added placeholder, tempItemId:', tempItemId);
+
+		const startRes = await startWebCrawl(localStorage.token, id, url, limit, crawlDelay, maxDepth, max403s > 0 ? max403s : null, includePaths.length > 0 ? includePaths : null, excludePaths.length > 0 ? excludePaths : null, regexOnFullUrl || null, crawlEntireDomain || null, batchSize).catch((e) => {
+			console.error('[crawlURL] startWebCrawl failed:', e);
+			toast.error(e);
+			return null;
+		});
+
+		if (!startRes) {
+			crawlLoading = false;
+			showAddWebCrawlModal = false;
+			knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
+			crawlTempItemId = null;
+			return;
+		}
+
+		crawlJobId = startRes.job_id;
+		lastProcessedPageIndex = 0;
+		crawlLogs = ['Crawl started…'];
+		console.log('[crawlURL] Job started, job_id:', crawlJobId);
+
+		localStorage.setItem('activeCrawlJob', JSON.stringify({
+			jobId: crawlJobId, knowledgeId: id, url, tempItemId, lastProcessedPageIndex: 0
+		}));
+
+		startPolling();
+	};
+
+
+	const cancelCrawlHandler = async () => {
+		console.log('[crawlURL] Cancelling job:', crawlJobId);
+
+		if (crawlPollTimer) {
+			clearTimeout(crawlPollTimer ?? undefined);
+			crawlPollTimer = null;
+		}
+
+		if (crawlJobId) {
+			await cancelWebCrawl(localStorage.token, crawlJobId).catch((e) =>
+				console.error('[crawlURL] cancel request failed:', e)
+			);
+			crawlJobId = null;
+		}
+
+		crawlLoading = false;
+		showAddWebCrawlModal = false;
+		crawlProgress = null;
+
+		if (crawlTempItemId) {
+			knowledge.files = knowledge.files.filter((item) => item.itemId !== crawlTempItemId);
+			crawlTempItemId = null;
+		}
+
+		localStorage.removeItem('activeCrawlJob');
+		toast.info($i18n.t('Crawl cancelled.'));
 	};
 
 	// Firefox fallback implementation using traditional file input
@@ -522,8 +754,41 @@
 			return null;
 		});
 
+			const ragConfig = await getRAGConfig(localStorage.token).catch(() => null);
+		if (ragConfig) {
+			webLoaderEngine = ragConfig.web_loader_engine ?? '';
+		}
+
 		if (res) {
 			knowledge = res;
+
+			// Resume an active crawl job — check the server so any device can pick it up
+			try {
+				const activeJobs = await listWebCrawlJobs(localStorage.token, id, 'running').catch(() => null);
+				const activeJob = activeJobs?.length ? activeJobs[0] : null;
+
+				if (activeJob) {
+					crawlJobId = activeJob.job_id;
+					crawlUrl = activeJob.url;
+					crawlTempItemId = uuidv4();
+					lastProcessedPageIndex = 0;
+					crawlLoading = true;
+					showAddWebCrawlModal = true;
+					crawlLogs = ['Reconnected to crawl…'];
+					knowledge.files = [
+						...(knowledge.files ?? []),
+						{ type: 'file', file: '', id: null, url: '', name: crawlUrl,
+						  size: 0, status: 'uploading', error: '', itemId: crawlTempItemId }
+					];
+					localStorage.setItem('activeCrawlJob', JSON.stringify({
+						jobId: crawlJobId, knowledgeId: id, url: crawlUrl,
+						tempItemId: crawlTempItemId, lastProcessedPageIndex: 0
+					}));
+					startPolling();
+				} else {
+					localStorage.removeItem('activeCrawlJob');
+				}
+			} catch (_) {}
 		} else {
 			goto('/workspace/knowledge');
 		}
@@ -583,6 +848,39 @@
 		uploadFileHandler(file);
 	}}
 />
+
+<AddWebUrlModal
+	bind:show={showAddWebUrlModal}
+	on:submit={(e) => {
+		submitScrapeURLHandler(e.detail.url);
+	}}
+/>
+
+<AddWebUrlModal
+	bind:show={showAddWebCrawlModal}
+	title="Crawl a website"
+	loading={crawlLoading}
+	viewOnly={!crawlLoading && crawlLogs.length > 0}
+	managedClose={true}
+	showLimitInput={true}
+	showMaxDepthInput={true}
+	showPollIntervalInput={true}
+	showMax403Input={true}
+	showIncludePathsInput={true}
+	showExcludePathsInput={true}
+	showRegexOnFullUrlInput={true}
+	showCrawlEntireDomainInput={true}
+	showBatchSizeInput={true}
+	{crawlProgress}
+	{crawlLogs}
+	on:submit={(e) => {
+		submitCrawlURLHandler(e.detail.url, e.detail.limit, e.detail.maxDepth, e.detail.crawlDelay, e.detail.max403s ?? 5, e.detail.includePaths, e.detail.excludePaths, e.detail.regexOnFullUrl, e.detail.crawlEntireDomain, e.detail.batchSize ?? 10);
+	}}
+	on:cancel={() => {
+		cancelCrawlHandler();
+	}}
+/>
+
 
 <input
 	id="files-input"
@@ -820,11 +1118,18 @@
 
 								<div>
 									<AddContentMenu
+										{webLoaderEngine}
 										on:upload={(e) => {
 											if (e.detail.type === 'directory') {
 												uploadDirectoryHandler();
 											} else if (e.detail.type === 'text') {
 												showAddTextContentModal = true;
+											} else if (e.detail.type === 'scrape'){
+												scrapeURLHandler();
+											} else if (e.detail.type === 'crawl') {
+												crawlLogs = [];
+												crawlProgress = null;
+												showAddWebCrawlModal = true;
 											} else {
 												document.getElementById('files-input').click();
 											}
@@ -837,14 +1142,26 @@
 							</div>
 						</div>
 
+						<div class="px-4 py-1 text-xs text-gray-500">
+							{(knowledge?.files ?? []).length} {(knowledge?.files ?? []).length === 1 ? $i18n.t('document') : $i18n.t('documents')}
+							{#if query && filteredItems.length !== (knowledge?.files ?? []).length}
+								<span>({filteredItems.length} {$i18n.t('matching')})</span>
+							{/if}
+						</div>
+
 						{#if filteredItems.length > 0}
 							<div class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs">
 								<Files
 									small
 									files={filteredItems}
 									{selectedFileId}
+									crawlItemId={null}
 									on:click={(e) => {
-										selectedFileId = selectedFileId === e.detail ? null : e.detail;
+										if (e.detail === null && crawlLogs.length > 0) {
+											showAddWebCrawlModal = true;
+										} else {
+											selectedFileId = selectedFileId === e.detail ? null : e.detail;
+										}
 									}}
 									on:delete={(e) => {
 										console.log(e.detail);

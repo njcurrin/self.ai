@@ -149,6 +149,9 @@ from selfai_ui.config import (
     RAG_OPENAI_API_KEY,
     RAG_OLLAMA_BASE_URL,
     RAG_OLLAMA_API_KEY,
+    RAG_WEB_LOADER_ENGINE,
+    FIRECRAWL_API_BASE_URL,
+    FIRECRAWL_API_KEY,
     CHUNK_OVERLAP,
     CHUNK_SIZE,
     CONTENT_EXTRACTION_ENGINE,
@@ -346,7 +349,14 @@ async def lifespan(app: FastAPI):
         reset_config()
 
     asyncio.create_task(periodic_usage_pool_cleanup())
+    asyncio.create_task(_resume_crawl_jobs(app.state))
     yield
+
+
+async def _resume_crawl_jobs(app_state) -> None:
+    """Thin wrapper so the import stays local to the lifespan."""
+    from selfai_ui.routers.retrieval import resume_crawl_jobs_on_startup
+    await resume_crawl_jobs_on_startup(app_state)
 
 
 app = FastAPI(
@@ -501,6 +511,7 @@ app.state.config.YOUTUBE_LOADER_PROXY_URL = YOUTUBE_LOADER_PROXY_URL
 app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
 app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
 app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
+app.state.config.RAG_WEB_LOADER_ENGINE = RAG_WEB_LOADER_ENGINE
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
 app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
@@ -519,6 +530,8 @@ app.state.config.SEARCHAPI_ENGINE = SEARCHAPI_ENGINE
 app.state.config.JINA_API_KEY = JINA_API_KEY
 app.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT
 app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY
+app.state.config.FIRECRAWL_API_BASE_URL = FIRECRAWL_API_BASE_URL
+app.state.config.FIRECRAWL_API_KEY = FIRECRAWL_API_KEY
 
 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS

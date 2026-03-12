@@ -85,10 +85,19 @@ def get_web_loader(
     urls: Union[str, Sequence[str]],
     verify_ssl: bool = True,
     requests_per_second: int = 2,
+    engine: str = "",
+    firecrawl_api_key: str = "",
+    firecrawl_api_url: str = "",
 ):
     # Check if the URL is valid
     if not validate_url(urls):
         raise ValueError(ERROR_MESSAGES.INVALID_URL)
+
+    if engine == "firecrawl":
+            from selfai_ui.retrieval.web.firecrawl import SafeFirecrawlLoader
+            log.info(f"Firecrawl loader: urls={urls!r} api_url={firecrawl_api_url!r}")
+            return SafeFirecrawlLoader(urls, api_key=firecrawl_api_key, api_base_url=firecrawl_api_url or None)
+    
     return SafeWebBaseLoader(
         urls,
         verify_ssl=verify_ssl,

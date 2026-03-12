@@ -674,7 +674,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     except Exception as e:
         log.exception(e)
 
-    # If context is not empty, insert it into the messages
+    # If context sources are not empty, insert it into the messages
     if len(sources) > 0:
         context_string = ""
         for source_idx, source in enumerate(sources):
