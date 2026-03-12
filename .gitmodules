@@ -1,3 +1,3 @@
-[submodule "self.llama"]
-	path = self.llama
+[submodule "self.Llama"]
+	path = self.Llama
 	url = https://github.com/njcurrin/self.llama.git

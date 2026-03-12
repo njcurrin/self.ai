@@ -407,6 +407,137 @@ export const processWeb = async (token: string, collection_name: string, url: st
 	return res;
 };
 
+export const startWebCrawl = async (
+	token: string,
+	collection_name: string,
+	url: string,
+	limit: number = 10,
+	delay: number = 2,
+	maxDepth: number = 3,
+	max403s: number | null = null,
+	includePaths: string[] | null = null,
+	excludePaths: string[] | null = null,
+	regexOnFullUrl: boolean | null = null,
+	crawlEntireDomain: boolean | null = null,
+	batchSize: number = 10
+) => {
+	let error = null;
+
+	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/web/crawl`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({ url, collection_name, limit, delay, max_depth: maxDepth, max_consecutive_403s: max403s, include_paths: includePaths, exclude_paths: excludePaths, regex_on_full_url: regexOnFullUrl, crawl_entire_domain: crawlEntireDomain, batch_size: batchSize })
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getWebCrawlStatus = async (token: string, job_id: string) => {
+	let error = null;
+
+	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/web/crawl/${job_id}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const listWebCrawlJobs = async (
+	token: string,
+	collection_name?: string,
+	status_filter?: string
+) => {
+	let error = null;
+
+	const params = new URLSearchParams();
+	if (collection_name) params.set('collection_name', collection_name);
+	if (status_filter) params.set('status_filter', status_filter);
+
+	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/web/crawl?${params.toString()}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const cancelWebCrawl = async (token: string, job_id: string) => {
+	let error = null;
+
+	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/web/crawl/${job_id}`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const processWebSearch = async (
 	token: string,
 	query: string,

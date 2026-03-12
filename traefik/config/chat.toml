@@ -1,0 +1,15 @@
+[http]
+  [http.routers]
+    [http.routers.chat]
+      entryPoints = ["web", "websecure"]
+      rule = "Host(`chat.home.mateysmarsh.com`)"
+      service = "chat"
+      [http.routers.chat.tls]
+        [[tls.certificates]]
+          certFile = "/letsEncrypt/live/chat.home.mateysmarsh.com/fullchain.pem"
+          keyFile = "/letsEncrypt/live/chat.home.mateysmarsh.com/privkey.pem"
+    [http.services]
+      [http.services.chat.loadBalancer]
+        strategy = "wrr"
+      [[http.services.chat.loadBalancer.servers]]
+        url = "http://selfUI:8080/"

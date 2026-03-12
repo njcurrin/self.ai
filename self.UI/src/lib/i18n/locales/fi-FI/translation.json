@@ -665,9 +665,9 @@
 	"Open file": "Avaa tiedosto",
 	"Open in full screen": "Avaa koko näytön tilaan",
 	"Open new chat": "Avaa uusi keskustelu",
-	"Open WebUI uses faster-whisper internally.": "Open WebUI käyttää faster-whisperia sisäisesti.",
-	"Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.": "Open WebUI käyttää SpeechT5:tä ja CMU Arctic -kaiuttimen upotuksia.",
-	"Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Open WebUI -versio (v{{OPEN_WEBUI_VERSION}}) on alempi kuin vaadittu versio (v{{REQUIRED_VERSION}})",
+	"Self.AI UI uses faster-whisper internally.": "Self.AI UI käyttää faster-whisperia sisäisesti.",
+	"Self.AI UI uses SpeechT5 and CMU Arctic speaker embeddings.": "Self.AI UI käyttää SpeechT5:tä ja CMU Arctic -kaiuttimen upotuksia.",
+	"Self.AI UI version (v{{SELFAI_UI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})": "Self.AI UI -versio (v{{SELFAI_UI_VERSION}}) on alempi kuin vaadittu versio (v{{REQUIRED_VERSION}})",
 	"OpenAI": "OpenAI",
 	"OpenAI API": "OpenAI API",
 	"OpenAI API Config": "OpenAI API -asetukset",
@@ -1056,7 +1056,7 @@
 	"You're a helpful assistant.": "Olet avulias avustaja.",
 	"You're now logged in.": "Olet nyt kirjautunut sisään.",
 	"Your account status is currently pending activation.": "Tilisi tila on tällä hetkellä odottaa aktivointia.",
-	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Koko panoksesi menee suoraan lisäosan kehittäjälle; Open WebUI ei pidätä prosenttiosuutta. Valittu rahoitusalusta voi kuitenkin periä omia maksujaan.",
+	"Your entire contribution will go directly to the plugin developer; Self.AI UI does not take any percentage. However, the chosen funding platform might have its own fees.": "Koko panoksesi menee suoraan lisäosan kehittäjälle; Self.AI UI ei pidätä prosenttiosuutta. Valittu rahoitusalusta voi kuitenkin periä omia maksujaan.",
 	"Youtube": "YouTube",
 	"Youtube Loader Settings": "YouTube Loader -asetukset"
 }

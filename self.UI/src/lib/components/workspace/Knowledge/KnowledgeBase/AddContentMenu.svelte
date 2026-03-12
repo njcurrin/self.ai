@@ -14,6 +14,7 @@
 	const i18n = getContext('i18n');
 
 	export let onClose: Function = () => {};
+	export let webLoaderEngine: string = '';
 
 	let show = false;
 </script>
@@ -102,6 +103,28 @@
 				<BarsArrowUp strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('Add text content')}</div>
 			</DropdownMenu.Item>
+
+			{#if webLoaderEngine === 'firecrawl'}
+			<DropdownMenu.Item
+				class="flex  gap-2  items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				on:click={() => {
+					dispatch('upload', { type: 'scrape' });
+				}}
+			>
+				<BarsArrowUp strokeWidth="2" />
+				<div class="flex items-center">{$i18n.t('Scrape a webpage')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex  gap-2  items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				on:click={() => {
+					dispatch('upload', { type: 'crawl' });
+				}}
+			>
+				<BarsArrowUp strokeWidth="2" />
+				<div class="flex items-center">{$i18n.t('Crawl a website')}</div>
+			</DropdownMenu.Item>
+		{/if}
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>
