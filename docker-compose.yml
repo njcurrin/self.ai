@@ -7,25 +7,32 @@ services:
     volumes:
       - ollama:/root/.ollama
 
-  self-llama:
-    image: local/llama.cpp:server-cuda
-    #pull_policy: build
+  self-llamolotl:
+    image: local/self-llamolotl:latest
     build:
-      context: ./self.Llama
-      dockerfile: .devops/cuda.Dockerfile
-      target: server
+      context: .
+      dockerfile: self.llamolotl/Dockerfile
       pull: false
-    container_name: self-llama
+    container_name: self-llamolotl
     volumes:
       - /srv/ollama/models:/models
+      - ./self.axolotl:/workspace/axolotl
+      - axolotl-cache:/root/.cache/huggingface/
     env_file:
       - ./self.Llama/.env
+    environment:
+      - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME}
+      - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL}
+      - GIT_COMMITTER_NAME=${GIT_COMMITTER_NAME}
+      - GIT_COMMITTER_EMAIL=${GIT_COMMITTER_EMAIL}
+      - WANDB_API_KEY=${WANDB_API_KEY}
     ports:
       - 8091:8080
+      - 8093:8093
     networks:
       - llama_internal
       - proxy_llama
-    gpus: all
+    restart: unless-stopped
     deploy:
       resources:
         reservations:
@@ -51,7 +58,7 @@ services:
       - self-valkey
       - self-qdrant
       #Inference
-      - self-llama
+      - self-llamolotl
       - self-ollama
       #HTTPS Proxy
       - self-traefik
@@ -66,18 +73,18 @@ services:
       - proxy_llama
       - llama_internal
   
-  self-swagger-ui:
-    image: swaggerapi/swagger-ui:latest
-    container_name: swaggerUI
-    profiles:
-      - development
-    environment:
-      SWAGGER_JSON: /tmp/openapi.yaml
-    volumes:
-      - ./openapi.with-code-samples.yml:/tmp/openapi.yaml:ro
-    ports:
-      - 8092:8080
-    restart: unless-stopped
+  # self-swagger-ui:
+  #   image: swaggerapi/swagger-ui:latest
+  #   container_name: swaggerUI
+  #   profiles:
+  #     - development
+  #   environment:
+  #     SWAGGER_JSON: /tmp/openapi.yaml
+  #   volumes:
+  #     - ./openapi.with-code-samples.yml:/tmp/openapi.yaml:ro
+  #   ports:
+  #     - 8092:8080
+  #   restart: unless-stopped
 
   # self-postgres:
   #   image: postgres:18
@@ -234,3 +241,4 @@ volumes:
   ollama: {}
   open-webui: {}
   qdrant_config: {}
+  axolotl-cache: {}

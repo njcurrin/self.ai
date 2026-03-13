@@ -1,0 +1,13 @@
+self.Llama/build/
+self.Llama/.git/
+self.axolotl/.git/
+self.UI/
+self.llamolotl/
+postgres/
+traefik/
+valkey/
+wyoming-whisper/
+notes/
+stardewwiki/
+**/__pycache__/
+**/*.pyc
