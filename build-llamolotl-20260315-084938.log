@@ -1,0 +1,140 @@
+time="2026-03-15T08:49:38-07:00" level=warning msg="The \"GIT_AUTHOR_NAME\" variable is not set. Defaulting to a blank string."
+time="2026-03-15T08:49:38-07:00" level=warning msg="The \"GIT_AUTHOR_EMAIL\" variable is not set. Defaulting to a blank string."
+time="2026-03-15T08:49:38-07:00" level=warning msg="The \"GIT_COMMITTER_NAME\" variable is not set. Defaulting to a blank string."
+time="2026-03-15T08:49:38-07:00" level=warning msg="The \"GIT_COMMITTER_EMAIL\" variable is not set. Defaulting to a blank string."
+time="2026-03-15T08:49:38-07:00" level=warning msg="The \"WANDB_API_KEY\" variable is not set. Defaulting to a blank string."
+ Image local/self-llamolotl:latest Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 542B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 6.79kB done
+#2 DONE 0.0s
+
+#3 resolve image config for docker-image://docker.io/docker/dockerfile:1.5
+#3 DONE 0.8s
+
+#4 docker-image://docker.io/docker/dockerfile:1.5@sha256:39b85bbfa7536a5feceb7372a0817649ecb2724562a38360f4d6a7782a409b14
+#4 resolve docker.io/docker/dockerfile:1.5@sha256:39b85bbfa7536a5feceb7372a0817649ecb2724562a38360f4d6a7782a409b14 done
+#4 CACHED
+
+#5 [internal] load .dockerignore
+#5 transferring context: 157B done
+#5 DONE 0.0s
+
+#6 [internal] load metadata for docker.io/nvidia/cuda:13.1.0-devel-ubuntu22.04
+#6 DONE 0.7s
+
+#7 [internal] load metadata for docker.io/nvidia/cuda:12.4.0-devel-ubuntu22.04
+#7 DONE 0.7s
+
+#8 [llama-builder 1/6] FROM docker.io/nvidia/cuda:13.1.0-devel-ubuntu22.04@sha256:eaded8d05ec577d25b882256d99da4270caf4787ec5c79408b0c1286c1efc0f1
+#8 resolve docker.io/nvidia/cuda:13.1.0-devel-ubuntu22.04@sha256:eaded8d05ec577d25b882256d99da4270caf4787ec5c79408b0c1286c1efc0f1 done
+#8 DONE 0.0s
+
+#9 [axolotl-builder  1/14] FROM docker.io/nvidia/cuda:12.4.0-devel-ubuntu22.04@sha256:28326fefd36d43ecf82447e9ca1175db639b931e234019b2807f35a0d1551656
+#9 resolve docker.io/nvidia/cuda:12.4.0-devel-ubuntu22.04@sha256:28326fefd36d43ecf82447e9ca1175db639b931e234019b2807f35a0d1551656 done
+#9 DONE 0.0s
+
+#10 [internal] load build context
+#10 transferring context: 182.52kB 0.1s done
+#10 DONE 0.1s
+
+#11 [llama-builder 4/6] COPY self.Llama/ .
+#11 CACHED
+
+#12 [axolotl-builder 14/14] RUN chmod +x /root/.axolotl-complete.bash &&     echo 'source /root/.axolotl-complete.bash' >> /root/.bashrc
+#12 CACHED
+
+#13 [llama-builder 3/6] WORKDIR /llama-src
+#13 CACHED
+
+#14 [axolotl-builder 12/14] RUN git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" &&     git config --get remote.origin.fetch &&     git config --global credential.helper store
+#14 CACHED
+
+#15 [runtime  6/11] COPY --from=axolotl-builder /workspace/axolotl-src /workspace/axolotl-src
+#15 CACHED
+
+#16 [axolotl-builder 10/14] RUN pip uninstall -y causal_conv1d || true &&     EXTRAS="flash-attn,ring-flash-attn,ray" &&     pip install --no-build-isolation -e .[${EXTRAS}] &&     python scripts/unsloth_install.py | sh 2>/dev/null || true &&     python scripts/cutcrossentropy_install.py | sh 2>/dev/null || true &&     pip install pytest &&     pip cache purge
+#16 CACHED
+
+#17 [runtime  9/11] RUN chmod +x /entrypoint.sh
+#17 CACHED
+
+#18 [axolotl-builder 11/14] RUN pip install --no-cache-dir fastapi "uvicorn[standard]" aiofiles &&     pip cache purge
+#18 CACHED
+
+#19 [runtime  7/11] COPY supervisord.conf /etc/supervisor/conf.d/llamolotl.conf
+#19 CACHED
+
+#20 [axolotl-builder  3/14] RUN python3.11 -m venv /opt/venv
+#20 CACHED
+
+#21 [axolotl-builder  6/14] RUN pip install --no-cache-dir causal-conv1d mamba-ssm 2>/dev/null ||     echo "Note: causal_conv1d/mamba_ssm prebuilt wheels not available, skipping" &&     pip cache purge
+#21 CACHED
+
+#22 [axolotl-builder  8/14] RUN git clone --depth=1 https://github.com/axolotl-ai-cloud/axolotl.git /workspace/axolotl-src
+#22 CACHED
+
+#23 [runtime  4/11] COPY --from=llama-builder /app/ /app/
+#23 CACHED
+
+#24 [llama-builder 5/6] RUN export LDFLAGS="-L/usr/local/cuda/lib64/stubs $LDFLAGS" &&     cmake -B build       -DGGML_NATIVE=OFF       -DGGML_CUDA=ON       -DLLAMA_BUILD_TESTS=OFF       -DCMAKE_BUILD_TYPE=Release       -DCMAKE_EXE_LINKER_FLAGS="-L/usr/local/cuda/lib64/stubs -Wl,--allow-shlib-undefined"       -DCMAKE_SHARED_LINKER_FLAGS="-L/usr/local/cuda/lib64/stubs -Wl,--allow-shlib-undefined"       . &&     cmake --build build --config Release -j$(nproc)
+#24 CACHED
+
+#25 [llama-builder 2/6] RUN apt-get update &&     apt-get install -y --no-install-recommends         build-essential cmake git libssl-dev libgomp1 &&     rm -rf /var/cache/apt/archives &&     rm -rf /var/lib/apt/lists/*
+#25 CACHED
+
+#26 [runtime  8/11] COPY entrypoint.sh /entrypoint.sh
+#26 CACHED
+
+#27 [axolotl-builder  9/14] WORKDIR /workspace/axolotl-src
+#27 CACHED
+
+#28 [llama-builder 6/6] RUN mkdir -p /app &&     cp build/bin/llama-server /app/llama-server &&     cp build/bin/llama-bench /app/llama-bench &&     find build/bin -name "*.so*" -exec cp -P {} /app/ ;
+#28 CACHED
+
+#29 [axolotl-builder  2/14] RUN apt-get update &&     apt-get install -y --no-install-recommends --allow-change-held-packages         python3.11 python3.11-venv python3-pip git build-essential ninja-build         cmake libaio-dev pkg-config vim curl nano libnccl2 libnccl-dev rsync         ibverbs-providers ibverbs-utils infiniband-diags         librdmacm-dev librdmacm1 rdmacm-utils &&     rm -rf /var/cache/apt/archives &&     rm -rf /var/lib/apt/lists/*
+#29 CACHED
+
+#30 [runtime  2/11] RUN apt-get update &&     apt-get install -y --no-install-recommends         curl supervisor python3.11 vim nano &&     apt-get autoremove -y &&     apt-get clean -y &&     rm -rf /var/cache/apt/archives &&     rm -rf /var/lib/apt/lists/* &&     rm -rf /tmp/* /var/tmp/*
+#30 CACHED
+
+#31 [axolotl-builder 13/14] COPY self.axolotl/.axolotl-complete.bash /root/.axolotl-complete.bash
+#31 CACHED
+
+#32 [runtime  3/11] RUN mkdir -p /var/log/supervisor
+#32 CACHED
+
+#33 [runtime 10/11] COPY api/ /workspace/axolotl-src/api/
+#33 CACHED
+
+#34 [axolotl-builder  5/14] RUN pip install --upgrade pip packaging==26.0 setuptools==75.8.0 wheel psutil &&     pip install --no-cache-dir         torch==2.6.0+cu124 torchvision         --index-url https://download.pytorch.org/whl/cu124 &&     pip cache purge
+#34 CACHED
+
+#35 [runtime  5/11] COPY --from=axolotl-builder /opt/venv /opt/venv
+#35 CACHED
+
+#36 [axolotl-builder  4/14] WORKDIR /workspace
+#36 CACHED
+
+#37 [axolotl-builder  7/14] RUN pip install --no-cache-dir flash-attn 2>/dev/null ||     (echo "Installing flash-attn from prebuilt wheel..." &&      PYTHON_CP="cp$(echo ${PYTHON_VERSION} | tr -d '.')" &&      TORCH_MAJOR_MINOR="$(echo 2.6.0 | grep -oP '^\d+\.\d+')" &&      TORCH_TAG="torch${TORCH_MAJOR_MINOR}" &&      case "amd64" in          amd64) ARCH_TAG="x86_64" ;;          arm64) ARCH_TAG="aarch64" ;;      esac &&      WHL_FILE="flash_attn-2.8.3+cu124${TORCH_TAG}-${PYTHON_CP}-${PYTHON_CP}-linux_${ARCH_TAG}.whl" &&      wget -q "https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.7.16/${WHL_FILE}" 2>/dev/null &&      pip install --no-cache-dir "${WHL_FILE}" &&      rm -f "${WHL_FILE}") ||     echo "Note: flash-attn not available, axolotl will use standard attention" &&     pip cache purge
+#37 CACHED
+
+#38 [runtime 11/11] WORKDIR /workspace/axolotl-src
+#38 CACHED
+
+#39 exporting to image
+#39 exporting layers done
+#39 exporting manifest sha256:6e63a67330a1860b208697a568e0bcedfe7491a8d5b8b5c1dc84589c84582c82 done
+#39 exporting config sha256:0fa2f50b6d51c8243223e14a87e0a4c9f6d7053bc1e5d2d8b60fde67001b83b7 done
+#39 exporting attestation manifest sha256:d251fb82244e14484276129a735db9ce3cd021fcaadc57829d31bdbc2cddf7ad done
+#39 exporting manifest list sha256:a5fbf1cd88d5941e73e2a595b219b526b42ff4ee0bfa79086e949b4c1e4a2459 done
+#39 naming to docker.io/local/self-llamolotl:latest done
+#39 unpacking to docker.io/local/self-llamolotl:latest done
+#39 DONE 0.0s
+
+#40 resolving provenance for metadata file
+#40 DONE 0.0s
+ Image local/self-llamolotl:latest Built 

@@ -78,6 +78,13 @@
 								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 							href="/admin/settings">{$i18n.t('Settings')}</a
 						>
+
+						<a
+							class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/admin/system')
+								? ''
+								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							href="/admin/system">{$i18n.t('System')}</a
+						>
 					</div>
 				</div>
 			</div>

@@ -53,6 +53,9 @@ export const functions = writable(null);
 
 export const banners: Writable<Banner[]> = writable([]);
 
+// Maps model IDs to load status: "loaded", "loading", or "unloaded"
+export const modelLoadStatus: Writable<Record<string, string>> = writable({});
+
 export const settings: Writable<Settings> = writable({});
 
 export const showSidebar = writable(false);

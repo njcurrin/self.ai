@@ -11,7 +11,7 @@
 	import { goto } from '$app/navigation';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
+	import { WEBUI_NAME, config, mobile, models as _models, settings, user, modelLoadStatus } from '$lib/stores';
 	import {
 		createNewModel,
 		deleteModelById,
@@ -26,6 +26,7 @@
 	import ModelMenu from './Models/ModelMenu.svelte';
 	import ModelDeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import ModelStatusDot from '../common/ModelStatusDot.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
@@ -261,7 +262,10 @@
 								className=" w-fit"
 								placement="top-start"
 							>
-								<div class=" font-semibold line-clamp-1">{model.name}</div>
+								<div class="flex items-center gap-1.5 font-semibold line-clamp-1">
+									{model.name}
+									<ModelStatusDot status={$modelLoadStatus[model.id] ?? $modelLoadStatus[model?.base_model_id] ?? model?.status} />
+								</div>
 							</Tooltip>
 
 							<div class="flex gap-1 text-xs overflow-hidden">

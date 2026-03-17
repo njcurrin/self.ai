@@ -6,6 +6,7 @@
 	import { models } from '$lib/stores';
 	import { verifyOpenAIConnection } from '$lib/apis/openai';
 	import { verifyOllamaConnection } from '$lib/apis/ollama';
+	import { verifyLlamolotlConnection } from '$lib/apis/llamolotl';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
@@ -21,6 +22,7 @@
 	export let show = false;
 	export let edit = false;
 	export let ollama = false;
+	export let llamolotl = false;
 
 	export let connection = null;
 
@@ -55,8 +57,20 @@
 		}
 	};
 
+	const verifyLlamolotlHandler = async () => {
+		const res = await verifyLlamolotlConnection(localStorage.token, url, key).catch((error) => {
+			toast.error(error);
+		});
+
+		if (res) {
+			toast.success($i18n.t('Server connection verified'));
+		}
+	};
+
 	const verifyHandler = () => {
-		if (ollama) {
+		if (llamolotl) {
+			verifyLlamolotlHandler();
+		} else if (ollama) {
 			verifyOllamaHandler();
 		} else {
 			verifyOpenAIHandler();
@@ -73,7 +87,7 @@
 	const submitHandler = async () => {
 		loading = true;
 
-		if (!ollama && (!url || !key)) {
+		if (!ollama && !llamolotl && (!url || !key)) {
 			loading = false;
 			toast.error('URL and Key are required');
 			return;
@@ -214,7 +228,7 @@
 										className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
 										bind:value={key}
 										placeholder={$i18n.t('API Key')}
-										required={!ollama}
+										required={!ollama && !llamolotl}
 									/>
 								</div>
 							</div>
@@ -269,7 +283,11 @@
 								</div>
 							{:else}
 								<div class="text-gray-500 text-xs text-center py-2 px-10">
-									{#if ollama}
+									{#if llamolotl}
+										{$i18n.t('Leave empty to include all models from "{{URL}}/v1/models" endpoint', {
+											URL: url
+										})}
+									{:else if ollama}
 										{$i18n.t('Leave empty to include all models from "{{URL}}/api/tags" endpoint', {
 											URL: url
 										})}

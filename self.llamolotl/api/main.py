@@ -8,6 +8,7 @@ import json
 import os
 import shutil
 import subprocess
+import threading
 import uuid
 from datetime import datetime
 from enum import Enum
@@ -30,6 +31,7 @@ JOBS_STATE_FILE = WORKSPACE / "jobs.json"
 VENV_BIN = Path("/opt/venv/bin")
 ACCELERATE = VENV_BIN / "accelerate"
 PYTHON = VENV_BIN / "python"
+MODELS_DIR = Path(os.environ.get("LLAMA_ARG_MODELS_DIR", "/models"))
 
 API_VERSION = "1.0.0"
 
@@ -82,10 +84,19 @@ class HealthResponse(BaseModel):
     api_version: str
 
 
+class ModelPullRequest(BaseModel):
+    name: str  # HuggingFace repo ID, e.g. "bartowski/Llama-3.2-1B-Instruct-GGUF"
+    filename: Optional[str] = None  # Specific GGUF file in the repo
+
+class ModelDeleteRequest(BaseModel):
+    name: str  # Filename in models dir to delete
+
+
 # ─── State ──────────────────────────────────────────────────────────────
 
 _jobs: Dict[str, Job] = {}
 _processes: Dict[str, subprocess.Popen] = {}
+_active_downloads: Dict[str, threading.Event] = {}  # name -> cancel event
 
 app = FastAPI(title="Axolotl Training API", version=API_VERSION)
 
@@ -278,6 +289,7 @@ def create_job(req: JobCreate) -> Job:
     env = os.environ.copy()
     env["PATH"] = f"{VENV_BIN}:{env.get('PATH', '')}"
     env["PYTHONUNBUFFERED"] = "1"
+    env["PYTORCH_JIT"] = "0"  # Prevents SIGSEGV from torch.jit.script during torch.distributed.optim import
 
     try:
         proc = subprocess.Popen(
@@ -493,6 +505,503 @@ def list_models():
         )
 
     return sorted(models, key=lambda m: m["modified"], reverse=True)
+
+
+# ─── GGUF Model Management ────────────────────────────────────────────
+
+
+import re
+
+_SPLIT_SHARD_RE = re.compile(r"-(\d{5})-of-(\d{5})\.gguf$")
+
+
+@app.get("/api/models/available")
+def list_available_models():
+    """List GGUF model files in the models directory (recursive).
+    Split GGUF shards are grouped: only the first shard is shown with the
+    combined size of all parts."""
+    if not MODELS_DIR.exists():
+        return []
+
+    # Clean up any dangling symlinks first
+    for f in MODELS_DIR.iterdir():
+        if f.is_symlink() and not f.resolve().exists():
+            f.unlink()
+
+    # Collect all GGUF files, skipping .cache, .downloading, and symlinks
+    all_files = []
+    for f in sorted(MODELS_DIR.rglob("*.gguf")):
+        if f.name.endswith(".downloading"):
+            continue
+        if f.is_symlink():
+            continue
+        try:
+            f.relative_to(MODELS_DIR / ".cache")
+            continue
+        except ValueError:
+            pass
+        all_files.append(f)
+
+    # Group split shards by their base name
+    # e.g. "Model-00001-of-00004.gguf" -> base "Model"
+    grouped: Dict[str, List[Path]] = {}
+    standalone: List[Path] = []
+
+    for f in all_files:
+        m = _SPLIT_SHARD_RE.search(f.name)
+        if m:
+            base = f.name[:m.start()]
+            key = str(f.parent / base)
+            grouped.setdefault(key, []).append(f)
+        else:
+            standalone.append(f)
+
+    models = []
+
+    # Standalone (non-split) models
+    for f in standalone:
+        # Skip symlinks (they point to split shards and are handled below)
+        if f.is_symlink():
+            continue
+        rel_path = str(f.relative_to(MODELS_DIR))
+        # A top-level file is always registered (visible to llama-server)
+        is_top_level = f.parent == MODELS_DIR
+        models.append({
+            "name": rel_path,
+            "size": f.stat().st_size,
+            "modified": f.stat().st_mtime,
+            "registered": is_top_level,
+        })
+
+    # Split models — show first shard with combined size
+    for key, shards in grouped.items():
+        shards.sort(key=lambda p: p.name)
+        first_shard = shards[0]
+        total_size = sum(s.stat().st_size for s in shards)
+        latest_modified = max(s.stat().st_mtime for s in shards)
+        rel_path = str(first_shard.relative_to(MODELS_DIR))
+        # Registered if first shard (or a symlink to it) exists at top level
+        top_level_path = MODELS_DIR / first_shard.name
+        registered = (
+            (first_shard.parent == MODELS_DIR) or
+            (top_level_path.is_symlink() or top_level_path.exists())
+        )
+        models.append({
+            "name": rel_path,
+            "size": total_size,
+            "modified": latest_modified,
+            "shards": len(shards),
+            "registered": registered,
+        })
+
+    return models
+
+
+class ModelRegisterRequest(BaseModel):
+    name: str  # Relative path to first shard or file within MODELS_DIR
+
+
+@app.post("/api/models/register")
+def register_model(req: ModelRegisterRequest):
+    """Register a model in a subdirectory by symlinking its first shard
+    to the top level of MODELS_DIR so llama-server can discover it."""
+    model_path = (MODELS_DIR / req.name).resolve()
+    # Path traversal protection
+    if not str(model_path).startswith(str(MODELS_DIR.resolve())):
+        raise HTTPException(status_code=400, detail="Invalid model path")
+    if not model_path.exists():
+        raise HTTPException(status_code=404, detail="Model file not found")
+
+    # Already at top level — nothing to do
+    if model_path.parent == MODELS_DIR.resolve():
+        return {"registered": True, "name": req.name, "action": "already_top_level"}
+
+    symlink_path = MODELS_DIR / model_path.name
+    if symlink_path.exists() or symlink_path.is_symlink():
+        return {"registered": True, "name": req.name, "action": "already_registered"}
+
+    symlink_path.symlink_to(model_path)
+
+    # Restart llama-server so it discovers the newly registered model
+    _restart_llama_server()
+
+    return {"registered": True, "name": model_path.name, "action": "symlinked"}
+
+
+@app.post("/api/models/pull")
+async def pull_model(req: ModelPullRequest):
+    """Pull a GGUF model from HuggingFace. Streams progress as NDJSON."""
+    from huggingface_hub import HfApi, hf_hub_download
+
+    repo_id = req.name.strip()
+    filename = req.filename
+
+    async def generate():
+        try:
+            api = HfApi()
+
+            # List repo files to find GGUFs
+            try:
+                all_files = api.list_repo_files(repo_id)
+            except Exception as e:
+                yield json.dumps({"error": f"Failed to access repo '{repo_id}': {e}"}) + "\n"
+                return
+
+            gguf_files = [f for f in all_files if f.endswith(".gguf")]
+
+            if not gguf_files:
+                yield json.dumps({"error": f"No GGUF files found in '{repo_id}'"}) + "\n"
+                return
+
+            # Group GGUFs: detect split shard sets vs standalone files
+            # Split shards look like: Model-00001-of-00004.gguf, Model-00002-of-00004.gguf
+            shard_groups: Dict[str, List[str]] = {}  # base -> [files]
+            standalone_gguf: List[str] = []
+
+            for gf in gguf_files:
+                m = _SPLIT_SHARD_RE.search(gf)
+                if m:
+                    base = gf[:gf.rfind("-", 0, m.start()) + 1] if "-" in gf[:m.start()] else gf[:m.start()]
+                    # Use directory + base as key to group shards
+                    parent = str(Path(gf).parent)
+                    key = f"{parent}/{Path(gf).name[:m.start()]}"
+                    shard_groups.setdefault(key, []).append(gf)
+                else:
+                    standalone_gguf.append(gf)
+
+            # Build selectable options: standalone files + shard groups (by first shard)
+            selectable = list(standalone_gguf)
+            shard_first_to_group: Dict[str, List[str]] = {}
+            for key, shards in shard_groups.items():
+                shards.sort()
+                first = shards[0]
+                selectable.append(first)
+                shard_first_to_group[first] = shards
+
+            # If no filename specified and multiple options, return list for selection
+            if not filename:
+                if len(selectable) == 1:
+                    selected = selectable[0]
+                else:
+                    yield json.dumps({"status": "select_file", "files": selectable}) + "\n"
+                    return
+            else:
+                if filename not in gguf_files and filename not in selectable:
+                    yield json.dumps({"error": f"File '{filename}' not found in repo. Available: {selectable}"}) + "\n"
+                    return
+                selected = filename
+
+            # Determine all files to download (single file or all shards in group)
+            files_to_download = shard_first_to_group.get(selected, [selected])
+            is_split = len(files_to_download) > 1
+
+            # Check if already exists
+            dest_path = MODELS_DIR / Path(files_to_download[0]).name
+            if dest_path.exists():
+                yield json.dumps({"error": f"Model '{dest_path.name}' already exists"}) + "\n"
+                return
+
+            # Get total file size for progress tracking
+            try:
+                file_info = api.model_info(repo_id, files_metadata=True)
+                total_size = 0
+                sibling_sizes = {}
+                for s in file_info.siblings:
+                    size = getattr(s, 'size', None) or 0
+                    if size == 0 and hasattr(s, 'lfs') and s.lfs:
+                        size = s.lfs.get('size', 0) if isinstance(s.lfs, dict) else getattr(s.lfs, 'size', 0)
+                    sibling_sizes[s.rfilename] = size
+                for dl_file in files_to_download:
+                    total_size += sibling_sizes.get(dl_file, 0)
+            except Exception:
+                total_size = 0
+
+            # Set up cancel event
+            cancel_event = threading.Event()
+            download_key = f"{repo_id}/{selected}"
+            _active_downloads[download_key] = cancel_event
+
+            download_error = []
+            download_done = threading.Event()
+
+            def download_task():
+                try:
+                    for dl_file in files_to_download:
+                        if cancel_event.is_set():
+                            return
+                        hf_hub_download(
+                            repo_id=repo_id,
+                            filename=dl_file,
+                            local_dir=str(MODELS_DIR),
+                            local_dir_use_symlinks=False,
+                        )
+                    download_done.set()
+                except Exception as e:
+                    download_error.append(str(e))
+                    download_done.set()
+
+            thread = threading.Thread(target=download_task, daemon=True)
+            thread.start()
+
+            status_label = Path(selected).name
+            if is_split:
+                status_label = f"{Path(selected).name} ({len(files_to_download)} shards)"
+            yield json.dumps({"status": f"downloading {status_label}"}) + "\n"
+
+            # Poll file size for progress
+            while not download_done.is_set():
+                if cancel_event.is_set():
+                    # Clean up partial downloads
+                    for dl_file in files_to_download:
+                        for cleanup in [MODELS_DIR / Path(dl_file).name, MODELS_DIR / dl_file]:
+                            if cleanup.exists():
+                                cleanup.unlink()
+                    yield json.dumps({"error": "Download cancelled"}) + "\n"
+                    _active_downloads.pop(download_key, None)
+                    return
+
+                # Sum up downloaded bytes across all files
+                current_size = 0
+                seen_inodes = set()
+                for dl_file in files_to_download:
+                    dl_name = Path(dl_file).name
+                    # Check completed file at top-level or in repo subdir
+                    for check_path in [MODELS_DIR / dl_name, MODELS_DIR / dl_file]:
+                        if check_path.exists():
+                            try:
+                                st = check_path.stat()
+                                if st.st_ino not in seen_inodes:
+                                    seen_inodes.add(st.st_ino)
+                                    current_size += st.st_size
+                            except OSError:
+                                pass
+                            break
+
+                    # Check for .incomplete temp file for THIS specific file
+                    if current_size == 0:
+                        for incomplete_path in [
+                            MODELS_DIR / f"{dl_name}.incomplete",
+                            MODELS_DIR / dl_file / ".incomplete",
+                            MODELS_DIR / f"{dl_file}.incomplete",
+                        ]:
+                            if incomplete_path.exists():
+                                try:
+                                    current_size += incomplete_path.stat().st_size
+                                except OSError:
+                                    pass
+                                break
+
+                # Last resort: check HF cache for this specific repo's incomplete files
+                if current_size == 0:
+                    hf_cache = Path.home() / ".cache" / "huggingface" / "hub"
+                    # HF cache uses a sanitized repo name
+                    cache_repo_dir = hf_cache / ("models--" + repo_id.replace("/", "--"))
+                    if cache_repo_dir.exists():
+                        for incomplete in cache_repo_dir.rglob("*.incomplete"):
+                            try:
+                                current_size += incomplete.stat().st_size
+                            except OSError:
+                                pass
+
+                # Always send progress updates so the UI shows something
+                if total_size > 0:
+                    yield json.dumps({
+                        "status": "downloading",
+                        "digest": Path(selected).name,
+                        "completed": min(current_size, total_size),
+                        "total": total_size,
+                    }) + "\n"
+                else:
+                    # No total_size known — still report bytes downloaded
+                    yield json.dumps({
+                        "status": "downloading",
+                        "digest": Path(selected).name,
+                        "completed": current_size,
+                        "total": 0,
+                    }) + "\n"
+
+                await asyncio.sleep(1)
+
+            _active_downloads.pop(download_key, None)
+
+            if download_error:
+                yield json.dumps({"error": download_error[0]}) + "\n"
+                return
+
+            # Post-download: ensure files are accessible to llama-server
+            # hf_hub_download may place files in subdirs matching repo structure
+            for dl_file in files_to_download:
+                final_name = Path(dl_file).name
+                top_level = MODELS_DIR / final_name
+                repo_subpath = MODELS_DIR / dl_file
+
+                if not top_level.exists() and repo_subpath.exists() and repo_subpath != top_level:
+                    if not is_split:
+                        # Single file: move to top level
+                        shutil.move(str(repo_subpath), str(top_level))
+                    # For split shards: leave in subdir, we'll symlink the first shard below
+
+            # For split models: symlink first shard to top level so llama-server discovers it
+            if is_split:
+                first_shard_name = Path(files_to_download[0]).name
+                symlink_path = MODELS_DIR / first_shard_name
+                actual_path = MODELS_DIR / files_to_download[0]
+
+                if not symlink_path.exists() and actual_path.exists():
+                    symlink_path.symlink_to(actual_path)
+                    yield json.dumps({"status": f"registered split model ({len(files_to_download)} shards)"}) + "\n"
+
+            # Clean up empty parent dirs from hf_hub_download
+            if not is_split:
+                for dl_file in files_to_download:
+                    repo_subpath = MODELS_DIR / dl_file
+                    parent = repo_subpath.parent
+                    while parent != MODELS_DIR:
+                        try:
+                            parent.rmdir()
+                        except OSError:
+                            break
+                        parent = parent.parent
+
+            # Verify success
+            first_file = Path(files_to_download[0]).name
+            check_path = MODELS_DIR / first_file
+            if check_path.exists() or check_path.is_symlink():
+                if is_split:
+                    combined_size = sum(
+                        (MODELS_DIR / f).stat().st_size
+                        for f in files_to_download
+                        if (MODELS_DIR / f).exists()
+                    )
+                    # Fall back to checking top-level if subdir paths don't exist
+                    if combined_size == 0:
+                        combined_size = check_path.stat().st_size
+                    yield json.dumps({
+                        "status": "downloading",
+                        "digest": first_file,
+                        "completed": combined_size,
+                        "total": combined_size,
+                    }) + "\n"
+                else:
+                    yield json.dumps({
+                        "status": "downloading",
+                        "digest": check_path.name,
+                        "completed": check_path.stat().st_size,
+                        "total": check_path.stat().st_size,
+                    }) + "\n"
+                # Restart llama-server so it discovers the new model
+                _restart_llama_server()
+                yield json.dumps({"status": "success"}) + "\n"
+            else:
+                yield json.dumps({"error": "Download completed but file not found in models directory"}) + "\n"
+
+        except Exception as e:
+            yield json.dumps({"error": str(e)}) + "\n"
+
+    return StreamingResponse(generate(), media_type="application/x-ndjson")
+
+
+@app.post("/api/models/pull/cancel")
+def cancel_pull(req: ModelPullRequest):
+    """Cancel an active model download."""
+    download_key = f"{req.name.strip()}/{req.filename or ''}"
+    # Try exact match first, then prefix match
+    event = _active_downloads.get(download_key)
+    if not event:
+        for key, evt in _active_downloads.items():
+            if key.startswith(req.name.strip()):
+                event = evt
+                download_key = key
+                break
+    if not event:
+        raise HTTPException(status_code=404, detail="No active download found")
+    event.set()
+    return {"status": "cancelling", "name": download_key}
+
+
+@app.post("/api/models/delete")
+def delete_gguf_model(req: ModelDeleteRequest):
+    """Delete a GGUF model file from the models directory.
+    If the file is part of a split GGUF set, all shards and symlinks are deleted."""
+    raw_path = MODELS_DIR / req.name
+
+    # Handle symlinks (resolve=False so we can check the link itself)
+    if raw_path.is_symlink():
+        # It's a symlink — delete it and the target shards if they exist
+        target = raw_path.resolve()
+        raw_path.unlink()
+        deleted = [req.name]
+        # If target was a split shard, also delete sibling shards
+        if target.exists():
+            m = _SPLIT_SHARD_RE.search(target.name)
+            if m:
+                base = target.name[:m.start()]
+                for shard in target.parent.glob(f"{base}-*-of-*.gguf"):
+                    if _SPLIT_SHARD_RE.search(shard.name):
+                        shard.unlink()
+                        deleted.append(str(shard))
+        return {"deleted": True, "name": req.name, "files_removed": deleted}
+
+    model_path = raw_path.resolve()
+    # Path traversal protection
+    if not str(model_path).startswith(str(MODELS_DIR.resolve())):
+        raise HTTPException(status_code=400, detail="Invalid model path")
+    if not model_path.exists():
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    deleted = []
+    m = _SPLIT_SHARD_RE.search(model_path.name)
+    if m:
+        # Delete all shards with the same base name in the same directory
+        base = model_path.name[:m.start()]
+        for shard in model_path.parent.glob(f"{base}-*-of-*.gguf"):
+            if _SPLIT_SHARD_RE.search(shard.name):
+                shard.unlink()
+                deleted.append(shard.name)
+        # Also remove any top-level symlinks pointing to deleted shards
+        for link in MODELS_DIR.iterdir():
+            if link.is_symlink() and link.name.endswith(".gguf"):
+                try:
+                    link_target = link.resolve()
+                    if not link_target.exists():
+                        link.unlink()
+                        deleted.append(f"symlink:{link.name}")
+                except Exception:
+                    pass
+    else:
+        model_path.unlink()
+        deleted.append(req.name)
+
+    # Restart llama-server so it rescans the models directory
+    _restart_llama_server()
+
+    return {"deleted": True, "name": req.name, "files_removed": deleted}
+
+
+# ─── llama-server Management ──────────────────────────────────────────
+
+
+def _restart_llama_server() -> dict:
+    """Restart llama-server via supervisord to rescan models directory."""
+    try:
+        result = subprocess.run(
+            ["supervisorctl", "restart", "llama-server"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if result.returncode == 0:
+            return {"status": "restarted"}
+        else:
+            return {"status": "error", "message": result.stderr.strip()}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/system/restart-llama-server")
+def restart_llama_server():
+    """Restart llama-server to rescan models directory."""
+    return _restart_llama_server()
 
 
 # ─── Health Endpoint ───────────────────────────────────────────────────

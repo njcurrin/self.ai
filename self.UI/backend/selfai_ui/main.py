@@ -52,6 +52,7 @@ from selfai_ui.socket.main import (
 from selfai_ui.routers import (
     audio,
     images,
+    llamolotl,
     ollama,
     openai,
     retrieval,
@@ -73,6 +74,7 @@ from selfai_ui.routers import (
     tools,
     users,
     utils,
+    system,
 )
 
 from selfai_ui.routers.retrieval import (
@@ -88,6 +90,11 @@ from selfai_ui.models.models import Models
 from selfai_ui.models.users import UserModel, Users
 
 from selfai_ui.config import (
+    # Llamolotl
+    ENABLE_LLAMOLOTL_API,
+    LLAMOLOTL_BASE_URLS,
+    LLAMOLOTL_CONTROL_BASE_URLS,
+    LLAMOLOTL_API_CONFIGS,
     # Ollama
     ENABLE_OLLAMA_API,
     OLLAMA_BASE_URLS,
@@ -375,6 +382,13 @@ app.state.config = AppConfig()
 #
 ########################################
 
+
+app.state.config.ENABLE_LLAMOLOTL_API = ENABLE_LLAMOLOTL_API
+app.state.config.LLAMOLOTL_BASE_URLS = LLAMOLOTL_BASE_URLS
+app.state.config.LLAMOLOTL_CONTROL_BASE_URLS = LLAMOLOTL_CONTROL_BASE_URLS
+app.state.config.LLAMOLOTL_API_CONFIGS = LLAMOLOTL_API_CONFIGS
+
+app.state.LLAMOLOTL_MODELS = {}
 
 app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
@@ -749,6 +763,7 @@ app.add_middleware(
 app.mount("/ws", socket_app)
 
 
+app.include_router(llamolotl.router, prefix="/llamolotl", tags=["llamolotl"])
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
 
@@ -782,6 +797,7 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+app.include_router(system.router, prefix="/api/system", tags=["system"])
 
 
 ##################################

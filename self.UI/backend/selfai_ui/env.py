@@ -85,6 +85,7 @@ log_sources = [
     "IMAGES",
     "MAIN",
     "MODELS",
+    "LLAMOLOTL",
     "OLLAMA",
     "OPENAI",
     "RAG",

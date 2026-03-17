@@ -4,7 +4,9 @@ export const createNewKnowledge = async (
 	token: string,
 	name: string,
 	description: string,
-	accessControl: null | object
+	accessControl: null | object,
+	meta: object | null = null,
+	data: object | null = null
 ) => {
 	let error = null;
 
@@ -18,7 +20,9 @@ export const createNewKnowledge = async (
 		body: JSON.stringify({
 			name: name,
 			description: description,
-			access_control: accessControl
+			access_control: accessControl,
+			...(meta && { meta }),
+			...(data && { data })
 		})
 	})
 		.then(async (res) => {

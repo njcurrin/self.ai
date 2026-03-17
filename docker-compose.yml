@@ -10,16 +10,16 @@ services:
   self-llamolotl:
     image: local/self-llamolotl:latest
     build:
-      context: .
-      dockerfile: self.llamolotl/Dockerfile
+      context: ./self.llamolotl
+      dockerfile: Dockerfile
       pull: false
     container_name: self-llamolotl
     volumes:
       - /srv/ollama/models:/models
-      - ./self.axolotl:/workspace/axolotl
+      - ./self.llamolotl/self.axolotl:/workspace/axolotl
       - axolotl-cache:/root/.cache/huggingface/
     env_file:
-      - ./self.Llama/.env
+      - ./self.llamolotl/self.Llama/.env
     environment:
       - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME}
       - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL}
@@ -50,11 +50,17 @@ services:
       pull: true
       #no_cache: true
     container_name: selfUI
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - TIMEZONE=America/Los_Angeles
     volumes:
-      - open-webui:/app/backend/data
+      - selfUI-data:/app/backend/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./self.bigcode-eval/results:/app/backend/data/bigcode-results:ro
     depends_on:
       #Databases
-      #- self-postgres
+      - self-postgres
       - self-valkey
       - self-qdrant
       #Inference
@@ -86,17 +92,16 @@ services:
   #     - 8092:8080
   #   restart: unless-stopped
 
-  # self-postgres:
-  #   image: postgres:18
-  #   restart: unless-stopped
-  #   container_name: self-postgres
-  #   env_file: 
-  #     - ./postgres/.env
-  #   volumes:
-  #     - ./postgres/data:/var/lib/postgresql
-  #   networks:
-  #     - llama_internal
-
+  self-postgres:
+    image: postgres:18
+    restart: unless-stopped
+    container_name: self-postgres
+    env_file: 
+      - ./postgres/.env
+    volumes:
+      - selfUI-db:/var/lib/postgresql
+    networks:
+      - llama_internal
   adminer:
     image: adminer:latest
     profiles:
@@ -119,7 +124,7 @@ services:
     env_file: 
       - ./valkey/.env
     volumes:
-      - ./valkey/data:/data
+      - self-valkey-data:/data
       - ./valkey/conf/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro
     command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
     networks:
@@ -194,11 +199,33 @@ services:
     #   - source: qdrant_config
     #     target: /qdrant/config/production.yaml
     volumes:
-      - /opt/ai-stack/qdrant/data:/qdrant/storage
-      - /opt/ai-stack/qdrant/configs:/qdrant/config
+      - ./self.qdrant/data:/qdrant/storage
+      - ./self.qdrant/configs:/qdrant/config
     networks:
       - llama_internal
   
+
+  self-bigcode-eval:
+    image: local/self-bigcode-eval:latest
+    build:
+      context: ./self.bigcode-eval
+      dockerfile: Dockerfile
+      pull: false
+    container_name: self-bigcode-eval
+    ports:
+      - 8095:8094
+    # profiles:
+    #   - eval
+    volumes:
+      - bigcode-hf-cache:/root/.cache/huggingface/
+      - ./self.bigcode-eval/results:/workspace/results
+      - bigcode-logs:/workspace/logs
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+    networks:
+      - llama_internal
+      - proxy_llama
+    restart: unless-stopped
 
   wyoming-whisper:
     image: rhasspy/wyoming-whisper
@@ -242,3 +269,8 @@ volumes:
   open-webui: {}
   qdrant_config: {}
   axolotl-cache: {}
+  selfUI-data: {}
+  selfUI-db: {}
+  self-valkey-data: {}
+  bigcode-hf-cache: {}
+  bigcode-logs: {}

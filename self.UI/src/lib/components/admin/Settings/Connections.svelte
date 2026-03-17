@@ -4,6 +4,7 @@
 
 	const dispatch = createEventDispatcher();
 
+	import { getLlamolotlConfig, updateLlamolotlConfig } from '$lib/apis/llamolotl';
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
 	import { getModels as _getModels } from '$lib/apis';
@@ -18,6 +19,7 @@
 	import OpenAIConnection from './Connections/OpenAIConnection.svelte';
 	import AddConnectionModal from './Connections/AddConnectionModal.svelte';
 	import OllamaConnection from './Connections/OllamaConnection.svelte';
+	import LlamolotlConnection from './Connections/LlamolotlConnection.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -27,6 +29,9 @@
 	};
 
 	// External
+	let LLAMOLOTL_BASE_URLS = [''];
+	let LLAMOLOTL_API_CONFIGS = {};
+
 	let OLLAMA_BASE_URLS = [''];
 	let OLLAMA_API_CONFIGS = {};
 
@@ -36,10 +41,12 @@
 
 	let ENABLE_OPENAI_API: null | boolean = null;
 	let ENABLE_OLLAMA_API: null | boolean = null;
+	let ENABLE_LLAMOLOTL_API: null | boolean = null;
 
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
 	let showAddOllamaConnectionModal = false;
+	let showAddLlamolotlConnectionModal = false;
 
 	const updateOpenAIHandler = async () => {
 		if (ENABLE_OPENAI_API !== null) {
@@ -123,10 +130,45 @@
 		await updateOllamaHandler();
 	};
 
+	const updateLlamolotlHandler = async () => {
+		if (ENABLE_LLAMOLOTL_API !== null) {
+			// Remove duplicate URLs
+			LLAMOLOTL_BASE_URLS = LLAMOLOTL_BASE_URLS.filter(
+				(url, urlIdx) => LLAMOLOTL_BASE_URLS.indexOf(url) === urlIdx && url !== ''
+			).map((url) => url.replace(/\/$/, ''));
+
+			if (LLAMOLOTL_BASE_URLS.length === 0) {
+				ENABLE_LLAMOLOTL_API = false;
+				toast.info($i18n.t('Llamolotl API disabled'));
+			}
+
+			const res = await updateLlamolotlConfig(localStorage.token, {
+				ENABLE_LLAMOLOTL_API: ENABLE_LLAMOLOTL_API,
+				LLAMOLOTL_BASE_URLS: LLAMOLOTL_BASE_URLS,
+				LLAMOLOTL_API_CONFIGS: LLAMOLOTL_API_CONFIGS
+			}).catch((error) => {
+				toast.error(error);
+			});
+
+			if (res) {
+				toast.success($i18n.t('Llamolotl API settings updated'));
+				await models.set(await getModels());
+			}
+		}
+	};
+
+	const addLlamolotlConnectionHandler = async (connection) => {
+		LLAMOLOTL_BASE_URLS = [...LLAMOLOTL_BASE_URLS, connection.url];
+		LLAMOLOTL_API_CONFIGS[connection.url] = connection.config;
+
+		await updateLlamolotlHandler();
+	};
+
 	onMount(async () => {
 		if ($user.role === 'admin') {
 			let ollamaConfig = {};
 			let openaiConfig = {};
+			let llamolotlConfig = {};
 
 			await Promise.all([
 				(async () => {
@@ -134,11 +176,15 @@
 				})(),
 				(async () => {
 					openaiConfig = await getOpenAIConfig(localStorage.token);
+				})(),
+				(async () => {
+					llamolotlConfig = await getLlamolotlConfig(localStorage.token);
 				})()
 			]);
 
 			ENABLE_OPENAI_API = openaiConfig.ENABLE_OPENAI_API;
 			ENABLE_OLLAMA_API = ollamaConfig.ENABLE_OLLAMA_API;
+			ENABLE_LLAMOLOTL_API = llamolotlConfig.ENABLE_LLAMOLOTL_API;
 
 			OPENAI_API_BASE_URLS = openaiConfig.OPENAI_API_BASE_URLS;
 			OPENAI_API_KEYS = openaiConfig.OPENAI_API_KEYS;
@@ -146,6 +192,9 @@
 
 			OLLAMA_BASE_URLS = ollamaConfig.OLLAMA_BASE_URLS;
 			OLLAMA_API_CONFIGS = ollamaConfig.OLLAMA_API_CONFIGS;
+
+			LLAMOLOTL_BASE_URLS = llamolotlConfig.LLAMOLOTL_BASE_URLS;
+			LLAMOLOTL_API_CONFIGS = llamolotlConfig.LLAMOLOTL_API_CONFIGS;
 
 			if (ENABLE_OPENAI_API) {
 				for (const url of OPENAI_API_BASE_URLS) {
@@ -173,6 +222,14 @@
 					}
 				}
 			}
+
+			if (ENABLE_LLAMOLOTL_API) {
+				for (const url of LLAMOLOTL_BASE_URLS) {
+					if (!LLAMOLOTL_API_CONFIGS[url]) {
+						LLAMOLOTL_API_CONFIGS[url] = {};
+					}
+				}
+			}
 		}
 	});
 </script>
@@ -188,17 +245,24 @@
 	onSubmit={addOllamaConnectionHandler}
 />
 
+<AddConnectionModal
+	llamolotl
+	bind:show={showAddLlamolotlConnectionModal}
+	onSubmit={addLlamolotlConnectionHandler}
+/>
+
 <form
 	class="flex flex-col h-full justify-between text-sm"
 	on:submit|preventDefault={() => {
 		updateOpenAIHandler();
 		updateOllamaHandler();
+		updateLlamolotlHandler();
 
 		dispatch('save');
 	}}
 >
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
-		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null}
+		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && ENABLE_LLAMOLOTL_API !== null}
 			<div class="my-2">
 				<div class="mt-2 space-y-2 pr-1.5">
 					<div class="flex justify-between items-center text-sm">
@@ -323,6 +387,63 @@
 							>
 								{$i18n.t('Click here for help.')}
 							</a>
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			<hr class=" border-gray-50 dark:border-gray-850" />
+
+			<div class="pr-1.5 my-2">
+				<div class="flex justify-between items-center text-sm mb-2">
+					<div class="  font-medium">{$i18n.t('self.llamolotl API')}</div>
+
+					<div class="mt-1">
+						<Switch
+							bind:state={ENABLE_LLAMOLOTL_API}
+							on:change={async () => {
+								updateLlamolotlHandler();
+							}}
+						/>
+					</div>
+				</div>
+
+				{#if ENABLE_LLAMOLOTL_API}
+					<hr class=" border-gray-50 dark:border-gray-850 my-2" />
+
+					<div class="">
+						<div class="flex justify-between items-center">
+							<div class="font-medium">{$i18n.t('Manage self.llamolotl Connections')}</div>
+
+							<Tooltip content={$i18n.t(`Add Connection`)}>
+								<button
+									class="px-1"
+									on:click={() => {
+										showAddLlamolotlConnectionModal = true;
+									}}
+									type="button"
+								>
+									<Plus />
+								</button>
+							</Tooltip>
+						</div>
+
+						<div class="flex w-full gap-1.5">
+							<div class="flex-1 flex flex-col gap-1.5 mt-1.5">
+								{#each LLAMOLOTL_BASE_URLS as url, idx}
+									<LlamolotlConnection
+										bind:url
+										bind:config={LLAMOLOTL_API_CONFIGS[url]}
+										{idx}
+										onSubmit={() => {
+											updateLlamolotlHandler();
+										}}
+										onDelete={() => {
+											LLAMOLOTL_BASE_URLS = LLAMOLOTL_BASE_URLS.filter((url, urlIdx) => idx !== urlIdx);
+										}}
+									/>
+								{/each}
+							</div>
 						</div>
 					</div>
 				{/if}

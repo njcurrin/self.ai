@@ -5,7 +5,7 @@ import sys
 from aiocache import cached
 from fastapi import Request
 
-from selfai_ui.routers import openai, ollama
+from selfai_ui.routers import openai, ollama, llamolotl
 from selfai_ui.functions import get_function_models
 
 
@@ -33,6 +33,7 @@ async def get_all_base_models(request: Request):
     function_models = []
     openai_models = []
     ollama_models = []
+    llamolotl_models = []
 
     if request.app.state.config.ENABLE_OPENAI_API:
         openai_models = await openai.get_all_models(request)
@@ -52,8 +53,23 @@ async def get_all_base_models(request: Request):
             for model in ollama_models["models"]
         ]
 
+    if request.app.state.config.ENABLE_LLAMOLOTL_API:
+        llamolotl_result = await llamolotl.get_all_models(request)
+        llamolotl_models = [
+            {
+                "id": model["id"],
+                "name": model.get("name", model["id"]),
+                "object": "model",
+                "created": model.get("created", int(time.time())),
+                "owned_by": "llamolotl",
+                "llamolotl": model,
+                "status": model.get("status", "unloaded"),
+            }
+            for model in llamolotl_result.get("data", [])
+        ]
+
     function_models = await get_function_models(request)
-    models = function_models + openai_models + ollama_models
+    models = function_models + openai_models + ollama_models + llamolotl_models
 
     return models
 
@@ -137,6 +153,7 @@ async def get_all_models(request):
             owned_by = "openai"
             pipe = None
             action_ids = []
+            base_status = None
 
             for model in models:
                 if (
@@ -146,6 +163,7 @@ async def get_all_models(request):
                     owned_by = model["owned_by"]
                     if "pipe" in model:
                         pipe = model["pipe"]
+                    base_status = model.get("status")
                     break
 
             if custom_model.meta:
@@ -163,6 +181,7 @@ async def get_all_models(request):
                     "info": custom_model.model_dump(),
                     "preset": True,
                     **({"pipe": pipe} if pipe is not None else {}),
+                    **({"status": base_status} if base_status is not None else {}),
                     "action_ids": action_ids,
                 }
             )

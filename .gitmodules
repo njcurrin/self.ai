@@ -1,6 +1,9 @@
 [submodule "self.Llama"]
-	path = self.Llama
+	path = self.llamolotl/self.Llama
 	url = https://github.com/njcurrin/self.llama.git
 [submodule "self.axolotl"]
-	path = self.axolotl
+	path = self.llamolotl/self.axolotl
 	url = https://github.com/njcurrin/self.ai-axolotl.git
+[submodule "self.bigcode-eval"]
+	path = self.bigcode-eval
+	url = https://github.com/njcurrin/self.ai-bigcode-evaluation-harness.git

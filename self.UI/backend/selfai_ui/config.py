@@ -662,6 +662,44 @@ OLLAMA_API_CONFIGS = PersistentConfig(
 )
 
 ####################################
+# LLAMOLOTL
+####################################
+
+ENABLE_LLAMOLOTL_API = PersistentConfig(
+    "ENABLE_LLAMOLOTL_API",
+    "llamolotl.enable",
+    os.environ.get("ENABLE_LLAMOLOTL_API", "True").lower() == "true",
+)
+
+LLAMOLOTL_BASE_URLS = os.environ.get("LLAMOLOTL_BASE_URLS", "")
+if LLAMOLOTL_BASE_URLS == "":
+    LLAMOLOTL_BASE_URLS = os.environ.get(
+        "LLAMOLOTL_BASE_URL", "http://self-llamolotl:8080"
+    )
+
+LLAMOLOTL_BASE_URLS = [url.strip() for url in LLAMOLOTL_BASE_URLS.split(";")]
+LLAMOLOTL_BASE_URLS = PersistentConfig(
+    "LLAMOLOTL_BASE_URLS", "llamolotl.base_urls", LLAMOLOTL_BASE_URLS
+)
+
+LLAMOLOTL_CONTROL_BASE_URLS = os.environ.get("LLAMOLOTL_CONTROL_BASE_URLS", "")
+if LLAMOLOTL_CONTROL_BASE_URLS == "":
+    LLAMOLOTL_CONTROL_BASE_URLS = os.environ.get(
+        "LLAMOLOTL_CONTROL_BASE_URL", "http://self-llamolotl:8093"
+    )
+
+LLAMOLOTL_CONTROL_BASE_URLS = [url.strip() for url in LLAMOLOTL_CONTROL_BASE_URLS.split(";")]
+LLAMOLOTL_CONTROL_BASE_URLS = PersistentConfig(
+    "LLAMOLOTL_CONTROL_BASE_URLS", "llamolotl.control_base_urls", LLAMOLOTL_CONTROL_BASE_URLS
+)
+
+LLAMOLOTL_API_CONFIGS = PersistentConfig(
+    "LLAMOLOTL_API_CONFIGS",
+    "llamolotl.api_configs",
+    {},
+)
+
+####################################
 # OPENAI_API
 ####################################
 

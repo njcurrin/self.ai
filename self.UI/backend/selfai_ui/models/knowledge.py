@@ -96,6 +96,7 @@ class KnowledgeForm(BaseModel):
     name: str
     description: str
     data: Optional[dict] = None
+    meta: Optional[dict] = None
     access_control: Optional[dict] = None
 
 

@@ -4,7 +4,8 @@
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { tick, getContext } from 'svelte';
 
-	import { models } from '$lib/stores';
+	import { models, modelLoadStatus } from '$lib/stores';
+	import ModelStatusDot from '$lib/components/common/ModelStatusDot.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -89,13 +90,16 @@
 							}}
 							on:focus={() => {}}
 						>
-							<div class="flex font-medium text-black dark:text-gray-100 line-clamp-1">
+							<div class="flex items-center font-medium text-black dark:text-gray-100 line-clamp-1">
 								<img
 									src={model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
 									alt={model?.name ?? model.id}
 									class="rounded-full size-6 items-center mr-2"
 								/>
 								{model.name}
+								<span class="ml-1.5">
+									<ModelStatusDot status={$modelLoadStatus[model.id] ?? $modelLoadStatus[model?.info?.base_model_id] ?? model?.status} />
+								</span>
 							</div>
 						</button>
 					{/each}

@@ -1,0 +1,1082 @@
+time="2026-03-15T09:21:24-07:00" level=warning msg="The \"GIT_AUTHOR_NAME\" variable is not set. Defaulting to a blank string."
+time="2026-03-15T09:21:24-07:00" level=warning msg="The \"GIT_AUTHOR_EMAIL\" variable is not set. Defaulting to a blank string."
+time="2026-03-15T09:21:24-07:00" level=warning msg="The \"GIT_COMMITTER_NAME\" variable is not set. Defaulting to a blank string."
+time="2026-03-15T09:21:24-07:00" level=warning msg="The \"GIT_COMMITTER_EMAIL\" variable is not set. Defaulting to a blank string."
+time="2026-03-15T09:21:24-07:00" level=warning msg="The \"WANDB_API_KEY\" variable is not set. Defaulting to a blank string."
+ Image local/self-llamolotl:latest Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 542B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 7.04kB done
+#2 DONE 0.0s
+
+#3 resolve image config for docker-image://docker.io/docker/dockerfile:1.5
+#3 DONE 1.1s
+
+#4 docker-image://docker.io/docker/dockerfile:1.5@sha256:39b85bbfa7536a5feceb7372a0817649ecb2724562a38360f4d6a7782a409b14
+#4 resolve docker.io/docker/dockerfile:1.5@sha256:39b85bbfa7536a5feceb7372a0817649ecb2724562a38360f4d6a7782a409b14 done
+#4 CACHED
+
+#5 [internal] load .dockerignore
+#5 transferring context: 157B done
+#5 DONE 0.0s
+
+#6 [internal] load metadata for docker.io/nvidia/cuda:13.1.0-devel-ubuntu22.04
+#6 DONE 0.5s
+
+#7 [axolotl-builder  1/18] FROM docker.io/nvidia/cuda:13.1.0-devel-ubuntu22.04@sha256:eaded8d05ec577d25b882256d99da4270caf4787ec5c79408b0c1286c1efc0f1
+#7 resolve docker.io/nvidia/cuda:13.1.0-devel-ubuntu22.04@sha256:eaded8d05ec577d25b882256d99da4270caf4787ec5c79408b0c1286c1efc0f1 done
+#7 DONE 0.0s
+
+#8 [axolotl-builder  7/18] RUN pip install --no-cache-dir flash-attn 2>/dev/null ||     (echo "Installing flash-attn from prebuilt wheel..." &&      PYTHON_CP="cp$(echo ${PYTHON_VERSION} | tr -d '.')" &&      TORCH_MAJOR_MINOR="$(echo 2.10.0 | grep -oP '^\d+\.\d+')" &&      TORCH_TAG="torch${TORCH_MAJOR_MINOR}" &&      case "amd64" in          amd64) ARCH_TAG="x86_64" ;;          arm64) ARCH_TAG="aarch64" ;;      esac &&      WHL_FILE="flash_attn-2.8.3+cu128${TORCH_TAG}-${PYTHON_CP}-${PYTHON_CP}-linux_${ARCH_TAG}.whl" &&      wget -q "https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.7.16/${WHL_FILE}" 2>/dev/null &&      pip install --no-cache-dir "${WHL_FILE}" &&      rm -f "${WHL_FILE}") ||     echo "Note: flash-attn not available, axolotl will use standard attention" &&     pip cache purge
+#8 CACHED
+
+#9 [axolotl-builder  8/18] RUN git clone --depth=1 https://github.com/axolotl-ai-cloud/axolotl.git /workspace/axolotl-src
+#9 CACHED
+
+#10 [axolotl-builder  2/18] RUN apt-get update &&     apt-get install -y --no-install-recommends --allow-change-held-packages         python3.11 python3.11-venv python3-pip git build-essential ninja-build         cmake libaio-dev pkg-config vim curl nano libnccl2 libnccl-dev rsync         ibverbs-providers ibverbs-utils infiniband-diags         librdmacm-dev librdmacm1 rdmacm-utils &&     rm -rf /var/cache/apt/archives &&     rm -rf /var/lib/apt/lists/*
+#10 CACHED
+
+#11 [axolotl-builder  3/18] RUN python3.11 -m venv /opt/venv
+#11 CACHED
+
+#12 [axolotl-builder  6/18] RUN pip install --no-cache-dir causal-conv1d mamba-ssm 2>/dev/null ||     echo "Note: causal_conv1d/mamba_ssm prebuilt wheels not available, skipping" &&     pip cache purge
+#12 CACHED
+
+#13 [axolotl-builder  9/18] WORKDIR /workspace/axolotl-src
+#13 CACHED
+
+#14 [axolotl-builder  4/18] WORKDIR /workspace
+#14 CACHED
+
+#15 [axolotl-builder  5/18] RUN pip install --upgrade pip packaging setuptools wheel psutil &&     pip install --no-cache-dir         torch==2.10.0+cu128 torchvision         --index-url https://download.pytorch.org/whl/cu128 &&     pip cache purge
+#15 CACHED
+
+#16 [axolotl-builder 10/18] RUN pip uninstall -y causal_conv1d 2>/dev/null; true
+#16 CACHED
+
+#17 [internal] load build context
+#17 transferring context: 182.52kB 0.1s done
+#17 DONE 0.1s
+
+#18 [axolotl-builder 11/18] RUN pip install --no-build-isolation -e ".[ring-flash-attn,ray]" &&     pip cache purge
+#18 0.360 Obtaining file:///workspace/axolotl-src
+#18 0.360   Checking if build backend supports build_editable: started
+#18 0.445   Checking if build backend supports build_editable: finished with status 'done'
+#18 0.445   Preparing editable metadata (pyproject.toml): started
+#18 0.585   Preparing editable metadata (pyproject.toml): finished with status 'done'
+#18 0.651 Collecting bitsandbytes==0.49.1 (from axolotl==0.16.0.dev0)
+#18 0.732   Downloading bitsandbytes-0.49.1-py3-none-manylinux_2_24_x86_64.whl.metadata (10 kB)
+#18 0.737 Requirement already satisfied: triton>=3.4.0 in /opt/venv/lib/python3.11/site-packages (from axolotl==0.16.0.dev0) (3.6.0)
+#18 0.764 Collecting xformers>=0.0.23.post1 (from axolotl==0.16.0.dev0)
+#18 0.771   Downloading xformers-0.0.35-py39-none-manylinux_2_28_x86_64.whl.metadata (1.2 kB)
+#18 0.785 Collecting liger-kernel==0.7.0 (from axolotl==0.16.0.dev0)
+#18 0.793   Downloading liger_kernel-0.7.0-py3-none-any.whl.metadata (25 kB)
+#18 0.799 Requirement already satisfied: packaging==26.0 in /opt/venv/lib/python3.11/site-packages (from axolotl==0.16.0.dev0) (26.0)
+#18 0.836 Collecting huggingface_hub>=1.1.7 (from axolotl==0.16.0.dev0)
+#18 0.844   Downloading huggingface_hub-1.7.1-py3-none-any.whl.metadata (13 kB)
+#18 0.867 Collecting peft>=0.18.1 (from axolotl==0.16.0.dev0)
+#18 0.874   Downloading peft-0.18.1-py3-none-any.whl.metadata (14 kB)
+#18 0.970 Collecting tokenizers>=0.22.1 (from axolotl==0.16.0.dev0)
+#18 0.977   Downloading tokenizers-0.22.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+#18 1.004 Collecting transformers==5.3.0 (from axolotl==0.16.0.dev0)
+#18 1.011   Downloading transformers-5.3.0-py3-none-any.whl.metadata (32 kB)
+#18 1.056 Collecting accelerate==1.13.0 (from axolotl==0.16.0.dev0)
+#18 1.063   Downloading accelerate-1.13.0-py3-none-any.whl.metadata (19 kB)
+#18 1.085 Collecting datasets==4.5.0 (from axolotl==0.16.0.dev0)
+#18 1.095   Downloading datasets-4.5.0-py3-none-any.whl.metadata (19 kB)
+#18 1.130 Collecting trl==0.29.0 (from axolotl==0.16.0.dev0)
+#18 1.138   Downloading trl-0.29.0-py3-none-any.whl.metadata (11 kB)
+#18 1.182 Collecting hf_xet==1.3.2 (from axolotl==0.16.0.dev0)
+#18 1.189   Downloading hf_xet-1.3.2-cp37-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (4.9 kB)
+#18 1.205 Collecting kernels==0.12.2 (from axolotl==0.16.0.dev0)
+#18 1.212   Downloading kernels-0.12.2-py3-none-any.whl.metadata (2.3 kB)
+#18 1.228 Collecting fla-core==0.4.1 (from axolotl==0.16.0.dev0)
+#18 1.236   Downloading fla_core-0.4.1-py3-none-any.whl.metadata (38 kB)
+#18 1.249 Collecting flash-linear-attention==0.4.1 (from axolotl==0.16.0.dev0)
+#18 1.257   Downloading flash_linear_attention-0.4.1-py3-none-any.whl.metadata (39 kB)
+#18 1.273 Collecting trackio>=0.16.1 (from axolotl==0.16.0.dev0)
+#18 1.282   Downloading trackio-0.19.0-py3-none-any.whl.metadata (14 kB)
+#18 1.286 Requirement already satisfied: typing-extensions>=4.15.0 in /opt/venv/lib/python3.11/site-packages (from axolotl==0.16.0.dev0) (4.15.0)
+#18 1.300 Collecting optimum==1.16.2 (from axolotl==0.16.0.dev0)
+#18 1.308   Downloading optimum-1.16.2-py3-none-any.whl.metadata (17 kB)
+#18 1.339 Collecting hf_transfer (from axolotl==0.16.0.dev0)
+#18 1.347   Downloading hf_transfer-0.1.9-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (1.7 kB)
+#18 1.399 Collecting sentencepiece (from axolotl==0.16.0.dev0)
+#18 1.406   Downloading sentencepiece-0.2.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (10 kB)
+#18 1.463 Collecting gradio<7.0,>=6.2.0 (from axolotl==0.16.0.dev0)
+#18 1.471   Downloading gradio-6.9.0-py3-none-any.whl.metadata (16 kB)
+#18 1.593 Collecting modal==1.3.0.post1 (from axolotl==0.16.0.dev0)
+#18 1.601   Downloading modal-1.3.0.post1-py3-none-any.whl.metadata (2.5 kB)
+#18 1.671 Collecting pydantic>=2.10.6 (from axolotl==0.16.0.dev0)
+#18 1.678   Downloading pydantic-2.12.5-py3-none-any.whl.metadata (90 kB)
+#18 1.694 Collecting addict (from axolotl==0.16.0.dev0)
+#18 1.701   Downloading addict-2.4.0-py3-none-any.whl.metadata (1.0 kB)
+#18 1.714 Collecting fire (from axolotl==0.16.0.dev0)
+#18 1.721   Downloading fire-0.7.1-py3-none-any.whl.metadata (5.8 kB)
+#18 1.768 Collecting PyYAML>=6.0 (from axolotl==0.16.0.dev0)
+#18 1.775   Downloading pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+#18 1.794 Collecting requests (from axolotl==0.16.0.dev0)
+#18 1.801   Downloading requests-2.32.5-py3-none-any.whl.metadata (4.9 kB)
+#18 1.856 Collecting wandb (from axolotl==0.16.0.dev0)
+#18 1.865   Downloading wandb-0.25.1-py3-none-manylinux_2_28_x86_64.whl.metadata (11 kB)
+#18 1.882 Collecting einops (from axolotl==0.16.0.dev0)
+#18 1.889   Downloading einops-0.8.2-py3-none-any.whl.metadata (13 kB)
+#18 1.903 Collecting colorama (from axolotl==0.16.0.dev0)
+#18 1.909   Downloading colorama-0.4.6-py2.py3-none-any.whl.metadata (17 kB)
+#18 1.968 Collecting numba>=0.61.2 (from axolotl==0.16.0.dev0)
+#18 1.975   Downloading numba-0.64.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.9 kB)
+#18 1.977 Requirement already satisfied: numpy>=2.2.6 in /opt/venv/lib/python3.11/site-packages (from axolotl==0.16.0.dev0) (2.3.5)
+#18 1.988 Collecting evaluate==0.4.1 (from axolotl==0.16.0.dev0)
+#18 1.996   Downloading evaluate-0.4.1-py3-none-any.whl.metadata (9.4 kB)
+#18 2.082 Collecting scipy (from axolotl==0.16.0.dev0)
+#18 2.089   Downloading scipy-1.17.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (62 kB)
+#18 2.107 Collecting nvidia-ml-py==12.560.30 (from axolotl==0.16.0.dev0)
+#18 2.114   Downloading nvidia_ml_py-12.560.30-py3-none-any.whl.metadata (8.6 kB)
+#18 2.131 Collecting art (from axolotl==0.16.0.dev0)
+#18 2.138   Downloading art-6.5-py3-none-any.whl.metadata (72 kB)
+#18 2.158 Collecting tensorboard (from axolotl==0.16.0.dev0)
+#18 2.164   Downloading tensorboard-2.20.0-py3-none-any.whl.metadata (1.8 kB)
+#18 2.178 Collecting python-dotenv==1.0.1 (from axolotl==0.16.0.dev0)
+#18 2.185   Downloading python_dotenv-1.0.1-py3-none-any.whl.metadata (23 kB)
+#18 2.202 Collecting s3fs>=2024.5.0 (from axolotl==0.16.0.dev0)
+#18 2.209   Downloading s3fs-2026.2.0-py3-none-any.whl.metadata (1.2 kB)
+#18 2.225 Collecting gcsfs>=2025.3.0 (from axolotl==0.16.0.dev0)
+#18 2.234   Downloading gcsfs-2026.2.0-py3-none-any.whl.metadata (2.1 kB)
+#18 2.249 Collecting adlfs>=2024.5.0 (from axolotl==0.16.0.dev0)
+#18 2.256   Downloading adlfs-2026.2.0-py3-none-any.whl.metadata (7.6 kB)
+#18 2.271 Collecting ocifs==1.3.2 (from axolotl==0.16.0.dev0)
+#18 2.278   Downloading ocifs-1.3.2-py3-none-any.whl.metadata (9.0 kB)
+#18 2.360 Collecting zstandard==0.22.0 (from axolotl==0.16.0.dev0)
+#18 2.368   Downloading zstandard-0.22.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (2.9 kB)
+#18 2.401 Collecting fastcore (from axolotl==0.16.0.dev0)
+#18 2.409   Downloading fastcore-1.12.24-py3-none-any.whl.metadata (3.4 kB)
+#18 2.421 Collecting lm_eval==0.4.7 (from axolotl==0.16.0.dev0)
+#18 2.429   Downloading lm_eval-0.4.7-py3-none-any.whl.metadata (46 kB)
+#18 2.449 Collecting langdetect==1.0.9 (from axolotl==0.16.0.dev0)
+#18 2.456   Downloading langdetect-1.0.9.tar.gz (981 kB)
+#18 2.476      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 981.5/981.5 kB 63.4 MB/s  0:00:00
+#18 2.505   Preparing metadata (pyproject.toml): started
+#18 2.607   Preparing metadata (pyproject.toml): finished with status 'done'
+#18 2.620 Collecting immutabledict==4.2.0 (from axolotl==0.16.0.dev0)
+#18 2.630   Downloading immutabledict-4.2.0-py3-none-any.whl.metadata (3.4 kB)
+#18 2.642 Collecting antlr4-python3-runtime==4.13.2 (from axolotl==0.16.0.dev0)
+#18 2.649   Downloading antlr4_python3_runtime-4.13.2-py3-none-any.whl.metadata (304 bytes)
+#18 2.665 Collecting torchao==0.16.0 (from axolotl==0.16.0.dev0)
+#18 2.674   Downloading torchao-0.16.0-cp310-abi3-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (20 kB)
+#18 2.689 Collecting openenv-core==0.1.0 (from axolotl==0.16.0.dev0)
+#18 2.702   Downloading openenv_core-0.1.0-py3-none-any.whl.metadata (6.5 kB)
+#18 2.719 Collecting schedulefree==1.4.1 (from axolotl==0.16.0.dev0)
+#18 2.727   Downloading schedulefree-1.4.1-py3-none-any.whl.metadata (9.7 kB)
+#18 2.738 Collecting axolotl-contribs-lgpl==0.0.7 (from axolotl==0.16.0.dev0)
+#18 2.746   Downloading axolotl_contribs_lgpl-0.0.7.tar.gz (10 kB)
+#18 2.751   Preparing metadata (pyproject.toml): started
+#18 2.863   Preparing metadata (pyproject.toml): finished with status 'done'
+#18 2.878 Collecting axolotl-contribs-mit==0.0.6 (from axolotl==0.16.0.dev0)
+#18 2.885   Downloading axolotl_contribs_mit-0.0.6.tar.gz (25 kB)
+#18 2.892   Preparing metadata (pyproject.toml): started
+#18 3.008   Preparing metadata (pyproject.toml): finished with status 'done'
+#18 3.031 Collecting posthog==6.7.11 (from axolotl==0.16.0.dev0)
+#18 3.039   Downloading posthog-6.7.11-py3-none-any.whl.metadata (6.0 kB)
+#18 3.056 Collecting mistral-common==1.8.8 (from axolotl==0.16.0.dev0)
+#18 3.063   Downloading mistral_common-1.8.8-py3-none-any.whl.metadata (5.3 kB)
+#18 3.066 Requirement already satisfied: torch==2.10.0+cu128 in /opt/venv/lib/python3.11/site-packages (from axolotl==0.16.0.dev0) (2.10.0+cu128)
+#18 3.138 Collecting ray>=2.52.1 (from ray[train]>=2.52.1; extra == "ray"->axolotl==0.16.0.dev0)
+#18 3.147   Downloading ray-2.54.0-cp311-cp311-manylinux2014_x86_64.whl.metadata (21 kB)
+#18 3.185 Collecting flash-attn==2.8.3 (from axolotl==0.16.0.dev0)
+#18 3.195   Downloading flash_attn-2.8.3.tar.gz (8.4 MB)
+#18 3.279      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 8.4/8.4 MB 102.5 MB/s  0:00:00
+#18 4.526   Preparing metadata (pyproject.toml): started
+#18 6.230   Preparing metadata (pyproject.toml): finished with status 'done'
+#18 6.245 Collecting ring-flash-attn>=0.1.7 (from axolotl==0.16.0.dev0)
+#18 6.253   Downloading ring_flash_attn-0.1.8-py3-none-any.whl.metadata (9.4 kB)
+#18 6.256 Requirement already satisfied: psutil in /opt/venv/lib/python3.11/site-packages (from accelerate==1.13.0->axolotl==0.16.0.dev0) (7.2.2)
+#18 6.379 Collecting safetensors>=0.4.3 (from accelerate==1.13.0->axolotl==0.16.0.dev0)
+#18 6.391   Downloading safetensors-0.7.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.1 kB)
+#18 6.402 Requirement already satisfied: filelock in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (3.20.0)
+#18 6.402 Requirement already satisfied: sympy>=1.13.3 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (1.14.0)
+#18 6.403 Requirement already satisfied: networkx>=2.5.1 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (3.6.1)
+#18 6.403 Requirement already satisfied: jinja2 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (3.1.6)
+#18 6.403 Requirement already satisfied: fsspec>=0.8.5 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (2025.12.0)
+#18 6.403 Requirement already satisfied: cuda-bindings==12.9.4 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (12.9.4)
+#18 6.403 Requirement already satisfied: nvidia-cuda-nvrtc-cu12==12.8.93 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (12.8.93)
+#18 6.404 Requirement already satisfied: nvidia-cuda-runtime-cu12==12.8.90 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (12.8.90)
+#18 6.404 Requirement already satisfied: nvidia-cuda-cupti-cu12==12.8.90 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (12.8.90)
+#18 6.404 Requirement already satisfied: nvidia-cudnn-cu12==9.10.2.21 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (9.10.2.21)
+#18 6.405 Requirement already satisfied: nvidia-cublas-cu12==12.8.4.1 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (12.8.4.1)
+#18 6.405 Requirement already satisfied: nvidia-cufft-cu12==11.3.3.83 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (11.3.3.83)
+#18 6.405 Requirement already satisfied: nvidia-curand-cu12==10.3.9.90 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (10.3.9.90)
+#18 6.405 Requirement already satisfied: nvidia-cusolver-cu12==11.7.3.90 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (11.7.3.90)
+#18 6.406 Requirement already satisfied: nvidia-cusparse-cu12==12.5.8.93 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (12.5.8.93)
+#18 6.406 Requirement already satisfied: nvidia-cusparselt-cu12==0.7.1 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (0.7.1)
+#18 6.406 Requirement already satisfied: nvidia-nccl-cu12==2.27.5 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (2.27.5)
+#18 6.406 Requirement already satisfied: nvidia-nvshmem-cu12==3.4.5 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (3.4.5)
+#18 6.407 Requirement already satisfied: nvidia-nvtx-cu12==12.8.90 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (12.8.90)
+#18 6.407 Requirement already satisfied: nvidia-nvjitlink-cu12==12.8.93 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (12.8.93)
+#18 6.407 Requirement already satisfied: nvidia-cufile-cu12==1.13.1.3 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (1.13.1.3)
+#18 6.409 Requirement already satisfied: cuda-pathfinder~=1.1 in /opt/venv/lib/python3.11/site-packages (from cuda-bindings==12.9.4->torch==2.10.0+cu128->axolotl==0.16.0.dev0) (1.2.2)
+#18 6.458 Collecting pyarrow>=21.0.0 (from datasets==4.5.0->axolotl==0.16.0.dev0)
+#18 6.465   Downloading pyarrow-23.0.1-cp311-cp311-manylinux_2_28_x86_64.whl.metadata (3.1 kB)
+#18 6.477 Collecting dill<0.4.1,>=0.3.0 (from datasets==4.5.0->axolotl==0.16.0.dev0)
+#18 6.485   Downloading dill-0.4.0-py3-none-any.whl.metadata (10 kB)
+#18 6.552 Collecting pandas (from datasets==4.5.0->axolotl==0.16.0.dev0)
+#18 6.560   Downloading pandas-3.0.1-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (79 kB)
+#18 6.589 Collecting httpx<1.0.0 (from datasets==4.5.0->axolotl==0.16.0.dev0)
+#18 6.595   Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+#18 6.615 Collecting tqdm>=4.66.3 (from datasets==4.5.0->axolotl==0.16.0.dev0)
+#18 6.622   Downloading tqdm-4.67.3-py3-none-any.whl.metadata (57 kB)
+#18 6.673 Collecting xxhash (from datasets==4.5.0->axolotl==0.16.0.dev0)
+#18 6.680   Downloading xxhash-3.6.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (13 kB)
+#18 6.696 Collecting multiprocess<0.70.19 (from datasets==4.5.0->axolotl==0.16.0.dev0)
+#18 6.703   Downloading multiprocess-0.70.18-py311-none-any.whl.metadata (7.5 kB)
+#18 6.721 Collecting fsspec>=0.8.5 (from torch==2.10.0+cu128->axolotl==0.16.0.dev0)
+#18 6.728   Downloading fsspec-2025.10.0-py3-none-any.whl.metadata (10 kB)
+#18 6.770 Collecting responses<0.19 (from evaluate==0.4.1->axolotl==0.16.0.dev0)
+#18 6.778   Downloading responses-0.18.0-py3-none-any.whl.metadata (29 kB)
+#18 6.800 Collecting six (from langdetect==1.0.9->axolotl==0.16.0.dev0)
+#18 6.807   Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+#18 6.823 Collecting jsonlines (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 6.829   Downloading jsonlines-4.0.0-py3-none-any.whl.metadata (1.6 kB)
+#18 6.941 Collecting numexpr (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 6.948   Downloading numexpr-2.14.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (9.0 kB)
+#18 6.966 Collecting pybind11>=2.6.2 (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 6.973   Downloading pybind11-3.0.2-py3-none-any.whl.metadata (10 kB)
+#18 6.994 Collecting pytablewriter (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 7.000   Downloading pytablewriter-1.2.1-py3-none-any.whl.metadata (38 kB)
+#18 7.018 Collecting rouge-score>=0.0.4 (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 7.025   Downloading rouge_score-0.1.2.tar.gz (17 kB)
+#18 7.031   Preparing metadata (pyproject.toml): started
+#18 7.133   Preparing metadata (pyproject.toml): finished with status 'done'
+#18 7.148 Collecting sacrebleu>=1.5.0 (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 7.155   Downloading sacrebleu-2.6.0-py3-none-any.whl.metadata (39 kB)
+#18 7.209 Collecting scikit-learn>=0.24.1 (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 7.216   Downloading scikit_learn-1.8.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (11 kB)
+#18 7.232 Collecting sqlitedict (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 7.238   Downloading sqlitedict-2.1.0.tar.gz (21 kB)
+#18 7.244   Preparing metadata (pyproject.toml): started
+#18 7.348   Preparing metadata (pyproject.toml): finished with status 'done'
+#18 7.360 Collecting tqdm-multiprocess (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 7.367   Downloading tqdm_multiprocess-0.0.11-py3-none-any.whl.metadata (5.7 kB)
+#18 7.381 Collecting word2number (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 7.388   Downloading word2number-1.1.zip (9.7 kB)
+#18 7.397   Preparing metadata (pyproject.toml): started
+#18 7.505   Preparing metadata (pyproject.toml): finished with status 'done'
+#18 7.520 Collecting more_itertools (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 7.526   Downloading more_itertools-10.8.0-py3-none-any.whl.metadata (39 kB)
+#18 7.548 Collecting jsonschema>=4.21.1 (from mistral-common==1.8.8->axolotl==0.16.0.dev0)
+#18 7.555   Downloading jsonschema-4.26.0-py3-none-any.whl.metadata (7.6 kB)
+#18 7.582 Collecting tiktoken>=0.7.0 (from mistral-common==1.8.8->axolotl==0.16.0.dev0)
+#18 7.589   Downloading tiktoken-0.12.0-cp311-cp311-manylinux_2_28_x86_64.whl.metadata (6.7 kB)
+#18 7.591 Requirement already satisfied: pillow>=10.3.0 in /opt/venv/lib/python3.11/site-packages (from mistral-common==1.8.8->axolotl==0.16.0.dev0) (12.0.0)
+#18 7.603 Collecting pydantic-extra-types>=2.10.5 (from pydantic-extra-types[pycountry]>=2.10.5->mistral-common==1.8.8->axolotl==0.16.0.dev0)
+#18 7.609   Downloading pydantic_extra_types-2.11.0-py3-none-any.whl.metadata (4.0 kB)
+#18 8.002 Collecting aiohttp (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 8.009   Downloading aiohttp-3.13.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+#18 8.050 Collecting cbor2 (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 8.057   Downloading cbor2-5.8.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (5.4 kB)
+#18 8.074 Collecting certifi (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 8.080   Downloading certifi-2026.2.25-py3-none-any.whl.metadata (2.5 kB)
+#18 8.095 Collecting click~=8.1 (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 8.102   Downloading click-8.3.1-py3-none-any.whl.metadata (2.6 kB)
+#18 8.120 Collecting grpclib<0.4.10,>=0.4.7 (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 8.127   Downloading grpclib-0.4.9-py3-none-any.whl.metadata (6.1 kB)
+#18 8.223 Collecting protobuf!=4.24.0,<7.0,>=3.19 (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 8.229   Downloading protobuf-6.33.5-cp39-abi3-manylinux2014_x86_64.whl.metadata (593 bytes)
+#18 8.256 Collecting rich>=12.0.0 (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 8.263   Downloading rich-14.3.3-py3-none-any.whl.metadata (18 kB)
+#18 8.280 Collecting synchronicity~=0.11.1 (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 8.286   Downloading synchronicity-0.11.1-py3-none-any.whl.metadata (14 kB)
+#18 8.298 Collecting toml (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 8.305   Downloading toml-0.10.2-py2.py3-none-any.whl.metadata (7.1 kB)
+#18 8.321 Collecting typer>=0.9 (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 8.327   Downloading typer-0.24.1-py3-none-any.whl.metadata (16 kB)
+#18 8.340 Collecting types-certifi (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 8.347   Downloading types_certifi-2021.10.8.3-py3-none-any.whl.metadata (1.4 kB)
+#18 8.360 Collecting types-toml (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 8.366   Downloading types_toml-0.10.8.20240310-py3-none-any.whl.metadata (1.5 kB)
+#18 8.413 Collecting watchfiles (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 8.420   Downloading watchfiles-1.1.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.9 kB)
+#18 8.473 Collecting oci>=2.43.1 (from ocifs==1.3.2->axolotl==0.16.0.dev0)
+#18 8.479   Downloading oci-2.168.1-py3-none-any.whl.metadata (5.8 kB)
+#18 8.513 Collecting fastapi>=0.104.0 (from openenv-core==0.1.0->axolotl==0.16.0.dev0)
+#18 8.520   Downloading fastapi-0.135.1-py3-none-any.whl.metadata (30 kB)
+#18 8.541 Collecting uvicorn>=0.24.0 (from openenv-core==0.1.0->axolotl==0.16.0.dev0)
+#18 8.548   Downloading uvicorn-0.41.0-py3-none-any.whl.metadata (6.7 kB)
+#18 8.566 Collecting coloredlogs (from optimum==1.16.2->axolotl==0.16.0.dev0)
+#18 8.573   Downloading coloredlogs-15.0.1-py2.py3-none-any.whl.metadata (12 kB)
+#18 8.600 Collecting python-dateutil>=2.2 (from posthog==6.7.11->axolotl==0.16.0.dev0)
+#18 8.607   Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+#18 8.620 Collecting backoff>=1.10.0 (from posthog==6.7.11->axolotl==0.16.0.dev0)
+#18 8.627   Downloading backoff-2.2.1-py3-none-any.whl.metadata (14 kB)
+#18 8.643 Collecting distro>=1.5.0 (from posthog==6.7.11->axolotl==0.16.0.dev0)
+#18 8.650   Downloading distro-1.9.0-py3-none-any.whl.metadata (6.8 kB)
+#18 8.973 Collecting regex!=2019.12.17 (from transformers==5.3.0->axolotl==0.16.0.dev0)
+#18 8.983   Downloading regex-2026.2.28-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+#18 9.055 Collecting aiofiles<25.0,>=22.0 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#18 9.062   Downloading aiofiles-24.1.0-py3-none-any.whl.metadata (10 kB)
+#18 9.078 Collecting anyio<5.0,>=3.0 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#18 9.085   Downloading anyio-4.12.1-py3-none-any.whl.metadata (4.3 kB)
+#18 9.111 Collecting brotli>=1.1.0 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#18 9.118   Downloading brotli-1.2.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (6.1 kB)
+#18 9.137 Collecting ffmpy (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#18 9.145   Downloading ffmpy-1.0.0-py3-none-any.whl.metadata (3.0 kB)
+#18 9.163 Collecting gradio-client==2.3.0 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#18 9.171   Downloading gradio_client-2.3.0-py3-none-any.whl.metadata (7.1 kB)
+#18 9.184 Collecting groovy~=0.1 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#18 9.191   Downloading groovy-0.1.2-py3-none-any.whl.metadata (6.1 kB)
+#18 9.199 Requirement already satisfied: markupsafe<4.0,>=2.0 in /opt/venv/lib/python3.11/site-packages (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0) (3.0.2)
+#18 9.340 Collecting orjson~=3.0 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#18 9.347   Downloading orjson-3.11.7-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (41 kB)
+#18 9.390 Collecting pydub (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#18 9.397   Downloading pydub-0.25.1-py2.py3-none-any.whl.metadata (1.4 kB)
+#18 9.408 Collecting python-multipart>=0.0.18 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#18 9.415   Downloading python_multipart-0.0.22-py3-none-any.whl.metadata (1.8 kB)
+#18 9.439 Collecting pytz>=2017.2 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#18 9.446   Downloading pytz-2026.1.post1-py2.py3-none-any.whl.metadata (22 kB)
+#18 9.458 Collecting safehttpx<0.2.0,>=0.1.7 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#18 9.466   Downloading safehttpx-0.1.7-py3-none-any.whl.metadata (4.2 kB)
+#18 9.478 Collecting semantic-version~=2.0 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#18 9.486   Downloading semantic_version-2.10.0-py2.py3-none-any.whl.metadata (9.7 kB)
+#18 9.505 Collecting starlette<1.0,>=0.40.0 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#18 9.512   Downloading starlette-0.52.1-py3-none-any.whl.metadata (6.3 kB)
+#18 9.526 Collecting tomlkit<0.14.0,>=0.12.0 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#18 9.532   Downloading tomlkit-0.13.3-py3-none-any.whl.metadata (2.8 kB)
+#18 9.557 Collecting idna>=2.8 (from anyio<5.0,>=3.0->gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#18 9.564   Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+#18 9.579 Collecting typing-inspection>=0.4.2 (from fastapi>=0.104.0->openenv-core==0.1.0->axolotl==0.16.0.dev0)
+#18 9.586   Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+#18 9.597 Collecting annotated-doc>=0.0.2 (from fastapi>=0.104.0->openenv-core==0.1.0->axolotl==0.16.0.dev0)
+#18 9.604   Downloading annotated_doc-0.0.4-py3-none-any.whl.metadata (6.6 kB)
+#18 9.620 Collecting h2<5,>=3.1.0 (from grpclib<0.4.10,>=0.4.7->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 9.626   Downloading h2-4.3.0-py3-none-any.whl.metadata (5.1 kB)
+#18 9.760 Collecting multidict (from grpclib<0.4.10,>=0.4.7->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 9.767   Downloading multidict-6.7.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (5.3 kB)
+#18 9.822 Collecting hyperframe<7,>=6.1 (from h2<5,>=3.1.0->grpclib<0.4.10,>=0.4.7->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 9.829   Downloading hyperframe-6.1.0-py3-none-any.whl.metadata (4.3 kB)
+#18 9.840 Collecting hpack<5,>=4.1 (from h2<5,>=3.1.0->grpclib<0.4.10,>=0.4.7->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 9.846   Downloading hpack-4.1.0-py3-none-any.whl.metadata (4.6 kB)
+#18 9.865 Collecting httpcore==1.* (from httpx<1.0.0->datasets==4.5.0->axolotl==0.16.0.dev0)
+#18 9.932   Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+#18 9.960 Collecting h11>=0.16 (from httpcore==1.*->httpx<1.0.0->datasets==4.5.0->axolotl==0.16.0.dev0)
+#18 9.974   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+#18 9.979 INFO: pip is looking at multiple versions of huggingface-hub to determine which version is compatible with other requirements. This could take a while.
+#18 9.979 Collecting huggingface_hub>=1.1.7 (from axolotl==0.16.0.dev0)
+#18 9.988   Downloading huggingface_hub-1.7.0-py3-none-any.whl.metadata (13 kB)
+#18 10.15 Collecting annotated-types>=0.6.0 (from pydantic>=2.10.6->axolotl==0.16.0.dev0)
+#18 10.16   Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+#18 10.53 Collecting pydantic-core==2.41.5 (from pydantic>=2.10.6->axolotl==0.16.0.dev0)
+#18 10.53   Downloading pydantic_core-2.41.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+#18 10.60 Collecting charset_normalizer<4,>=2 (from requests->axolotl==0.16.0.dev0)
+#18 10.61   Downloading charset_normalizer-3.4.5-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (39 kB)
+#18 10.63 Collecting urllib3<3,>=1.21.1 (from requests->axolotl==0.16.0.dev0)
+#18 10.63   Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+#18 10.67 Collecting shellingham>=1.3.0 (from typer>=0.9->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 10.68   Downloading shellingham-1.5.4-py2.py3-none-any.whl.metadata (3.5 kB)
+#18 10.70 Collecting azure-core<2.0.0,>=1.28.0 (from adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 10.71   Downloading azure_core-1.38.3-py3-none-any.whl.metadata (48 kB)
+#18 10.73 Collecting azure-datalake-store<0.1,>=0.0.53 (from adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 10.73   Downloading azure_datalake_store-0.0.53-py2.py3-none-any.whl.metadata (19 kB)
+#18 10.75 Collecting azure-identity (from adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 10.76   Downloading azure_identity-1.25.3-py3-none-any.whl.metadata (91 kB)
+#18 10.77 Collecting azure-storage-blob>=12.17.0 (from azure-storage-blob[aio]>=12.17.0->adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 10.78   Downloading azure_storage_blob-12.28.0-py3-none-any.whl.metadata (26 kB)
+#18 10.84 Collecting cffi (from azure-datalake-store<0.1,>=0.0.53->adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 10.85   Downloading cffi-2.0.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+#18 10.87 Collecting msal<2,>=1.16.0 (from azure-datalake-store<0.1,>=0.0.53->adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 10.87   Downloading msal-1.35.1-py3-none-any.whl.metadata (11 kB)
+#18 10.89 Collecting PyJWT<3,>=1.0.0 (from PyJWT[crypto]<3,>=1.0.0->msal<2,>=1.16.0->azure-datalake-store<0.1,>=0.0.53->adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 10.90   Downloading pyjwt-2.12.1-py3-none-any.whl.metadata (4.1 kB)
+#18 11.17 Collecting cryptography<49,>=2.5 (from msal<2,>=1.16.0->azure-datalake-store<0.1,>=0.0.53->adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 11.18   Downloading cryptography-46.0.5-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (5.7 kB)
+#18 11.23 Collecting aiohappyeyeballs>=2.5.0 (from aiohttp->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 11.24   Downloading aiohappyeyeballs-2.6.1-py3-none-any.whl.metadata (5.9 kB)
+#18 11.25 Collecting aiosignal>=1.4.0 (from aiohttp->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 11.26   Downloading aiosignal-1.4.0-py3-none-any.whl.metadata (3.7 kB)
+#18 11.27 Collecting attrs>=17.3.0 (from aiohttp->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 11.28   Downloading attrs-25.4.0-py3-none-any.whl.metadata (10 kB)
+#18 11.32 Collecting frozenlist>=1.1.1 (from aiohttp->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 11.33   Downloading frozenlist-1.8.0-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (20 kB)
+#18 11.37 Collecting propcache>=0.2.0 (from aiohttp->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 11.38   Downloading propcache-0.4.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (13 kB)
+#18 11.53 Collecting yarl<2.0,>=1.17.0 (from aiohttp->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 11.54   Downloading yarl-1.23.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (79 kB)
+#18 11.60 Collecting isodate>=0.6.1 (from azure-storage-blob>=12.17.0->azure-storage-blob[aio]>=12.17.0->adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 11.60   Downloading isodate-0.7.2-py3-none-any.whl.metadata (11 kB)
+#18 11.63 Collecting pycparser (from cffi->azure-datalake-store<0.1,>=0.0.53->adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 11.64   Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+#18 11.65 Collecting decorator>4.1.2 (from gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#18 11.66   Downloading decorator-5.2.1-py3-none-any.whl.metadata (3.9 kB)
+#18 11.66 INFO: pip is looking at multiple versions of gcsfs to determine which version is compatible with other requirements. This could take a while.
+#18 11.66 Collecting gcsfs>=2025.3.0 (from axolotl==0.16.0.dev0)
+#18 11.67   Downloading gcsfs-2026.1.0-py3-none-any.whl.metadata (2.1 kB)
+#18 11.68   Downloading gcsfs-2025.12.0-py3-none-any.whl.metadata (2.1 kB)
+#18 11.69   Downloading gcsfs-2025.10.0-py2.py3-none-any.whl.metadata (2.1 kB)
+#18 11.72 Collecting google-auth>=1.2 (from gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#18 11.73   Downloading google_auth-2.49.1-py3-none-any.whl.metadata (6.2 kB)
+#18 11.75 Collecting google-auth-oauthlib (from gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#18 11.76   Downloading google_auth_oauthlib-1.3.0-py3-none-any.whl.metadata (2.9 kB)
+#18 11.78 Collecting google-cloud-storage (from gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#18 11.78   Downloading google_cloud_storage-3.9.0-py3-none-any.whl.metadata (15 kB)
+#18 11.81 Collecting pyasn1-modules>=0.2.1 (from google-auth>=1.2->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#18 11.81   Downloading pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+#18 11.84 Collecting jsonschema-specifications>=2023.03.6 (from jsonschema>=4.21.1->mistral-common==1.8.8->axolotl==0.16.0.dev0)
+#18 11.85   Downloading jsonschema_specifications-2025.9.1-py3-none-any.whl.metadata (2.9 kB)
+#18 11.87 Collecting referencing>=0.28.4 (from jsonschema>=4.21.1->mistral-common==1.8.8->axolotl==0.16.0.dev0)
+#18 11.88   Downloading referencing-0.37.0-py3-none-any.whl.metadata (2.8 kB)
+#18 12.02 Collecting rpds-py>=0.25.0 (from jsonschema>=4.21.1->mistral-common==1.8.8->axolotl==0.16.0.dev0)
+#18 12.03   Downloading rpds_py-0.30.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.1 kB)
+#18 12.10 Collecting llvmlite<0.47,>=0.46.0dev0 (from numba>=0.61.2->axolotl==0.16.0.dev0)
+#18 12.11   Downloading llvmlite-0.46.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (5.0 kB)
+#18 12.14 Collecting pyOpenSSL<=25.3.0,>=17.5.0 (from oci>=2.43.1->ocifs==1.3.2->axolotl==0.16.0.dev0)
+#18 12.15   Downloading pyopenssl-25.3.0-py3-none-any.whl.metadata (17 kB)
+#18 12.16 Collecting circuitbreaker<3.0.0,>=1.3.1 (from oci>=2.43.1->ocifs==1.3.2->axolotl==0.16.0.dev0)
+#18 12.17   Downloading circuitbreaker-2.1.3-py3-none-any.whl.metadata (8.0 kB)
+#18 12.21 Collecting pyasn1<0.7.0,>=0.6.1 (from pyasn1-modules>=0.2.1->google-auth>=1.2->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#18 12.21   Downloading pyasn1-0.6.2-py3-none-any.whl.metadata (8.4 kB)
+#18 12.23 Collecting pycountry>=23 (from pydantic-extra-types[pycountry]>=2.10.5->mistral-common==1.8.8->axolotl==0.16.0.dev0)
+#18 12.24   Downloading pycountry-26.2.16-py3-none-any.whl.metadata (12 kB)
+#18 12.28 Collecting msgpack<2.0.0,>=1.0.0 (from ray>=2.52.1->ray[train]>=2.52.1; extra == "ray"->axolotl==0.16.0.dev0)
+#18 12.29   Downloading msgpack-1.1.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+#18 12.33 Collecting tensorboardX>=1.9 (from ray[train]>=2.52.1; extra == "ray"->axolotl==0.16.0.dev0)
+#18 12.34   Downloading tensorboardx-2.6.4-py3-none-any.whl.metadata (6.2 kB)
+#18 12.36 Collecting markdown-it-py>=2.2.0 (from rich>=12.0.0->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 12.37   Downloading markdown_it_py-4.0.0-py3-none-any.whl.metadata (7.3 kB)
+#18 12.39 Collecting pygments<3.0.0,>=2.13.0 (from rich>=12.0.0->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 12.39   Downloading pygments-2.19.2-py3-none-any.whl.metadata (2.5 kB)
+#18 12.41 Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->rich>=12.0.0->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#18 12.41   Downloading mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+#18 12.43 Collecting absl-py (from rouge-score>=0.0.4->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 12.44   Downloading absl_py-2.4.0-py3-none-any.whl.metadata (3.3 kB)
+#18 12.45 Collecting nltk (from rouge-score>=0.0.4->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 12.46   Downloading nltk-3.9.3-py3-none-any.whl.metadata (3.2 kB)
+#18 12.48 Collecting aiobotocore<4.0.0,>=2.19.0 (from s3fs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 12.49   Downloading aiobotocore-3.2.1-py3-none-any.whl.metadata (26 kB)
+#18 12.49 INFO: pip is looking at multiple versions of s3fs to determine which version is compatible with other requirements. This could take a while.
+#18 12.49 Collecting s3fs>=2024.5.0 (from axolotl==0.16.0.dev0)
+#18 12.50   Downloading s3fs-2026.1.0-py3-none-any.whl.metadata (1.2 kB)
+#18 12.51   Downloading s3fs-2025.12.0-py3-none-any.whl.metadata (1.2 kB)
+#18 12.52 Collecting aiobotocore<3.0.0,>=2.5.4 (from s3fs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 12.53   Downloading aiobotocore-2.26.0-py3-none-any.whl.metadata (25 kB)
+#18 12.53 Collecting s3fs>=2024.5.0 (from axolotl==0.16.0.dev0)
+#18 12.54   Downloading s3fs-2025.10.0-py3-none-any.whl.metadata (1.4 kB)
+#18 12.56 Collecting aioitertools<1.0.0,>=0.5.1 (from aiobotocore<3.0.0,>=2.5.4->s3fs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 12.57   Downloading aioitertools-0.13.0-py3-none-any.whl.metadata (3.3 kB)
+#18 12.72 Collecting botocore<1.41.6,>=1.41.0 (from aiobotocore<3.0.0,>=2.5.4->s3fs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 12.73   Downloading botocore-1.41.5-py3-none-any.whl.metadata (5.9 kB)
+#18 12.75 Collecting jmespath<2.0.0,>=0.7.1 (from aiobotocore<3.0.0,>=2.5.4->s3fs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 12.76   Downloading jmespath-1.1.0-py3-none-any.whl.metadata (7.6 kB)
+#18 13.05 Collecting wrapt<2.0.0,>=1.10.10 (from aiobotocore<3.0.0,>=2.5.4->s3fs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 13.05   Downloading wrapt-1.17.3-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.4 kB)
+#18 13.09 Collecting portalocker (from sacrebleu>=1.5.0->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 13.10   Downloading portalocker-3.2.0-py3-none-any.whl.metadata (8.7 kB)
+#18 13.11 Collecting tabulate>=0.8.9 (from sacrebleu>=1.5.0->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 13.12   Downloading tabulate-0.10.0-py3-none-any.whl.metadata (40 kB)
+#18 13.23 Collecting lxml (from sacrebleu>=1.5.0->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 13.23   Downloading lxml-6.0.2-cp311-cp311-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl.metadata (3.6 kB)
+#18 13.25 Collecting joblib>=1.3.0 (from scikit-learn>=0.24.1->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 13.26   Downloading joblib-1.5.3-py3-none-any.whl.metadata (5.5 kB)
+#18 13.27 Collecting threadpoolctl>=3.2.0 (from scikit-learn>=0.24.1->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 13.28   Downloading threadpoolctl-3.6.0-py3-none-any.whl.metadata (13 kB)
+#18 13.29 Requirement already satisfied: mpmath<1.4,>=1.1.0 in /opt/venv/lib/python3.11/site-packages (from sympy>=1.13.3->torch==2.10.0+cu128->axolotl==0.16.0.dev0) (1.3.0)
+#18 13.34 Collecting pandas (from datasets==4.5.0->axolotl==0.16.0.dev0)
+#18 13.34   Downloading pandas-2.3.3-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (91 kB)
+#18 13.46 Collecting pillow>=10.3.0 (from mistral-common==1.8.8->axolotl==0.16.0.dev0)
+#18 13.46   Downloading pillow-11.3.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (9.0 kB)
+#18 13.49 Collecting plotly<7.0.0,>=6.0.0 (from trackio>=0.16.1->axolotl==0.16.0.dev0)
+#18 13.50   Downloading plotly-6.6.0-py3-none-any.whl.metadata (8.5 kB)
+#18 13.52 Collecting authlib (from gradio[oauth]<7.0.0,>=6.8.0->trackio>=0.16.1->axolotl==0.16.0.dev0)
+#18 13.53   Downloading authlib-1.6.9-py2.py3-none-any.whl.metadata (9.8 kB)
+#18 13.54 Collecting itsdangerous (from gradio[oauth]<7.0.0,>=6.8.0->trackio>=0.16.1->axolotl==0.16.0.dev0)
+#18 13.55   Downloading itsdangerous-2.2.0-py3-none-any.whl.metadata (1.9 kB)
+#18 13.56 Collecting tzdata>=2022.7 (from pandas->datasets==4.5.0->axolotl==0.16.0.dev0)
+#18 13.57   Downloading tzdata-2025.3-py2.py3-none-any.whl.metadata (1.4 kB)
+#18 13.60 Collecting narwhals>=1.15.1 (from plotly<7.0.0,>=6.0.0->trackio>=0.16.1->axolotl==0.16.0.dev0)
+#18 13.61   Downloading narwhals-2.18.0-py3-none-any.whl.metadata (14 kB)
+#18 13.64 Collecting msal-extensions>=1.2.0 (from azure-identity->adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#18 13.65   Downloading msal_extensions-1.3.1-py3-none-any.whl.metadata (7.8 kB)
+#18 13.68 Collecting humanfriendly>=9.1 (from coloredlogs->optimum==1.16.2->axolotl==0.16.0.dev0)
+#18 13.68   Downloading humanfriendly-10.0-py2.py3-none-any.whl.metadata (9.2 kB)
+#18 13.70 Collecting termcolor (from fire->axolotl==0.16.0.dev0)
+#18 13.71   Downloading termcolor-3.3.0-py3-none-any.whl.metadata (6.5 kB)
+#18 13.73 Collecting requests-oauthlib>=0.7.0 (from google-auth-oauthlib->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#18 13.74   Downloading requests_oauthlib-2.0.0-py2.py3-none-any.whl.metadata (11 kB)
+#18 13.76 Collecting oauthlib>=3.0.0 (from requests-oauthlib>=0.7.0->google-auth-oauthlib->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#18 13.76   Downloading oauthlib-3.3.1-py3-none-any.whl.metadata (7.9 kB)
+#18 13.79 Collecting google-api-core<3.0.0,>=2.27.0 (from google-cloud-storage->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#18 13.80   Downloading google_api_core-2.30.0-py3-none-any.whl.metadata (3.1 kB)
+#18 13.82 Collecting google-cloud-core<3.0.0,>=2.4.2 (from google-cloud-storage->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#18 13.83   Downloading google_cloud_core-2.5.0-py3-none-any.whl.metadata (3.1 kB)
+#18 13.84 Collecting google-resumable-media<3.0.0,>=2.7.2 (from google-cloud-storage->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#18 13.85   Downloading google_resumable_media-2.8.0-py3-none-any.whl.metadata (2.6 kB)
+#18 13.90 Collecting google-crc32c<2.0.0,>=1.1.3 (from google-cloud-storage->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#18 13.90   Downloading google_crc32c-1.8.0-cp311-cp311-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl.metadata (1.7 kB)
+#18 13.92 Collecting googleapis-common-protos<2.0.0,>=1.56.3 (from google-api-core<3.0.0,>=2.27.0->google-cloud-storage->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#18 13.93   Downloading googleapis_common_protos-1.73.0-py3-none-any.whl.metadata (9.4 kB)
+#18 13.95 Collecting proto-plus<2.0.0,>=1.22.3 (from google-api-core<3.0.0,>=2.27.0->google-cloud-storage->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#18 13.96   Downloading proto_plus-1.27.1-py3-none-any.whl.metadata (2.2 kB)
+#18 14.02 Requirement already satisfied: setuptools>=38.3.0 in /opt/venv/lib/python3.11/site-packages (from pytablewriter->lm_eval==0.4.7->axolotl==0.16.0.dev0) (82.0.1)
+#18 14.04 Collecting DataProperty<2,>=1.1.0 (from pytablewriter->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 14.05   Downloading DataProperty-1.1.0-py3-none-any.whl.metadata (11 kB)
+#18 14.07 Collecting mbstrdecoder<2,>=1.0.0 (from pytablewriter->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 14.07   Downloading mbstrdecoder-1.1.4-py3-none-any.whl.metadata (4.3 kB)
+#18 14.09 Collecting pathvalidate<4,>=2.3.0 (from pytablewriter->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 14.10   Downloading pathvalidate-3.3.1-py3-none-any.whl.metadata (12 kB)
+#18 14.11 Collecting tabledata<2,>=1.3.1 (from pytablewriter->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 14.12   Downloading tabledata-1.3.4-py3-none-any.whl.metadata (3.7 kB)
+#18 14.13 Collecting tcolorpy<1,>=0.0.5 (from pytablewriter->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 14.14   Downloading tcolorpy-0.1.7-py3-none-any.whl.metadata (6.3 kB)
+#18 14.15 Collecting typepy<2,>=1.3.2 (from typepy[datetime]<2,>=1.3.2->pytablewriter->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 14.16   Downloading typepy-1.3.4-py3-none-any.whl.metadata (9.2 kB)
+#18 14.18 Collecting chardet<6,>=3.0.4 (from mbstrdecoder<2,>=1.0.0->pytablewriter->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#18 14.19   Downloading chardet-5.2.0-py3-none-any.whl.metadata (3.4 kB)
+#18 14.50 Collecting grpcio>=1.48.2 (from tensorboard->axolotl==0.16.0.dev0)
+#18 14.50   Downloading grpcio-1.78.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (3.8 kB)
+#18 14.54 Collecting markdown>=2.6.8 (from tensorboard->axolotl==0.16.0.dev0)
+#18 14.54   Downloading markdown-3.10.2-py3-none-any.whl.metadata (5.1 kB)
+#18 14.57 Collecting tensorboard-data-server<0.8.0,>=0.7.0 (from tensorboard->axolotl==0.16.0.dev0)
+#18 14.57   Downloading tensorboard_data_server-0.7.2-py3-none-manylinux_2_31_x86_64.whl.metadata (1.1 kB)
+#18 14.59 Collecting werkzeug>=1.0.1 (from tensorboard->axolotl==0.16.0.dev0)
+#18 14.60   Downloading werkzeug-3.1.6-py3-none-any.whl.metadata (4.0 kB)
+#18 14.63 Collecting gitpython!=3.1.29,>=1.0.0 (from wandb->axolotl==0.16.0.dev0)
+#18 14.64   Downloading gitpython-3.1.46-py3-none-any.whl.metadata (13 kB)
+#18 14.65 Collecting platformdirs (from wandb->axolotl==0.16.0.dev0)
+#18 14.66   Downloading platformdirs-4.9.4-py3-none-any.whl.metadata (4.7 kB)
+#18 14.71 Collecting sentry-sdk>=2.0.0 (from wandb->axolotl==0.16.0.dev0)
+#18 14.72   Downloading sentry_sdk-2.54.0-py2.py3-none-any.whl.metadata (10 kB)
+#18 14.74 Collecting gitdb<5,>=4.0.1 (from gitpython!=3.1.29,>=1.0.0->wandb->axolotl==0.16.0.dev0)
+#18 14.75   Downloading gitdb-4.0.12-py3-none-any.whl.metadata (1.2 kB)
+#18 14.76 Collecting smmap<6,>=3.0.1 (from gitdb<5,>=4.0.1->gitpython!=3.1.29,>=1.0.0->wandb->axolotl==0.16.0.dev0)
+#18 14.77   Downloading smmap-5.0.3-py3-none-any.whl.metadata (4.6 kB)
+#18 14.79 Downloading accelerate-1.13.0-py3-none-any.whl (383 kB)
+#18 14.81 Downloading antlr4_python3_runtime-4.13.2-py3-none-any.whl (144 kB)
+#18 14.82 Downloading bitsandbytes-0.49.1-py3-none-manylinux_2_24_x86_64.whl (59.1 MB)
+#18 15.40    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 59.1/59.1 MB 102.3 MB/s  0:00:00
+#18 15.40 Downloading datasets-4.5.0-py3-none-any.whl (515 kB)
+#18 15.42 Downloading evaluate-0.4.1-py3-none-any.whl (84 kB)
+#18 15.44 Downloading fla_core-0.4.1-py3-none-any.whl (437 kB)
+#18 15.45 Downloading flash_linear_attention-0.4.1-py3-none-any.whl (287 kB)
+#18 15.46 Downloading hf_xet-1.3.2-cp37-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (4.2 MB)
+#18 15.51    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.2/4.2 MB 99.0 MB/s  0:00:00
+#18 15.51 Downloading immutabledict-4.2.0-py3-none-any.whl (4.7 kB)
+#18 15.52 Downloading kernels-0.12.2-py3-none-any.whl (55 kB)
+#18 15.53 Downloading liger_kernel-0.7.0-py3-none-any.whl (276 kB)
+#18 15.55 Downloading lm_eval-0.4.7-py3-none-any.whl (2.5 MB)
+#18 15.58    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.5/2.5 MB 97.7 MB/s  0:00:00
+#18 15.58 Downloading mistral_common-1.8.8-py3-none-any.whl (6.5 MB)
+#18 15.65    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.5/6.5 MB 96.6 MB/s  0:00:00
+#18 15.66 Downloading modal-1.3.0.post1-py3-none-any.whl (744 kB)
+#18 15.67    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 744.3/744.3 kB 80.5 MB/s  0:00:00
+#18 15.68 Downloading nvidia_ml_py-12.560.30-py3-none-any.whl (40 kB)
+#18 15.69 Downloading ocifs-1.3.2-py3-none-any.whl (67 kB)
+#18 15.70 Downloading openenv_core-0.1.0-py3-none-any.whl (30 kB)
+#18 15.71 Downloading optimum-1.16.2-py3-none-any.whl (402 kB)
+#18 15.72 Downloading posthog-6.7.11-py3-none-any.whl (138 kB)
+#18 15.73 Downloading python_dotenv-1.0.1-py3-none-any.whl (19 kB)
+#18 15.74 Downloading schedulefree-1.4.1-py3-none-any.whl (55 kB)
+#18 15.75 Downloading torchao-0.16.0-cp310-abi3-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (3.2 MB)
+#18 15.78    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.2/3.2 MB 99.9 MB/s  0:00:00
+#18 15.79 Downloading transformers-5.3.0-py3-none-any.whl (10.7 MB)
+#18 15.89    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10.7/10.7 MB 103.3 MB/s  0:00:00
+#18 15.90 Downloading trl-0.29.0-py3-none-any.whl (528 kB)
+#18 15.91    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 528.8/528.8 kB 61.0 MB/s  0:00:00
+#18 15.92 Downloading zstandard-0.22.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (5.4 MB)
+#18 15.97    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.4/5.4 MB 100.6 MB/s  0:00:00
+#18 15.98 Downloading click-8.3.1-py3-none-any.whl (108 kB)
+#18 15.99 Downloading dill-0.4.0-py3-none-any.whl (119 kB)
+#18 16.00 Downloading fsspec-2025.10.0-py3-none-any.whl (200 kB)
+#18 16.01 Downloading gradio-6.9.0-py3-none-any.whl (42.9 MB)
+#18 16.42    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 42.9/42.9 MB 104.6 MB/s  0:00:00
+#18 16.43 Downloading gradio_client-2.3.0-py3-none-any.whl (58 kB)
+#18 16.44 Downloading aiofiles-24.1.0-py3-none-any.whl (15 kB)
+#18 16.45 Downloading anyio-4.12.1-py3-none-any.whl (113 kB)
+#18 16.46 Downloading fastapi-0.135.1-py3-none-any.whl (116 kB)
+#18 16.47 Downloading groovy-0.1.2-py3-none-any.whl (14 kB)
+#18 16.48 Downloading grpclib-0.4.9-py3-none-any.whl (77 kB)
+#18 16.49 Downloading h2-4.3.0-py3-none-any.whl (61 kB)
+#18 16.50 Downloading hpack-4.1.0-py3-none-any.whl (34 kB)
+#18 16.51 Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+#18 16.51 Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+#18 16.52 Downloading huggingface_hub-1.7.0-py3-none-any.whl (616 kB)
+#18 16.53    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 616.3/616.3 kB 80.5 MB/s  0:00:00
+#18 16.54 Downloading hyperframe-6.1.0-py3-none-any.whl (13 kB)
+#18 16.55 Downloading multiprocess-0.70.18-py311-none-any.whl (144 kB)
+#18 16.56 Downloading orjson-3.11.7-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (133 kB)
+#18 16.57 Downloading protobuf-6.33.5-cp39-abi3-manylinux2014_x86_64.whl (323 kB)
+#18 16.58 Downloading pydantic-2.12.5-py3-none-any.whl (463 kB)
+#18 16.60 Downloading pydantic_core-2.41.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+#18 16.62    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 97.5 MB/s  0:00:00
+#18 16.63 Downloading pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (806 kB)
+#18 16.64    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 806.6/806.6 kB 64.6 MB/s  0:00:00
+#18 16.64 Downloading requests-2.32.5-py3-none-any.whl (64 kB)
+#18 16.65 Downloading charset_normalizer-3.4.5-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (193 kB)
+#18 16.66 Downloading idna-3.11-py3-none-any.whl (71 kB)
+#18 16.68 Downloading responses-0.18.0-py3-none-any.whl (38 kB)
+#18 16.69 Downloading safehttpx-0.1.7-py3-none-any.whl (9.0 kB)
+#18 16.69 Downloading semantic_version-2.10.0-py2.py3-none-any.whl (15 kB)
+#18 16.70 Downloading starlette-0.52.1-py3-none-any.whl (74 kB)
+#18 16.71 Downloading synchronicity-0.11.1-py3-none-any.whl (40 kB)
+#18 16.72 Downloading tokenizers-0.22.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.3 MB)
+#18 16.75    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.3/3.3 MB 101.1 MB/s  0:00:00
+#18 16.76 Downloading tomlkit-0.13.3-py3-none-any.whl (38 kB)
+#18 16.77 Downloading typer-0.24.1-py3-none-any.whl (56 kB)
+#18 16.78 Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+#18 16.79 Downloading adlfs-2026.2.0-py3-none-any.whl (45 kB)
+#18 16.80 Downloading azure_core-1.38.3-py3-none-any.whl (218 kB)
+#18 16.81 Downloading azure_datalake_store-0.0.53-py2.py3-none-any.whl (55 kB)
+#18 16.81 Downloading msal-1.35.1-py3-none-any.whl (119 kB)
+#18 16.82 Downloading cryptography-46.0.5-cp311-abi3-manylinux_2_34_x86_64.whl (4.5 MB)
+#18 16.87    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 99.6 MB/s  0:00:00
+#18 16.88 Downloading pyjwt-2.12.1-py3-none-any.whl (29 kB)
+#18 16.89 Downloading aiohttp-3.13.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.7 MB)
+#18 16.91    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 91.2 MB/s  0:00:00
+#18 16.91 Downloading multidict-6.7.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (246 kB)
+#18 16.92 Downloading yarl-1.23.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (102 kB)
+#18 16.93 Downloading aiohappyeyeballs-2.6.1-py3-none-any.whl (15 kB)
+#18 16.94 Downloading aiosignal-1.4.0-py3-none-any.whl (7.5 kB)
+#18 16.95 Downloading annotated_doc-0.0.4-py3-none-any.whl (5.3 kB)
+#18 16.96 Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+#18 16.97 Downloading attrs-25.4.0-py3-none-any.whl (67 kB)
+#18 16.98 Downloading azure_storage_blob-12.28.0-py3-none-any.whl (431 kB)
+#18 16.99 Downloading backoff-2.2.1-py3-none-any.whl (15 kB)
+#18 17.00 Downloading brotli-1.2.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (1.4 MB)
+#18 17.02    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.4/1.4 MB 93.0 MB/s  0:00:00
+#18 17.03 Downloading certifi-2026.2.25-py3-none-any.whl (153 kB)
+#18 17.04 Downloading cffi-2.0.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (215 kB)
+#18 17.05 Downloading distro-1.9.0-py3-none-any.whl (20 kB)
+#18 17.06 Downloading frozenlist-1.8.0-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (231 kB)
+#18 17.07 Downloading gcsfs-2025.10.0-py2.py3-none-any.whl (36 kB)
+#18 17.08 Downloading decorator-5.2.1-py3-none-any.whl (9.2 kB)
+#18 17.09 Downloading google_auth-2.49.1-py3-none-any.whl (240 kB)
+#18 17.10 Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+#18 17.11 Downloading isodate-0.7.2-py3-none-any.whl (22 kB)
+#18 17.11 Downloading jsonschema-4.26.0-py3-none-any.whl (90 kB)
+#18 17.12 Downloading jsonschema_specifications-2025.9.1-py3-none-any.whl (18 kB)
+#18 17.13 Downloading numba-0.64.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (3.7 MB)
+#18 17.17    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.7/3.7 MB 98.2 MB/s  0:00:00
+#18 17.18 Downloading llvmlite-0.46.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (56.3 MB)
+#18 17.76    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 56.3/56.3 MB 96.8 MB/s  0:00:00
+#18 17.77 Downloading oci-2.168.1-py3-none-any.whl (34.0 MB)
+#18 18.21    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 34.0/34.0 MB 78.4 MB/s  0:00:00
+#18 18.21 Downloading circuitbreaker-2.1.3-py3-none-any.whl (7.7 kB)
+#18 18.22 Downloading pyopenssl-25.3.0-py3-none-any.whl (57 kB)
+#18 18.23 Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+#18 18.24 Downloading peft-0.18.1-py3-none-any.whl (556 kB)
+#18 18.25    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 557.0/557.0 kB 56.5 MB/s  0:00:00
+#18 18.26 Downloading propcache-0.4.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (210 kB)
+#18 18.27 Downloading pyarrow-23.0.1-cp311-cp311-manylinux_2_28_x86_64.whl (47.6 MB)
+#18 18.81    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 47.6/47.6 MB 88.6 MB/s  0:00:00
+#18 18.81 Downloading pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+#18 18.83 Downloading pyasn1-0.6.2-py3-none-any.whl (83 kB)
+#18 18.83 Downloading pybind11-3.0.2-py3-none-any.whl (310 kB)
+#18 18.85 Downloading pydantic_extra_types-2.11.0-py3-none-any.whl (74 kB)
+#18 18.86 Downloading pycountry-26.2.16-py3-none-any.whl (8.0 MB)
+#18 18.95    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 8.0/8.0 MB 85.3 MB/s  0:00:00
+#18 18.96 Downloading python_multipart-0.0.22-py3-none-any.whl (24 kB)
+#18 18.97 Downloading pytz-2026.1.post1-py2.py3-none-any.whl (510 kB)
+#18 18.99 Downloading ray-2.54.0-cp311-cp311-manylinux2014_x86_64.whl (72.9 MB)
+#18 20.10    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 72.9/72.9 MB 65.3 MB/s  0:00:01
+#18 20.11 Downloading msgpack-1.1.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (426 kB)
+#18 20.12 Downloading referencing-0.37.0-py3-none-any.whl (26 kB)
+#18 20.13 Downloading regex-2026.2.28-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (800 kB)
+#18 20.15    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 800.2/800.2 kB 54.0 MB/s  0:00:00
+#18 20.15 Downloading rich-14.3.3-py3-none-any.whl (310 kB)
+#18 20.17 Downloading pygments-2.19.2-py3-none-any.whl (1.2 MB)
+#18 20.20    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 35.6 MB/s  0:00:00
+#18 20.20 Downloading markdown_it_py-4.0.0-py3-none-any.whl (87 kB)
+#18 20.21 Downloading mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+#18 20.22 Downloading ring_flash_attn-0.1.8-py3-none-any.whl (25 kB)
+#18 20.23 Downloading rpds_py-0.30.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (390 kB)
+#18 20.25 Downloading s3fs-2025.10.0-py3-none-any.whl (30 kB)
+#18 20.25 Downloading aiobotocore-2.26.0-py3-none-any.whl (87 kB)
+#18 20.26 Downloading aioitertools-0.13.0-py3-none-any.whl (24 kB)
+#18 20.27 Downloading botocore-1.41.5-py3-none-any.whl (14.3 MB)
+#18 20.56    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 14.3/14.3 MB 49.9 MB/s  0:00:00
+#18 20.57 Downloading jmespath-1.1.0-py3-none-any.whl (20 kB)
+#18 20.59 Downloading wrapt-1.17.3-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (82 kB)
+#18 20.60 Downloading sacrebleu-2.6.0-py3-none-any.whl (100 kB)
+#18 20.61 Downloading safetensors-0.7.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (507 kB)
+#18 20.63 Downloading scikit_learn-1.8.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (9.1 MB)
+#18 20.77    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.1/9.1 MB 64.0 MB/s  0:00:00
+#18 20.78 Downloading joblib-1.5.3-py3-none-any.whl (309 kB)
+#18 20.79 Downloading scipy-1.17.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (35.3 MB)
+#18 21.42    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.3/35.3 MB 56.1 MB/s  0:00:00
+#18 21.43 Downloading shellingham-1.5.4-py2.py3-none-any.whl (9.8 kB)
+#18 21.43 Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+#18 21.44 Downloading tabulate-0.10.0-py3-none-any.whl (39 kB)
+#18 21.45 Downloading tensorboardx-2.6.4-py3-none-any.whl (87 kB)
+#18 21.46 Downloading threadpoolctl-3.6.0-py3-none-any.whl (18 kB)
+#18 21.47 Downloading tiktoken-0.12.0-cp311-cp311-manylinux_2_28_x86_64.whl (1.2 MB)
+#18 21.49    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 54.3 MB/s  0:00:00
+#18 21.50 Downloading tqdm-4.67.3-py3-none-any.whl (78 kB)
+#18 21.50 Downloading trackio-0.19.0-py3-none-any.whl (1.0 MB)
+#18 21.52    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 52.8 MB/s  0:00:00
+#18 21.53 Downloading pandas-2.3.3-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (12.8 MB)
+#18 21.76    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.8/12.8 MB 56.3 MB/s  0:00:00
+#18 21.77 Downloading pillow-11.3.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (6.6 MB)
+#18 21.88    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.6/6.6 MB 59.8 MB/s  0:00:00
+#18 21.89 Downloading plotly-6.6.0-py3-none-any.whl (9.9 MB)
+#18 22.07    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.9/9.9 MB 54.1 MB/s  0:00:00
+#18 22.08 Downloading pydub-0.25.1-py2.py3-none-any.whl (32 kB)
+#18 22.08 Downloading narwhals-2.18.0-py3-none-any.whl (444 kB)
+#18 22.10 Downloading sentencepiece-0.2.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (1.4 MB)
+#18 22.13    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.4/1.4 MB 46.8 MB/s  0:00:00
+#18 22.14 Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+#18 22.15 Downloading tzdata-2025.3-py2.py3-none-any.whl (348 kB)
+#18 22.16 Downloading uvicorn-0.41.0-py3-none-any.whl (68 kB)
+#18 22.17 Downloading xformers-0.0.35-py39-none-manylinux_2_28_x86_64.whl (3.3 MB)
+#18 22.24    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.3/3.3 MB 48.0 MB/s  0:00:00
+#18 22.25 Downloading absl_py-2.4.0-py3-none-any.whl (135 kB)
+#18 22.26 Downloading addict-2.4.0-py3-none-any.whl (3.8 kB)
+#18 22.26 Downloading art-6.5-py3-none-any.whl (610 kB)
+#18 22.28    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 610.4/610.4 kB 45.8 MB/s  0:00:00
+#18 22.28 Downloading authlib-1.6.9-py2.py3-none-any.whl (244 kB)
+#18 22.30 Downloading azure_identity-1.25.3-py3-none-any.whl (192 kB)
+#18 22.31 Downloading msal_extensions-1.3.1-py3-none-any.whl (20 kB)
+#18 22.32 Downloading cbor2-5.8.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (258 kB)
+#18 22.33 Downloading colorama-0.4.6-py2.py3-none-any.whl (25 kB)
+#18 22.34 Downloading coloredlogs-15.0.1-py2.py3-none-any.whl (46 kB)
+#18 22.35 Downloading humanfriendly-10.0-py2.py3-none-any.whl (86 kB)
+#18 22.36 Downloading einops-0.8.2-py3-none-any.whl (65 kB)
+#18 22.36 Downloading fastcore-1.12.24-py3-none-any.whl (97 kB)
+#18 22.37 Downloading ffmpy-1.0.0-py3-none-any.whl (5.6 kB)
+#18 22.38 Downloading fire-0.7.1-py3-none-any.whl (115 kB)
+#18 22.39 Downloading google_auth_oauthlib-1.3.0-py3-none-any.whl (19 kB)
+#18 22.40 Downloading requests_oauthlib-2.0.0-py2.py3-none-any.whl (24 kB)
+#18 22.41 Downloading oauthlib-3.3.1-py3-none-any.whl (160 kB)
+#18 22.42 Downloading google_cloud_storage-3.9.0-py3-none-any.whl (321 kB)
+#18 22.43 Downloading google_api_core-2.30.0-py3-none-any.whl (173 kB)
+#18 22.45 Downloading google_cloud_core-2.5.0-py3-none-any.whl (29 kB)
+#18 22.45 Downloading google_crc32c-1.8.0-cp311-cp311-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl (33 kB)
+#18 22.46 Downloading google_resumable_media-2.8.0-py3-none-any.whl (81 kB)
+#18 22.47 Downloading googleapis_common_protos-1.73.0-py3-none-any.whl (297 kB)
+#18 22.48 Downloading proto_plus-1.27.1-py3-none-any.whl (50 kB)
+#18 22.49 Downloading hf_transfer-0.1.9-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.6 MB)
+#18 22.57    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.6/3.6 MB 49.8 MB/s  0:00:00
+#18 22.57 Downloading itsdangerous-2.2.0-py3-none-any.whl (16 kB)
+#18 22.58 Downloading jsonlines-4.0.0-py3-none-any.whl (8.7 kB)
+#18 22.59 Downloading lxml-6.0.2-cp311-cp311-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl (5.2 MB)
+#18 22.72    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.2/5.2 MB 38.5 MB/s  0:00:00
+#18 22.73 Downloading more_itertools-10.8.0-py3-none-any.whl (69 kB)
+#18 22.75 Downloading nltk-3.9.3-py3-none-any.whl (1.5 MB)
+#18 22.80    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.5/1.5 MB 33.0 MB/s  0:00:00
+#18 22.81 Downloading numexpr-2.14.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (442 kB)
+#18 22.83 Downloading portalocker-3.2.0-py3-none-any.whl (22 kB)
+#18 22.85 Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+#18 22.87 Downloading pytablewriter-1.2.1-py3-none-any.whl (91 kB)
+#18 22.89 Downloading DataProperty-1.1.0-py3-none-any.whl (27 kB)
+#18 22.91 Downloading mbstrdecoder-1.1.4-py3-none-any.whl (7.9 kB)
+#18 22.93 Downloading chardet-5.2.0-py3-none-any.whl (199 kB)
+#18 22.95 Downloading pathvalidate-3.3.1-py3-none-any.whl (24 kB)
+#18 22.97 Downloading tabledata-1.3.4-py3-none-any.whl (11 kB)
+#18 22.99 Downloading tcolorpy-0.1.7-py3-none-any.whl (8.1 kB)
+#18 23.01 Downloading typepy-1.3.4-py3-none-any.whl (31 kB)
+#18 23.03 Downloading tensorboard-2.20.0-py3-none-any.whl (5.5 MB)
+#18 23.15    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.5/5.5 MB 46.5 MB/s  0:00:00
+#18 23.16 Downloading tensorboard_data_server-0.7.2-py3-none-manylinux_2_31_x86_64.whl (6.6 MB)
+#18 23.28    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.6/6.6 MB 52.5 MB/s  0:00:00
+#18 23.29 Downloading grpcio-1.78.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (6.7 MB)
+#18 23.41    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.7/6.7 MB 56.4 MB/s  0:00:00
+#18 23.42 Downloading markdown-3.10.2-py3-none-any.whl (108 kB)
+#18 23.43 Downloading werkzeug-3.1.6-py3-none-any.whl (225 kB)
+#18 23.44 Downloading termcolor-3.3.0-py3-none-any.whl (7.7 kB)
+#18 23.45 Downloading toml-0.10.2-py2.py3-none-any.whl (16 kB)
+#18 23.46 Downloading tqdm_multiprocess-0.0.11-py3-none-any.whl (9.8 kB)
+#18 23.47 Downloading types_certifi-2021.10.8.3-py3-none-any.whl (2.1 kB)
+#18 23.47 Downloading types_toml-0.10.8.20240310-py3-none-any.whl (4.8 kB)
+#18 23.49 Downloading wandb-0.25.1-py3-none-manylinux_2_28_x86_64.whl (25.6 MB)
+#18 24.02    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 25.6/25.6 MB 48.0 MB/s  0:00:00
+#18 24.03 Downloading gitpython-3.1.46-py3-none-any.whl (208 kB)
+#18 24.04 Downloading gitdb-4.0.12-py3-none-any.whl (62 kB)
+#18 24.05 Downloading smmap-5.0.3-py3-none-any.whl (24 kB)
+#18 24.06 Downloading sentry_sdk-2.54.0-py2.py3-none-any.whl (439 kB)
+#18 24.08 Downloading platformdirs-4.9.4-py3-none-any.whl (21 kB)
+#18 24.09 Downloading watchfiles-1.1.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (456 kB)
+#18 24.11 Downloading xxhash-3.6.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (193 kB)
+#18 24.80 Building wheels for collected packages: axolotl, axolotl-contribs-lgpl, axolotl-contribs-mit, flash-attn, langdetect, rouge-score, sqlitedict, word2number
+#18 24.80   Building editable for axolotl (pyproject.toml): started
+#18 24.99   Building editable for axolotl (pyproject.toml): finished with status 'done'
+#18 24.99   Created wheel for axolotl: filename=axolotl-0.16.0.dev0-0.editable-py3-none-any.whl size=12203 sha256=21bfb619bcc5676ed529fc0ab5edb873446e7e69b5c2b22c3da372cc989f1480
+#18 24.99   Stored in directory: /tmp/pip-ephem-wheel-cache-v1dsu4lo/wheels/0a/2f/66/311e56dbdf54e5c4069cd07f23b8be3ef1484f9a88e77d8554
+#18 24.99   Building wheel for axolotl-contribs-lgpl (pyproject.toml): started
+#18 25.12   Building wheel for axolotl-contribs-lgpl (pyproject.toml): finished with status 'done'
+#18 25.12   Created wheel for axolotl-contribs-lgpl: filename=axolotl_contribs_lgpl-0.0.7-py3-none-any.whl size=10889 sha256=8752898ac3199e6677c0f8e6529feeef8a6a17eb85ff5c2ed3ffdcd94b583941
+#18 25.12   Stored in directory: /root/.cache/pip/wheels/da/42/8b/0f6b8aaadea546111e79e1c1940ad5139070b2abbf6a1b30d4
+#18 25.12   Building wheel for axolotl-contribs-mit (pyproject.toml): started
+#18 25.26   Building wheel for axolotl-contribs-mit (pyproject.toml): finished with status 'done'
+#18 25.26   Created wheel for axolotl-contribs-mit: filename=axolotl_contribs_mit-0.0.6-py3-none-any.whl size=29015 sha256=466602081013a6140f0154853babdf83c82e9935aaf8a0fb69eecc6d893e3b9f
+#18 25.26   Stored in directory: /root/.cache/pip/wheels/06/79/58/3dee7baf92ba4ceedf89c839b7095e17cb6edd14e0a50736d4
+#18 25.26   Building wheel for flash-attn (pyproject.toml): started
+#18 26.66   Building wheel for flash-attn (pyproject.toml): finished with status 'error'
+#18 26.66   error: subprocess-exited-with-error
+#18 26.66   
+#18 26.66   × Building wheel for flash-attn (pyproject.toml) did not run successfully.
+#18 26.66   │ exit code: 1
+#18 26.66   ╰─> [224 lines of output]
+#18 26.66       /opt/venv/lib/python3.11/site-packages/wheel/bdist_wheel.py:4: FutureWarning: The 'wheel' package is no longer the canonical location of the 'bdist_wheel' command, and will be removed in a future release. Please update to setuptools v70.1 or later which contains an integrated version of this command.
+#18 26.66         warn(
+#18 26.66       W0315 16:21:53.789499 101 torch/utils/cpp_extension.py:118] No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
+#18 26.66       
+#18 26.66       
+#18 26.66       torch.__version__  = 2.10.0+cu128
+#18 26.66       
+#18 26.66       
+#18 26.66       /opt/venv/lib/python3.11/site-packages/setuptools/dist.py:765: SetuptoolsDeprecationWarning: License classifiers are deprecated.
+#18 26.66       !!
+#18 26.66       
+#18 26.66               ********************************************************************************
+#18 26.66               Please consider removing the following classifiers in favor of a SPDX license expression:
+#18 26.66       
+#18 26.66               License :: OSI Approved :: BSD License
+#18 26.66       
+#18 26.66               See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license for details.
+#18 26.66               ********************************************************************************
+#18 26.66       
+#18 26.66       !!
+#18 26.66         self._finalize_license_expression()
+#18 26.66       running bdist_wheel
+#18 26.66       Guessing wheel URL:  https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.10cxx11abiTRUE-cp311-cp311-linux_x86_64.whl
+#18 26.66       Precompiled wheel not found. Building from source...
+#18 26.66       running build
+#18 26.66       running build_py
+#18 26.66       creating build/lib.linux-x86_64-cpython-311/hopper
+#18 26.66       copying hopper/__init__.py -> build/lib.linux-x86_64-cpython-311/hopper
+#18 26.66       copying hopper/padding.py -> build/lib.linux-x86_64-cpython-311/hopper
+#18 26.66       copying hopper/benchmark_mla_decode.py -> build/lib.linux-x86_64-cpython-311/hopper
+#18 26.66       copying hopper/flash_attn_interface.py -> build/lib.linux-x86_64-cpython-311/hopper
+#18 26.66       copying hopper/test_kvcache.py -> build/lib.linux-x86_64-cpython-311/hopper
+#18 26.66       copying hopper/test_attn_kvcache.py -> build/lib.linux-x86_64-cpython-311/hopper
+#18 26.66       copying hopper/test_flash_attn.py -> build/lib.linux-x86_64-cpython-311/hopper
+#18 26.66       copying hopper/setup.py -> build/lib.linux-x86_64-cpython-311/hopper
+#18 26.66       copying hopper/benchmark_flash_attention_fp8.py -> build/lib.linux-x86_64-cpython-311/hopper
+#18 26.66       copying hopper/test_util.py -> build/lib.linux-x86_64-cpython-311/hopper
+#18 26.66       copying hopper/generate_kernels.py -> build/lib.linux-x86_64-cpython-311/hopper
+#18 26.66       copying hopper/benchmark_attn.py -> build/lib.linux-x86_64-cpython-311/hopper
+#18 26.66       copying hopper/benchmark_split_kv.py -> build/lib.linux-x86_64-cpython-311/hopper
+#18 26.66       creating build/lib.linux-x86_64-cpython-311/flash_attn
+#18 26.66       copying flash_attn/__init__.py -> build/lib.linux-x86_64-cpython-311/flash_attn
+#18 26.66       copying flash_attn/flash_blocksparse_attn_interface.py -> build/lib.linux-x86_64-cpython-311/flash_attn
+#18 26.66       copying flash_attn/flash_attn_triton_og.py -> build/lib.linux-x86_64-cpython-311/flash_attn
+#18 26.66       copying flash_attn/flash_attn_interface.py -> build/lib.linux-x86_64-cpython-311/flash_attn
+#18 26.66       copying flash_attn/flash_attn_triton.py -> build/lib.linux-x86_64-cpython-311/flash_attn
+#18 26.66       copying flash_attn/flash_blocksparse_attention.py -> build/lib.linux-x86_64-cpython-311/flash_attn
+#18 26.66       copying flash_attn/bert_padding.py -> build/lib.linux-x86_64-cpython-311/flash_attn
+#18 26.66       creating build/lib.linux-x86_64-cpython-311/flash_attn/utils
+#18 26.66       copying flash_attn/utils/__init__.py -> build/lib.linux-x86_64-cpython-311/flash_attn/utils
+#18 26.66       copying flash_attn/utils/distributed.py -> build/lib.linux-x86_64-cpython-311/flash_attn/utils
+#18 26.66       copying flash_attn/utils/generation.py -> build/lib.linux-x86_64-cpython-311/flash_attn/utils
+#18 26.66       copying flash_attn/utils/benchmark.py -> build/lib.linux-x86_64-cpython-311/flash_attn/utils
+#18 26.66       copying flash_attn/utils/testing.py -> build/lib.linux-x86_64-cpython-311/flash_attn/utils
+#18 26.66       copying flash_attn/utils/library.py -> build/lib.linux-x86_64-cpython-311/flash_attn/utils
+#18 26.66       copying flash_attn/utils/torch.py -> build/lib.linux-x86_64-cpython-311/flash_attn/utils
+#18 26.66       copying flash_attn/utils/pretrained.py -> build/lib.linux-x86_64-cpython-311/flash_attn/utils
+#18 26.66       creating build/lib.linux-x86_64-cpython-311/flash_attn/ops
+#18 26.66       copying flash_attn/ops/__init__.py -> build/lib.linux-x86_64-cpython-311/flash_attn/ops
+#18 26.66       copying flash_attn/ops/layer_norm.py -> build/lib.linux-x86_64-cpython-311/flash_attn/ops
+#18 26.66       copying flash_attn/ops/fused_dense.py -> build/lib.linux-x86_64-cpython-311/flash_attn/ops
+#18 26.66       copying flash_attn/ops/activations.py -> build/lib.linux-x86_64-cpython-311/flash_attn/ops
+#18 26.66       copying flash_attn/ops/rms_norm.py -> build/lib.linux-x86_64-cpython-311/flash_attn/ops
+#18 26.66       creating build/lib.linux-x86_64-cpython-311/flash_attn/flash_attn_triton_amd
+#18 26.66       copying flash_attn/flash_attn_triton_amd/__init__.py -> build/lib.linux-x86_64-cpython-311/flash_attn/flash_attn_triton_amd
+#18 26.66       copying flash_attn/flash_attn_triton_amd/train.py -> build/lib.linux-x86_64-cpython-311/flash_attn/flash_attn_triton_amd
+#18 26.66       copying flash_attn/flash_attn_triton_amd/bwd_prefill.py -> build/lib.linux-x86_64-cpython-311/flash_attn/flash_attn_triton_amd
+#18 26.66       copying flash_attn/flash_attn_triton_amd/bwd_ref.py -> build/lib.linux-x86_64-cpython-311/flash_attn/flash_attn_triton_amd
+#18 26.66       copying flash_attn/flash_attn_triton_amd/bwd_prefill_split.py -> build/lib.linux-x86_64-cpython-311/flash_attn/flash_attn_triton_amd
+#18 26.66       copying flash_attn/flash_attn_triton_amd/fwd_prefill.py -> build/lib.linux-x86_64-cpython-311/flash_attn/flash_attn_triton_amd
+#18 26.66       copying flash_attn/flash_attn_triton_amd/fwd_decode.py -> build/lib.linux-x86_64-cpython-311/flash_attn/flash_attn_triton_amd
+#18 26.66       copying flash_attn/flash_attn_triton_amd/bwd_prefill_fused.py -> build/lib.linux-x86_64-cpython-311/flash_attn/flash_attn_triton_amd
+#18 26.66       copying flash_attn/flash_attn_triton_amd/interface_fa.py -> build/lib.linux-x86_64-cpython-311/flash_attn/flash_attn_triton_amd
+#18 26.66       copying flash_attn/flash_attn_triton_amd/utils.py -> build/lib.linux-x86_64-cpython-311/flash_attn/flash_attn_triton_amd
+#18 26.66       copying flash_attn/flash_attn_triton_amd/bench.py -> build/lib.linux-x86_64-cpython-311/flash_attn/flash_attn_triton_amd
+#18 26.66       copying flash_attn/flash_attn_triton_amd/fwd_ref.py -> build/lib.linux-x86_64-cpython-311/flash_attn/flash_attn_triton_amd
+#18 26.66       copying flash_attn/flash_attn_triton_amd/bwd_prefill_onekernel.py -> build/lib.linux-x86_64-cpython-311/flash_attn/flash_attn_triton_amd
+#18 26.66       copying flash_attn/flash_attn_triton_amd/test.py -> build/lib.linux-x86_64-cpython-311/flash_attn/flash_attn_triton_amd
+#18 26.66       copying flash_attn/flash_attn_triton_amd/fp8.py -> build/lib.linux-x86_64-cpython-311/flash_attn/flash_attn_triton_amd
+#18 26.66       creating build/lib.linux-x86_64-cpython-311/flash_attn/models
+#18 26.66       copying flash_attn/models/__init__.py -> build/lib.linux-x86_64-cpython-311/flash_attn/models
+#18 26.66       copying flash_attn/models/gpt.py -> build/lib.linux-x86_64-cpython-311/flash_attn/models
+#18 26.66       copying flash_attn/models/btlm.py -> build/lib.linux-x86_64-cpython-311/flash_attn/models
+#18 26.66       copying flash_attn/models/gpt_neox.py -> build/lib.linux-x86_64-cpython-311/flash_attn/models
+#18 26.66       copying flash_attn/models/llama.py -> build/lib.linux-x86_64-cpython-311/flash_attn/models
+#18 26.66       copying flash_attn/models/falcon.py -> build/lib.linux-x86_64-cpython-311/flash_attn/models
+#18 26.66       copying flash_attn/models/opt.py -> build/lib.linux-x86_64-cpython-311/flash_attn/models
+#18 26.66       copying flash_attn/models/vit.py -> build/lib.linux-x86_64-cpython-311/flash_attn/models
+#18 26.66       copying flash_attn/models/baichuan.py -> build/lib.linux-x86_64-cpython-311/flash_attn/models
+#18 26.66       copying flash_attn/models/bigcode.py -> build/lib.linux-x86_64-cpython-311/flash_attn/models
+#18 26.66       copying flash_attn/models/gptj.py -> build/lib.linux-x86_64-cpython-311/flash_attn/models
+#18 26.66       copying flash_attn/models/bert.py -> build/lib.linux-x86_64-cpython-311/flash_attn/models
+#18 26.66       creating build/lib.linux-x86_64-cpython-311/flash_attn/losses
+#18 26.66       copying flash_attn/losses/__init__.py -> build/lib.linux-x86_64-cpython-311/flash_attn/losses
+#18 26.66       copying flash_attn/losses/cross_entropy.py -> build/lib.linux-x86_64-cpython-311/flash_attn/losses
+#18 26.66       creating build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/fast_math.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/__init__.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/flash_fwd.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/named_barrier.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/hopper_helpers.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/blackwell_helpers.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/ampere_helpers.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/pipeline.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/block_info.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/utils.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/flash_bwd_preprocess.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/softmax.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/mma_sm100_desc.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/seqlen_info.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/interface.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/flash_bwd.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/tile_scheduler.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/flash_bwd_postprocess.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/pack_gqa.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/flash_fwd_sm100.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       copying flash_attn/cute/mask.py -> build/lib.linux-x86_64-cpython-311/flash_attn/cute
+#18 26.66       creating build/lib.linux-x86_64-cpython-311/flash_attn/layers
+#18 26.66       copying flash_attn/layers/patch_embed.py -> build/lib.linux-x86_64-cpython-311/flash_attn/layers
+#18 26.66       copying flash_attn/layers/__init__.py -> build/lib.linux-x86_64-cpython-311/flash_attn/layers
+#18 26.66       copying flash_attn/layers/rotary.py -> build/lib.linux-x86_64-cpython-311/flash_attn/layers
+#18 26.66       creating build/lib.linux-x86_64-cpython-311/flash_attn/modules
+#18 26.66       copying flash_attn/modules/__init__.py -> build/lib.linux-x86_64-cpython-311/flash_attn/modules
+#18 26.66       copying flash_attn/modules/embedding.py -> build/lib.linux-x86_64-cpython-311/flash_attn/modules
+#18 26.66       copying flash_attn/modules/mlp.py -> build/lib.linux-x86_64-cpython-311/flash_attn/modules
+#18 26.66       copying flash_attn/modules/block.py -> build/lib.linux-x86_64-cpython-311/flash_attn/modules
+#18 26.66       copying flash_attn/modules/mha.py -> build/lib.linux-x86_64-cpython-311/flash_attn/modules
+#18 26.66       creating build/lib.linux-x86_64-cpython-311/flash_attn/ops/triton
+#18 26.66       copying flash_attn/ops/triton/__init__.py -> build/lib.linux-x86_64-cpython-311/flash_attn/ops/triton
+#18 26.66       copying flash_attn/ops/triton/mlp.py -> build/lib.linux-x86_64-cpython-311/flash_attn/ops/triton
+#18 26.66       copying flash_attn/ops/triton/rotary.py -> build/lib.linux-x86_64-cpython-311/flash_attn/ops/triton
+#18 26.66       copying flash_attn/ops/triton/layer_norm.py -> build/lib.linux-x86_64-cpython-311/flash_attn/ops/triton
+#18 26.66       copying flash_attn/ops/triton/linear.py -> build/lib.linux-x86_64-cpython-311/flash_attn/ops/triton
+#18 26.66       copying flash_attn/ops/triton/k_activations.py -> build/lib.linux-x86_64-cpython-311/flash_attn/ops/triton
+#18 26.66       copying flash_attn/ops/triton/cross_entropy.py -> build/lib.linux-x86_64-cpython-311/flash_attn/ops/triton
+#18 26.66       running build_ext
+#18 26.66       Traceback (most recent call last):
+#18 26.66         File "<string>", line 486, in run
+#18 26.66         File "/usr/lib/python3.11/urllib/request.py", line 241, in urlretrieve
+#18 26.66           with contextlib.closing(urlopen(url, data)) as fp:
+#18 26.66                                   ^^^^^^^^^^^^^^^^^^
+#18 26.66         File "/usr/lib/python3.11/urllib/request.py", line 216, in urlopen
+#18 26.66           return opener.open(url, data, timeout)
+#18 26.66                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#18 26.66         File "/usr/lib/python3.11/urllib/request.py", line 525, in open
+#18 26.66           response = meth(req, response)
+#18 26.66                      ^^^^^^^^^^^^^^^^^^^
+#18 26.66         File "/usr/lib/python3.11/urllib/request.py", line 634, in http_response
+#18 26.66           response = self.parent.error(
+#18 26.66                      ^^^^^^^^^^^^^^^^^^
+#18 26.66         File "/usr/lib/python3.11/urllib/request.py", line 563, in error
+#18 26.66           return self._call_chain(*args)
+#18 26.66                  ^^^^^^^^^^^^^^^^^^^^^^^
+#18 26.66         File "/usr/lib/python3.11/urllib/request.py", line 496, in _call_chain
+#18 26.66           result = func(*args)
+#18 26.66                    ^^^^^^^^^^^
+#18 26.66         File "/usr/lib/python3.11/urllib/request.py", line 643, in http_error_default
+#18 26.66           raise HTTPError(req.full_url, code, msg, hdrs, fp)
+#18 26.66       urllib.error.HTTPError: HTTP Error 404: Not Found
+#18 26.66       
+#18 26.66       During handling of the above exception, another exception occurred:
+#18 26.66       
+#18 26.66       Traceback (most recent call last):
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/pip/_vendor/pyproject_hooks/_in_process/_in_process.py", line 389, in <module>
+#18 26.66           main()
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/pip/_vendor/pyproject_hooks/_in_process/_in_process.py", line 373, in main
+#18 26.66           json_out["return_val"] = hook(**hook_input["kwargs"])
+#18 26.66                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/pip/_vendor/pyproject_hooks/_in_process/_in_process.py", line 280, in build_wheel
+#18 26.66           return _build_backend().build_wheel(
+#18 26.66                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/build_meta.py", line 441, in build_wheel
+#18 26.66           return _build(['bdist_wheel', '--dist-info-dir', str(metadata_directory)])
+#18 26.66                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/build_meta.py", line 429, in _build
+#18 26.66           return self._build_with_temp_dir(
+#18 26.66                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/build_meta.py", line 410, in _build_with_temp_dir
+#18 26.66           self.run_setup()
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/build_meta.py", line 520, in run_setup
+#18 26.66           super().run_setup(setup_script=setup_script)
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/build_meta.py", line 317, in run_setup
+#18 26.66           exec(code, locals())
+#18 26.66         File "<string>", line 526, in <module>
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/__init__.py", line 117, in setup
+#18 26.66           return distutils.core.setup(**attrs)  # type: ignore[return-value]
+#18 26.66                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/_distutils/core.py", line 186, in setup
+#18 26.66           return run_commands(dist)
+#18 26.66                  ^^^^^^^^^^^^^^^^^^
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/_distutils/core.py", line 202, in run_commands
+#18 26.66           dist.run_commands()
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/_distutils/dist.py", line 1000, in run_commands
+#18 26.66           self.run_command(cmd)
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/dist.py", line 1107, in run_command
+#18 26.66           super().run_command(command)
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/_distutils/dist.py", line 1019, in run_command
+#18 26.66           cmd_obj.run()
+#18 26.66         File "<string>", line 503, in run
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/command/bdist_wheel.py", line 370, in run
+#18 26.66           self.run_command("build")
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/_distutils/cmd.py", line 341, in run_command
+#18 26.66           self.distribution.run_command(command)
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/dist.py", line 1107, in run_command
+#18 26.66           super().run_command(command)
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/_distutils/dist.py", line 1019, in run_command
+#18 26.66           cmd_obj.run()
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/_distutils/command/build.py", line 135, in run
+#18 26.66           self.run_command(cmd_name)
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/_distutils/cmd.py", line 341, in run_command
+#18 26.66           self.distribution.run_command(command)
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/dist.py", line 1107, in run_command
+#18 26.66           super().run_command(command)
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/_distutils/dist.py", line 1019, in run_command
+#18 26.66           cmd_obj.run()
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/command/build_ext.py", line 97, in run
+#18 26.66           _build_ext.run(self)
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/setuptools/_distutils/command/build_ext.py", line 367, in run
+#18 26.66           self.build_extensions()
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/torch/utils/cpp_extension.py", line 695, in build_extensions
+#18 26.66           _check_cuda_version(compiler_name, compiler_version)
+#18 26.66         File "/opt/venv/lib/python3.11/site-packages/torch/utils/cpp_extension.py", line 524, in _check_cuda_version
+#18 26.66           raise RuntimeError(CUDA_MISMATCH_MESSAGE, cuda_str_version, torch.version.cuda)
+#18 26.66       RuntimeError: ('The detected CUDA version (%s) mismatches the version that was used to compilePyTorch (%s). Please make sure to use the same CUDA versions.', '13.1', '12.8')
+#18 26.66       [end of output]
+#18 26.66   
+#18 26.66   note: This error originates from a subprocess, and is likely not a problem with pip.
+#18 26.66   ERROR: Failed building wheel for flash-attn
+#18 26.66   Building wheel for langdetect (pyproject.toml): started
+#18 26.94   Building wheel for langdetect (pyproject.toml): finished with status 'done'
+#18 26.94   Created wheel for langdetect: filename=langdetect-1.0.9-py3-none-any.whl size=993332 sha256=052a77627d18144b6d7361bdc7da87eaa9f10c38419029ced52780d2b91363e2
+#18 26.94   Stored in directory: /root/.cache/pip/wheels/0a/f2/b2/e5ca405801e05eb7c8ed5b3b4bcf1fcabcd6272c167640072e
+#18 26.94   Building wheel for rouge-score (pyproject.toml): started
+#18 27.07   Building wheel for rouge-score (pyproject.toml): finished with status 'done'
+#18 27.07   Created wheel for rouge-score: filename=rouge_score-0.1.2-py3-none-any.whl size=24988 sha256=44c15025cb903d88fd2eb216c86faaa100687cd2296cdc0065374df71ffe4ef7
+#18 27.07   Stored in directory: /root/.cache/pip/wheels/1e/19/43/8a442dc83660ca25e163e1bd1f89919284ab0d0c1475475148
+#18 27.07   Building wheel for sqlitedict (pyproject.toml): started
+#18 27.19   Building wheel for sqlitedict (pyproject.toml): finished with status 'done'
+#18 27.19   Created wheel for sqlitedict: filename=sqlitedict-2.1.0-py3-none-any.whl size=16955 sha256=352e068d4dc2d55660ebeb41dd7e42f5257e04eac8d5660be03df1de32018a5f
+#18 27.19   Stored in directory: /root/.cache/pip/wheels/73/63/89/7210274f9b7fb033b8f22671f64c0e0b55083d30c3c046a3ff
+#18 27.19   Building wheel for word2number (pyproject.toml): started
+#18 27.31   Building wheel for word2number (pyproject.toml): finished with status 'done'
+#18 27.31   Created wheel for word2number: filename=word2number-1.1-py3-none-any.whl size=5659 sha256=1ca7baceb4356fced9037e0a0e68c722f23e7f192f6184229ae74783f4e706da
+#18 27.31   Stored in directory: /root/.cache/pip/wheels/cd/ef/ae/073b491b14d25e2efafcffca9e16b2ee6d114ec5c643ba4f06
+#18 27.31 Successfully built axolotl axolotl-contribs-lgpl axolotl-contribs-mit langdetect rouge-score sqlitedict word2number
+#18 27.31 Failed to build flash-attn
+#18 27.38 error: failed-wheel-build-for-install
+#18 27.38 
+#18 27.38 × Failed to build installable wheels for some pyproject.toml based projects
+#18 27.38 ╰─> flash-attn
+#18 ERROR: process "/bin/sh -c pip install --no-build-isolation -e \".[ring-flash-attn,ray]\" &&     pip cache purge" did not complete successfully: exit code: 1
+------
+ > [axolotl-builder 11/18] RUN pip install --no-build-isolation -e ".[ring-flash-attn,ray]" &&     pip cache purge:
+27.19   Building wheel for word2number (pyproject.toml): started
+27.31   Building wheel for word2number (pyproject.toml): finished with status 'done'
+27.31   Created wheel for word2number: filename=word2number-1.1-py3-none-any.whl size=5659 sha256=1ca7baceb4356fced9037e0a0e68c722f23e7f192f6184229ae74783f4e706da
+27.31   Stored in directory: /root/.cache/pip/wheels/cd/ef/ae/073b491b14d25e2efafcffca9e16b2ee6d114ec5c643ba4f06
+27.31 Successfully built axolotl axolotl-contribs-lgpl axolotl-contribs-mit langdetect rouge-score sqlitedict word2number
+27.31 Failed to build flash-attn
+27.38 error: failed-wheel-build-for-install
+27.38 
+27.38 × Failed to build installable wheels for some pyproject.toml based projects
+27.38 ╰─> flash-attn
+------
+failed to solve: process "/bin/sh -c pip install --no-build-isolation -e \".[ring-flash-attn,ray]\" &&     pip cache purge" did not complete successfully: exit code: 1
+

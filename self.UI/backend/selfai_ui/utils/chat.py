@@ -28,6 +28,10 @@ from selfai_ui.routers.ollama import (
     generate_chat_completion as generate_ollama_chat_completion,
 )
 
+from selfai_ui.routers.llamolotl import (
+    generate_chat_completion as generate_llamolotl_chat_completion,
+)
+
 from selfai_ui.routers.pipelines import (
     process_pipeline_inlet_filter,
     process_pipeline_outlet_filter,
@@ -151,6 +155,11 @@ async def generate_chat_completion(
             )
         else:
             return convert_response_ollama_to_openai(response)
+    elif model["owned_by"] == "llamolotl":
+        # Using /llamolotl/chat/completions endpoint (already OpenAI format)
+        return await generate_llamolotl_chat_completion(
+            request=request, form_data=form_data, user=user, bypass_filter=bypass_filter
+        )
     else:
         return await generate_openai_chat_completion(
             request=request, form_data=form_data, user=user, bypass_filter=bypass_filter

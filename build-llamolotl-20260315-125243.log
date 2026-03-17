@@ -1,0 +1,1862 @@
+time="2026-03-15T12:52:43-07:00" level=warning msg="The \"GIT_AUTHOR_NAME\" variable is not set. Defaulting to a blank string."
+time="2026-03-15T12:52:43-07:00" level=warning msg="The \"GIT_AUTHOR_EMAIL\" variable is not set. Defaulting to a blank string."
+time="2026-03-15T12:52:43-07:00" level=warning msg="The \"GIT_COMMITTER_NAME\" variable is not set. Defaulting to a blank string."
+time="2026-03-15T12:52:43-07:00" level=warning msg="The \"GIT_COMMITTER_EMAIL\" variable is not set. Defaulting to a blank string."
+time="2026-03-15T12:52:43-07:00" level=warning msg="The \"WANDB_API_KEY\" variable is not set. Defaulting to a blank string."
+ Image local/self-llamolotl:latest Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 542B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 7.85kB done
+#2 DONE 0.0s
+
+#3 resolve image config for docker-image://docker.io/docker/dockerfile:1.5
+#3 DONE 1.0s
+
+#4 docker-image://docker.io/docker/dockerfile:1.5@sha256:39b85bbfa7536a5feceb7372a0817649ecb2724562a38360f4d6a7782a409b14
+#4 resolve docker.io/docker/dockerfile:1.5@sha256:39b85bbfa7536a5feceb7372a0817649ecb2724562a38360f4d6a7782a409b14 done
+#4 CACHED
+
+#5 [internal] load .dockerignore
+#5 transferring context: 157B done
+#5 DONE 0.0s
+
+#6 [internal] load metadata for docker.io/nvidia/cuda:13.1.0-devel-ubuntu22.04
+#6 ...
+
+#7 [internal] load metadata for docker.io/nvidia/cuda:12.8.0-devel-ubuntu22.04
+#7 DONE 0.6s
+
+#6 [internal] load metadata for docker.io/nvidia/cuda:13.1.0-devel-ubuntu22.04
+#6 DONE 0.6s
+
+#8 [llama-builder 1/6] FROM docker.io/nvidia/cuda:13.1.0-devel-ubuntu22.04@sha256:eaded8d05ec577d25b882256d99da4270caf4787ec5c79408b0c1286c1efc0f1
+#8 resolve docker.io/nvidia/cuda:13.1.0-devel-ubuntu22.04@sha256:eaded8d05ec577d25b882256d99da4270caf4787ec5c79408b0c1286c1efc0f1 done
+#8 DONE 0.0s
+
+#9 [axolotl-builder  1/19] FROM docker.io/nvidia/cuda:12.8.0-devel-ubuntu22.04@sha256:54f18e2a8e1b3d03f77b9a6dc905533da46ac93a5513f10e8ba8e560db9fa5ab
+#9 resolve docker.io/nvidia/cuda:12.8.0-devel-ubuntu22.04@sha256:54f18e2a8e1b3d03f77b9a6dc905533da46ac93a5513f10e8ba8e560db9fa5ab done
+#9 CACHED
+
+#10 [internal] load build context
+#10 transferring context: 182.52kB 0.1s done
+#10 DONE 0.1s
+
+#11 [llama-builder 2/6] RUN apt-get update &&     apt-get install -y --no-install-recommends         build-essential cmake git libssl-dev libgomp1 &&     rm -rf /var/cache/apt/archives &&     rm -rf /var/lib/apt/lists/*
+#11 CACHED
+
+#12 [llama-builder 6/6] RUN mkdir -p /app &&     cp build/bin/llama-server /app/llama-server &&     cp build/bin/llama-bench /app/llama-bench &&     find build/bin -name "*.so*" -exec cp -P {} /app/ ;
+#12 CACHED
+
+#13 [runtime  2/11] RUN apt-get update &&     apt-get install -y --no-install-recommends         curl supervisor python3.11 vim nano &&     apt-get autoremove -y &&     apt-get clean -y &&     rm -rf /var/cache/apt/archives &&     rm -rf /var/lib/apt/lists/* &&     rm -rf /tmp/* /var/tmp/*
+#13 CACHED
+
+#14 [llama-builder 5/6] RUN export LDFLAGS="-L/usr/local/cuda/lib64/stubs $LDFLAGS" &&     cmake -B build       -DGGML_NATIVE=OFF       -DGGML_CUDA=ON       -DLLAMA_BUILD_TESTS=OFF       -DCMAKE_BUILD_TYPE=Release       -DCMAKE_EXE_LINKER_FLAGS="-L/usr/local/cuda/lib64/stubs -Wl,--allow-shlib-undefined"       -DCMAKE_SHARED_LINKER_FLAGS="-L/usr/local/cuda/lib64/stubs -Wl,--allow-shlib-undefined"       . &&     cmake --build build --config Release -j$(nproc)
+#14 CACHED
+
+#15 [runtime  3/11] RUN mkdir -p /var/log/supervisor
+#15 CACHED
+
+#16 [llama-builder 4/6] COPY self.Llama/ .
+#16 CACHED
+
+#17 [llama-builder 3/6] WORKDIR /llama-src
+#17 CACHED
+
+#18 [runtime  4/11] COPY --from=llama-builder /app/ /app/
+#18 CACHED
+
+#19 [axolotl-builder  2/19] RUN apt-get update &&     apt-get install -y --no-install-recommends --allow-change-held-packages         python3.11 python3.11-dev python3.11-venv python3-pip git build-essential ninja-build         cmake libaio-dev pkg-config vim curl nano libnccl2 libnccl-dev rsync         ibverbs-providers ibverbs-utils infiniband-diags         librdmacm-dev librdmacm1 rdmacm-utils &&     rm -rf /var/cache/apt/archives &&     rm -rf /var/lib/apt/lists/*
+#19 0.343 Get:1 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64  InRelease [1581 B]
+#19 0.396 Get:2 http://security.ubuntu.com/ubuntu jammy-security InRelease [129 kB]
+#19 0.548 Get:3 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64  Packages [2436 kB]
+#19 0.698 Get:4 http://archive.ubuntu.com/ubuntu jammy InRelease [270 kB]
+#19 0.774 Get:5 http://security.ubuntu.com/ubuntu jammy-security/main amd64 Packages [3786 kB]
+#19 1.221 Get:6 http://security.ubuntu.com/ubuntu jammy-security/multiverse amd64 Packages [62.6 kB]
+#19 1.221 Get:7 http://security.ubuntu.com/ubuntu jammy-security/universe amd64 Packages [1302 kB]
+#19 1.239 Get:8 http://security.ubuntu.com/ubuntu jammy-security/restricted amd64 Packages [6669 kB]
+#19 1.607 Get:9 http://archive.ubuntu.com/ubuntu jammy-updates InRelease [128 kB]
+#19 1.826 Get:10 http://archive.ubuntu.com/ubuntu jammy-backports InRelease [127 kB]
+#19 2.045 Get:11 http://archive.ubuntu.com/ubuntu jammy/multiverse amd64 Packages [266 kB]
+#19 2.166 Get:12 http://archive.ubuntu.com/ubuntu jammy/universe amd64 Packages [17.5 MB]
+#19 3.280 Get:13 http://archive.ubuntu.com/ubuntu jammy/main amd64 Packages [1792 kB]
+#19 3.342 Get:14 http://archive.ubuntu.com/ubuntu jammy/restricted amd64 Packages [164 kB]
+#19 3.350 Get:15 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 Packages [4160 kB]
+#19 3.514 Get:16 http://archive.ubuntu.com/ubuntu jammy-updates/multiverse amd64 Packages [70.9 kB]
+#19 3.516 Get:17 http://archive.ubuntu.com/ubuntu jammy-updates/restricted amd64 Packages [6994 kB]
+#19 3.797 Get:18 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 Packages [1615 kB]
+#19 3.859 Get:19 http://archive.ubuntu.com/ubuntu jammy-backports/universe amd64 Packages [35.6 kB]
+#19 3.860 Get:20 http://archive.ubuntu.com/ubuntu jammy-backports/main amd64 Packages [84.0 kB]
+#19 4.018 Fetched 47.6 MB in 4s (12.5 MB/s)
+#19 4.018 Reading package lists...
+#19 4.787 Reading package lists...
+#19 5.450 Building dependency tree...
+#19 5.631 Reading state information...
+#19 5.730 build-essential is already the newest version (12.9ubuntu3).
+#19 5.730 build-essential set to manually installed.
+#19 5.730 The following additional packages will be installed:
+#19 5.730   cmake-data dh-elpa-helper emacsen-common git-man libaio1 libarchive13
+#19 5.730   libbrotli1 libcurl3-gnutls libcurl4 liberror-perl libexpat1 libexpat1-dev
+#19 5.730   libglib2.0-0 libgpm2 libibmad5 libibnetdisc5 libibumad3 libibverbs-dev
+#19 5.730   libibverbs1 libicu70 libjsoncpp25 libmpdec3 libnghttp2-14 libnl-3-200
+#19 5.730   libnl-3-dev libnl-route-3-200 libnl-route-3-dev libpopt0 libpsl5
+#19 5.730   libpython3-stdlib libpython3.10 libpython3.10-minimal libpython3.10-stdlib
+#19 5.730   libpython3.11 libpython3.11-dev libpython3.11-minimal libpython3.11-stdlib
+#19 5.730   librhash0 librtmp1 libsodium23 libssh-4 libuv1 libxml2 media-types python3
+#19 5.730   python3-distutils python3-lib2to3 python3-minimal python3-pip-whl
+#19 5.730   python3-pkg-resources python3-setuptools python3-setuptools-whl
+#19 5.730   python3-wheel python3.10 python3.10-minimal python3.11-minimal vim-common
+#19 5.730   vim-runtime xxd zlib1g-dev
+#19 5.731 Suggested packages:
+#19 5.731   cmake-doc cmake-format gettext-base git-daemon-run | git-daemon-sysvinit
+#19 5.731   git-doc git-email git-gui gitk gitweb git-cvs git-mediawiki git-svn lrzip
+#19 5.731   gpm hunspell python3-doc python3-tk python3-venv python-setuptools-doc
+#19 5.731   python3.10-venv python3.10-doc binfmt-support python3.11-doc openssh-client
+#19 5.731   openssh-server python3-braceexpand ctags vim-doc vim-scripts
+#19 5.731 Recommended packages:
+#19 5.731   less ssh-client libglib2.0-data shared-mime-info xdg-user-dirs publicsuffix
+#19 5.731   python3-dev
+#19 5.891 The following NEW packages will be installed:
+#19 5.891   cmake cmake-data curl dh-elpa-helper emacsen-common git git-man
+#19 5.891   ibverbs-providers ibverbs-utils infiniband-diags libaio-dev libaio1
+#19 5.891   libarchive13 libbrotli1 libcurl3-gnutls libcurl4 liberror-perl libexpat1
+#19 5.891   libexpat1-dev libglib2.0-0 libgpm2 libibmad5 libibnetdisc5 libibumad3
+#19 5.891   libibverbs-dev libibverbs1 libicu70 libjsoncpp25 libmpdec3 libnghttp2-14
+#19 5.891   libnl-3-200 libnl-3-dev libnl-route-3-200 libnl-route-3-dev libpopt0 libpsl5
+#19 5.891   libpython3-stdlib libpython3.10 libpython3.10-minimal libpython3.10-stdlib
+#19 5.891   libpython3.11 libpython3.11-dev libpython3.11-minimal libpython3.11-stdlib
+#19 5.891   librdmacm-dev librdmacm1 librhash0 librtmp1 libsodium23 libssh-4 libuv1
+#19 5.891   libxml2 media-types nano ninja-build pkg-config python3 python3-distutils
+#19 5.891   python3-lib2to3 python3-minimal python3-pip python3-pip-whl
+#19 5.891   python3-pkg-resources python3-setuptools python3-setuptools-whl
+#19 5.891   python3-wheel python3.10 python3.10-minimal python3.11 python3.11-dev
+#19 5.891   python3.11-minimal python3.11-venv rdmacm-utils rsync vim vim-common
+#19 5.891   vim-runtime xxd zlib1g-dev
+#19 5.891 The following held packages will be changed:
+#19 5.891   libnccl-dev libnccl2
+#19 5.892 The following packages will be upgraded:
+#19 5.892   libnccl-dev libnccl2
+#19 6.058 2 upgraded, 79 newly installed, 0 to remove and 128 not upgraded.
+#19 6.058 Need to get 459 MB of archives.
+#19 6.058 After this operation, 57.5 MB of additional disk space will be used.
+#19 6.058 Get:1 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libpython3.10-minimal amd64 3.10.12-1~22.04.15 [816 kB]
+#19 6.060 Get:2 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64  libnccl-dev 2.29.7-1+cuda13.2 [201 MB]
+#19 6.903 Get:3 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libexpat1 amd64 2.4.7-1ubuntu0.7 [92.1 kB]
+#19 6.910 Get:4 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 python3.10-minimal amd64 3.10.12-1~22.04.15 [2275 kB]
+#19 7.191 Get:5 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 python3-minimal amd64 3.10.6-1~22.04.1 [24.3 kB]
+#19 7.191 Get:6 http://archive.ubuntu.com/ubuntu jammy/main amd64 media-types all 7.0.0 [25.5 kB]
+#19 7.192 Get:7 http://archive.ubuntu.com/ubuntu jammy/main amd64 libmpdec3 amd64 2.5.1-2build2 [86.8 kB]
+#19 7.196 Get:8 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libpython3.10-stdlib amd64 3.10.12-1~22.04.15 [1850 kB]
+#19 7.272 Get:9 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 python3.10 amd64 3.10.12-1~22.04.15 [508 kB]
+#19 7.282 Get:10 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libpython3-stdlib amd64 3.10.6-1~22.04.1 [6812 B]
+#19 7.283 Get:11 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 python3 amd64 3.10.6-1~22.04.1 [22.8 kB]
+#19 7.283 Get:12 http://archive.ubuntu.com/ubuntu jammy/main amd64 libpopt0 amd64 1.18-3build1 [28.2 kB]
+#19 7.283 Get:13 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 rsync amd64 3.2.7-0ubuntu0.22.04.4 [437 kB]
+#19 7.292 Get:14 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 libpython3.11-minimal amd64 3.11.0~rc1-1~22.04 [837 kB]
+#19 7.343 Get:15 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 python3.11-minimal amd64 3.11.0~rc1-1~22.04 [2370 kB]
+#19 7.388 Get:16 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libglib2.0-0 amd64 2.72.4-0ubuntu2.9 [1467 kB]
+#19 7.412 Get:17 http://archive.ubuntu.com/ubuntu jammy/main amd64 libicu70 amd64 70.1-2 [10.6 MB]
+#19 7.863 Get:18 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libxml2 amd64 2.9.13+dfsg-1ubuntu0.11 [765 kB]
+#19 7.866 Get:19 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 python3-pkg-resources all 59.6.0-1.2ubuntu0.22.04.3 [133 kB]
+#19 7.923 Get:20 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 xxd amd64 2:8.2.3995-1ubuntu2.24 [51.4 kB]
+#19 7.925 Get:21 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 vim-common all 2:8.2.3995-1ubuntu2.24 [81.5 kB]
+#19 7.926 Get:22 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libnghttp2-14 amd64 1.43.0-1ubuntu0.2 [76.9 kB]
+#19 7.928 Get:23 http://archive.ubuntu.com/ubuntu jammy/main amd64 libpsl5 amd64 0.21.0-1.2build2 [58.4 kB]
+#19 7.929 Get:24 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libuv1 amd64 1.43.0-1ubuntu0.1 [92.7 kB]
+#19 7.931 Get:25 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 nano amd64 6.2-1ubuntu0.1 [280 kB]
+#19 7.936 Get:26 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libarchive13 amd64 3.6.0-1ubuntu1.5 [368 kB]
+#19 7.943 Get:27 http://archive.ubuntu.com/ubuntu jammy/main amd64 libbrotli1 amd64 1.0.9-2build6 [315 kB]
+#19 8.013 Get:28 http://archive.ubuntu.com/ubuntu jammy/main amd64 librtmp1 amd64 2.4+20151223.gitfa8646d.1-2build4 [58.2 kB]
+#19 8.015 Get:29 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libssh-4 amd64 0.9.6-2ubuntu0.22.04.6 [187 kB]
+#19 8.020 Get:30 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libcurl4 amd64 7.81.0-1ubuntu1.23 [290 kB]
+#19 8.025 Get:31 http://archive.ubuntu.com/ubuntu jammy/main amd64 libjsoncpp25 amd64 1.9.5-3 [80.0 kB]
+#19 8.027 Get:32 http://archive.ubuntu.com/ubuntu jammy/main amd64 librhash0 amd64 1.4.2-1ubuntu1 [125 kB]
+#19 8.029 Get:33 http://archive.ubuntu.com/ubuntu jammy/main amd64 dh-elpa-helper all 2.0.9ubuntu1 [7610 B]
+#19 8.029 Get:34 http://archive.ubuntu.com/ubuntu jammy/main amd64 emacsen-common all 3.0.4 [14.9 kB]
+#19 8.029 Get:35 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 cmake-data all 3.22.1-1ubuntu1.22.04.2 [1913 kB]
+#19 8.088 Get:36 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 cmake amd64 3.22.1-1ubuntu1.22.04.2 [5010 kB]
+#19 8.187 Get:37 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 curl amd64 7.81.0-1ubuntu1.23 [194 kB]
+#19 8.188 Get:38 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libcurl3-gnutls amd64 7.81.0-1ubuntu1.23 [284 kB]
+#19 8.189 Get:39 http://archive.ubuntu.com/ubuntu jammy/main amd64 liberror-perl all 0.17029-1 [26.5 kB]
+#19 8.190 Get:40 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 git-man all 1:2.34.1-1ubuntu1.17 [954 kB]
+#19 8.205 Get:41 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 git amd64 1:2.34.1-1ubuntu1.17 [3174 kB]
+#19 8.265 Get:42 http://archive.ubuntu.com/ubuntu jammy/main amd64 libnl-3-200 amd64 3.5.0-0.1 [59.1 kB]
+#19 8.266 Get:43 http://archive.ubuntu.com/ubuntu jammy/main amd64 libnl-route-3-200 amd64 3.5.0-0.1 [180 kB]
+#19 8.268 Get:44 http://archive.ubuntu.com/ubuntu jammy/main amd64 libibverbs1 amd64 39.0-1 [69.3 kB]
+#19 8.269 Get:45 http://archive.ubuntu.com/ubuntu jammy/main amd64 ibverbs-providers amd64 39.0-1 [341 kB]
+#19 8.274 Get:46 http://archive.ubuntu.com/ubuntu jammy/main amd64 libaio1 amd64 0.3.112-13build1 [7176 B]
+#19 8.332 Get:47 http://archive.ubuntu.com/ubuntu jammy/main amd64 libaio-dev amd64 0.3.112-13build1 [21.2 kB]
+#19 8.332 Get:48 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libexpat1-dev amd64 2.4.7-1ubuntu0.7 [148 kB]
+#19 8.334 Get:49 http://archive.ubuntu.com/ubuntu jammy/main amd64 libgpm2 amd64 1.20.7-10build1 [15.3 kB]
+#19 8.335 Get:50 http://archive.ubuntu.com/ubuntu jammy/main amd64 libnl-3-dev amd64 3.5.0-0.1 [101 kB]
+#19 8.343 Get:51 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64  libnccl2 2.29.7-1+cuda13.2 [194 MB]
+#19 8.404 Get:52 http://archive.ubuntu.com/ubuntu jammy/main amd64 libnl-route-3-dev amd64 3.5.0-0.1 [202 kB]
+#19 8.408 Get:53 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libpython3.10 amd64 3.10.12-1~22.04.15 [1949 kB]
+#19 8.448 Get:54 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 libpython3.11-stdlib amd64 3.11.0~rc1-1~22.04 [1859 kB]
+#19 9.282 Get:55 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 libpython3.11 amd64 3.11.0~rc1-1~22.04 [2226 kB]
+#19 9.291 Get:56 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 zlib1g-dev amd64 1:1.2.11.dfsg-2ubuntu9.2 [164 kB]
+#19 9.292 Get:57 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 libpython3.11-dev amd64 3.11.0~rc1-1~22.04 [5590 kB]
+#19 9.506 Get:58 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libsodium23 amd64 1.0.18-1ubuntu0.22.04.1 [164 kB]
+#19 9.507 Get:59 http://archive.ubuntu.com/ubuntu jammy/universe amd64 ninja-build amd64 1.10.1-1 [111 kB]
+#19 9.507 Get:60 http://archive.ubuntu.com/ubuntu jammy/main amd64 pkg-config amd64 0.29.2-1ubuntu3 [48.2 kB]
+#19 9.508 Get:61 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 python3-lib2to3 all 3.10.8-1~22.04 [77.6 kB]
+#19 9.508 Get:62 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 python3-distutils all 3.10.8-1~22.04 [139 kB]
+#19 9.509 Get:63 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 python3-setuptools all 59.6.0-1.2ubuntu0.22.04.3 [340 kB]
+#19 9.510 Get:64 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 python3-wheel all 0.37.1-2ubuntu0.22.04.1 [32.0 kB]
+#19 9.510 Get:65 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 python3-pip all 22.0.2+dfsg-1ubuntu0.7 [1306 kB]
+#19 9.516 Get:66 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 python3-pip-whl all 22.0.2+dfsg-1ubuntu0.7 [1683 kB]
+#19 9.600 Get:67 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 python3-setuptools-whl all 59.6.0-1.2ubuntu0.22.04.3 [789 kB]
+#19 9.662 Get:68 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 python3.11 amd64 3.11.0~rc1-1~22.04 [550 kB]
+#19 9.681 Get:69 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 python3.11-dev amd64 3.11.0~rc1-1~22.04 [614 kB]
+#19 9.692 Get:70 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 python3.11-venv amd64 3.11.0~rc1-1~22.04 [5730 B]
+#19 9.692 Get:71 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 vim-runtime all 2:8.2.3995-1ubuntu2.24 [6833 kB]
+#19 9.822 Get:72 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 vim amd64 2:8.2.3995-1ubuntu2.24 [1728 kB]
+#19 9.864 Get:73 http://archive.ubuntu.com/ubuntu jammy/universe amd64 ibverbs-utils amd64 39.0-1 [57.3 kB]
+#19 9.864 Get:74 http://archive.ubuntu.com/ubuntu jammy/main amd64 libibumad3 amd64 39.0-1 [28.4 kB]
+#19 9.865 Get:75 http://archive.ubuntu.com/ubuntu jammy/main amd64 libibmad5 amd64 39.0-1 [43.7 kB]
+#19 9.866 Get:76 http://archive.ubuntu.com/ubuntu jammy/main amd64 libibnetdisc5 amd64 39.0-1 [32.6 kB]
+#19 9.867 Get:77 http://archive.ubuntu.com/ubuntu jammy/universe amd64 infiniband-diags amd64 39.0-1 [235 kB]
+#19 9.871 Get:78 http://archive.ubuntu.com/ubuntu jammy/main amd64 libibverbs-dev amd64 39.0-1 [628 kB]
+#19 9.882 Get:79 http://archive.ubuntu.com/ubuntu jammy/main amd64 librdmacm1 amd64 39.0-1 [71.2 kB]
+#19 9.883 Get:80 http://archive.ubuntu.com/ubuntu jammy/main amd64 librdmacm-dev amd64 39.0-1 [129 kB]
+#19 9.894 Get:81 http://archive.ubuntu.com/ubuntu jammy/universe amd64 rdmacm-utils amd64 39.0-1 [74.6 kB]
+#19 11.23 debconf: delaying package configuration, since apt-utils is not installed
+#19 11.26 Fetched 459 MB in 5s (89.8 MB/s)
+#19 11.29 Selecting previously unselected package libpython3.10-minimal:amd64.
+#19 11.29 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 14926 files and directories currently installed.)
+#19 11.32 Preparing to unpack .../libpython3.10-minimal_3.10.12-1~22.04.15_amd64.deb ...
+#19 11.33 Unpacking libpython3.10-minimal:amd64 (3.10.12-1~22.04.15) ...
+#19 11.38 Selecting previously unselected package libexpat1:amd64.
+#19 11.38 Preparing to unpack .../libexpat1_2.4.7-1ubuntu0.7_amd64.deb ...
+#19 11.39 Unpacking libexpat1:amd64 (2.4.7-1ubuntu0.7) ...
+#19 11.41 Selecting previously unselected package python3.10-minimal.
+#19 11.41 Preparing to unpack .../python3.10-minimal_3.10.12-1~22.04.15_amd64.deb ...
+#19 11.42 Unpacking python3.10-minimal (3.10.12-1~22.04.15) ...
+#19 11.46 Setting up libpython3.10-minimal:amd64 (3.10.12-1~22.04.15) ...
+#19 11.47 Setting up libexpat1:amd64 (2.4.7-1ubuntu0.7) ...
+#19 11.47 Setting up python3.10-minimal (3.10.12-1~22.04.15) ...
+#19 11.85 Selecting previously unselected package python3-minimal.
+#19 11.85 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 15230 files and directories currently installed.)
+#19 11.85 Preparing to unpack .../0-python3-minimal_3.10.6-1~22.04.1_amd64.deb ...
+#19 11.85 Unpacking python3-minimal (3.10.6-1~22.04.1) ...
+#19 11.88 Selecting previously unselected package media-types.
+#19 11.88 Preparing to unpack .../1-media-types_7.0.0_all.deb ...
+#19 11.88 Unpacking media-types (7.0.0) ...
+#19 11.90 Selecting previously unselected package libmpdec3:amd64.
+#19 11.90 Preparing to unpack .../2-libmpdec3_2.5.1-2build2_amd64.deb ...
+#19 11.90 Unpacking libmpdec3:amd64 (2.5.1-2build2) ...
+#19 11.93 Selecting previously unselected package libpython3.10-stdlib:amd64.
+#19 11.93 Preparing to unpack .../3-libpython3.10-stdlib_3.10.12-1~22.04.15_amd64.deb ...
+#19 11.93 Unpacking libpython3.10-stdlib:amd64 (3.10.12-1~22.04.15) ...
+#19 11.99 Selecting previously unselected package python3.10.
+#19 11.99 Preparing to unpack .../4-python3.10_3.10.12-1~22.04.15_amd64.deb ...
+#19 11.99 Unpacking python3.10 (3.10.12-1~22.04.15) ...
+#19 12.01 Selecting previously unselected package libpython3-stdlib:amd64.
+#19 12.02 Preparing to unpack .../5-libpython3-stdlib_3.10.6-1~22.04.1_amd64.deb ...
+#19 12.02 Unpacking libpython3-stdlib:amd64 (3.10.6-1~22.04.1) ...
+#19 12.03 Setting up python3-minimal (3.10.6-1~22.04.1) ...
+#19 12.13 Selecting previously unselected package python3.
+#19 12.13 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 15631 files and directories currently installed.)
+#19 12.14 Preparing to unpack .../00-python3_3.10.6-1~22.04.1_amd64.deb ...
+#19 12.14 Unpacking python3 (3.10.6-1~22.04.1) ...
+#19 12.17 Selecting previously unselected package libpopt0:amd64.
+#19 12.17 Preparing to unpack .../01-libpopt0_1.18-3build1_amd64.deb ...
+#19 12.18 Unpacking libpopt0:amd64 (1.18-3build1) ...
+#19 12.19 Selecting previously unselected package rsync.
+#19 12.19 Preparing to unpack .../02-rsync_3.2.7-0ubuntu0.22.04.4_amd64.deb ...
+#19 12.19 Unpacking rsync (3.2.7-0ubuntu0.22.04.4) ...
+#19 12.22 Selecting previously unselected package libpython3.11-minimal:amd64.
+#19 12.23 Preparing to unpack .../03-libpython3.11-minimal_3.11.0~rc1-1~22.04_amd64.deb ...
+#19 12.23 Unpacking libpython3.11-minimal:amd64 (3.11.0~rc1-1~22.04) ...
+#19 12.29 Selecting previously unselected package python3.11-minimal.
+#19 12.29 Preparing to unpack .../04-python3.11-minimal_3.11.0~rc1-1~22.04_amd64.deb ...
+#19 12.30 Unpacking python3.11-minimal (3.11.0~rc1-1~22.04) ...
+#19 12.33 Selecting previously unselected package libglib2.0-0:amd64.
+#19 12.33 Preparing to unpack .../05-libglib2.0-0_2.72.4-0ubuntu2.9_amd64.deb ...
+#19 12.33 Unpacking libglib2.0-0:amd64 (2.72.4-0ubuntu2.9) ...
+#19 12.37 Selecting previously unselected package libicu70:amd64.
+#19 12.37 Preparing to unpack .../06-libicu70_70.1-2_amd64.deb ...
+#19 12.37 Unpacking libicu70:amd64 (70.1-2) ...
+#19 12.48 Selecting previously unselected package libxml2:amd64.
+#19 12.48 Preparing to unpack .../07-libxml2_2.9.13+dfsg-1ubuntu0.11_amd64.deb ...
+#19 12.48 Unpacking libxml2:amd64 (2.9.13+dfsg-1ubuntu0.11) ...
+#19 12.50 Selecting previously unselected package python3-pkg-resources.
+#19 12.50 Preparing to unpack .../08-python3-pkg-resources_59.6.0-1.2ubuntu0.22.04.3_all.deb ...
+#19 12.50 Unpacking python3-pkg-resources (59.6.0-1.2ubuntu0.22.04.3) ...
+#19 12.53 Selecting previously unselected package xxd.
+#19 12.53 Preparing to unpack .../09-xxd_2%3a8.2.3995-1ubuntu2.24_amd64.deb ...
+#19 12.53 Unpacking xxd (2:8.2.3995-1ubuntu2.24) ...
+#19 12.55 Selecting previously unselected package vim-common.
+#19 12.55 Preparing to unpack .../10-vim-common_2%3a8.2.3995-1ubuntu2.24_all.deb ...
+#19 12.56 Unpacking vim-common (2:8.2.3995-1ubuntu2.24) ...
+#19 12.58 Selecting previously unselected package libnghttp2-14:amd64.
+#19 12.59 Preparing to unpack .../11-libnghttp2-14_1.43.0-1ubuntu0.2_amd64.deb ...
+#19 12.59 Unpacking libnghttp2-14:amd64 (1.43.0-1ubuntu0.2) ...
+#19 12.60 Selecting previously unselected package libpsl5:amd64.
+#19 12.60 Preparing to unpack .../12-libpsl5_0.21.0-1.2build2_amd64.deb ...
+#19 12.60 Unpacking libpsl5:amd64 (0.21.0-1.2build2) ...
+#19 12.62 Selecting previously unselected package libuv1:amd64.
+#19 12.62 Preparing to unpack .../13-libuv1_1.43.0-1ubuntu0.1_amd64.deb ...
+#19 12.63 Unpacking libuv1:amd64 (1.43.0-1ubuntu0.1) ...
+#19 12.64 Selecting previously unselected package nano.
+#19 12.64 Preparing to unpack .../14-nano_6.2-1ubuntu0.1_amd64.deb ...
+#19 12.64 Unpacking nano (6.2-1ubuntu0.1) ...
+#19 12.68 Selecting previously unselected package libarchive13:amd64.
+#19 12.68 Preparing to unpack .../15-libarchive13_3.6.0-1ubuntu1.5_amd64.deb ...
+#19 12.68 Unpacking libarchive13:amd64 (3.6.0-1ubuntu1.5) ...
+#19 12.71 Selecting previously unselected package libbrotli1:amd64.
+#19 12.71 Preparing to unpack .../16-libbrotli1_1.0.9-2build6_amd64.deb ...
+#19 12.71 Unpacking libbrotli1:amd64 (1.0.9-2build6) ...
+#19 12.72 Selecting previously unselected package librtmp1:amd64.
+#19 12.72 Preparing to unpack .../17-librtmp1_2.4+20151223.gitfa8646d.1-2build4_amd64.deb ...
+#19 12.73 Unpacking librtmp1:amd64 (2.4+20151223.gitfa8646d.1-2build4) ...
+#19 12.75 Selecting previously unselected package libssh-4:amd64.
+#19 12.76 Preparing to unpack .../18-libssh-4_0.9.6-2ubuntu0.22.04.6_amd64.deb ...
+#19 12.76 Unpacking libssh-4:amd64 (0.9.6-2ubuntu0.22.04.6) ...
+#19 12.77 Selecting previously unselected package libcurl4:amd64.
+#19 12.77 Preparing to unpack .../19-libcurl4_7.81.0-1ubuntu1.23_amd64.deb ...
+#19 12.77 Unpacking libcurl4:amd64 (7.81.0-1ubuntu1.23) ...
+#19 12.80 Selecting previously unselected package libjsoncpp25:amd64.
+#19 12.80 Preparing to unpack .../20-libjsoncpp25_1.9.5-3_amd64.deb ...
+#19 12.81 Unpacking libjsoncpp25:amd64 (1.9.5-3) ...
+#19 12.82 Selecting previously unselected package librhash0:amd64.
+#19 12.82 Preparing to unpack .../21-librhash0_1.4.2-1ubuntu1_amd64.deb ...
+#19 12.82 Unpacking librhash0:amd64 (1.4.2-1ubuntu1) ...
+#19 12.85 Selecting previously unselected package dh-elpa-helper.
+#19 12.85 Preparing to unpack .../22-dh-elpa-helper_2.0.9ubuntu1_all.deb ...
+#19 12.85 Unpacking dh-elpa-helper (2.0.9ubuntu1) ...
+#19 12.86 Selecting previously unselected package emacsen-common.
+#19 12.86 Preparing to unpack .../23-emacsen-common_3.0.4_all.deb ...
+#19 12.87 Unpacking emacsen-common (3.0.4) ...
+#19 12.89 Selecting previously unselected package cmake-data.
+#19 12.89 Preparing to unpack .../24-cmake-data_3.22.1-1ubuntu1.22.04.2_all.deb ...
+#19 12.90 Unpacking cmake-data (3.22.1-1ubuntu1.22.04.2) ...
+#19 13.24 Selecting previously unselected package cmake.
+#19 13.24 Preparing to unpack .../25-cmake_3.22.1-1ubuntu1.22.04.2_amd64.deb ...
+#19 13.24 Unpacking cmake (3.22.1-1ubuntu1.22.04.2) ...
+#19 13.31 Selecting previously unselected package curl.
+#19 13.31 Preparing to unpack .../26-curl_7.81.0-1ubuntu1.23_amd64.deb ...
+#19 13.31 Unpacking curl (7.81.0-1ubuntu1.23) ...
+#19 13.33 Selecting previously unselected package libcurl3-gnutls:amd64.
+#19 13.33 Preparing to unpack .../27-libcurl3-gnutls_7.81.0-1ubuntu1.23_amd64.deb ...
+#19 13.33 Unpacking libcurl3-gnutls:amd64 (7.81.0-1ubuntu1.23) ...
+#19 13.36 Selecting previously unselected package liberror-perl.
+#19 13.36 Preparing to unpack .../28-liberror-perl_0.17029-1_all.deb ...
+#19 13.36 Unpacking liberror-perl (0.17029-1) ...
+#19 13.37 Selecting previously unselected package git-man.
+#19 13.38 Preparing to unpack .../29-git-man_1%3a2.34.1-1ubuntu1.17_all.deb ...
+#19 13.38 Unpacking git-man (1:2.34.1-1ubuntu1.17) ...
+#19 13.40 Selecting previously unselected package git.
+#19 13.40 Preparing to unpack .../30-git_1%3a2.34.1-1ubuntu1.17_amd64.deb ...
+#19 13.41 Unpacking git (1:2.34.1-1ubuntu1.17) ...
+#19 13.49 Selecting previously unselected package libnl-3-200:amd64.
+#19 13.49 Preparing to unpack .../31-libnl-3-200_3.5.0-0.1_amd64.deb ...
+#19 13.50 Unpacking libnl-3-200:amd64 (3.5.0-0.1) ...
+#19 13.52 Selecting previously unselected package libnl-route-3-200:amd64.
+#19 13.52 Preparing to unpack .../32-libnl-route-3-200_3.5.0-0.1_amd64.deb ...
+#19 13.52 Unpacking libnl-route-3-200:amd64 (3.5.0-0.1) ...
+#19 13.53 Selecting previously unselected package libibverbs1:amd64.
+#19 13.54 Preparing to unpack .../33-libibverbs1_39.0-1_amd64.deb ...
+#19 13.54 Unpacking libibverbs1:amd64 (39.0-1) ...
+#19 13.56 Selecting previously unselected package ibverbs-providers:amd64.
+#19 13.56 Preparing to unpack .../34-ibverbs-providers_39.0-1_amd64.deb ...
+#19 13.57 Unpacking ibverbs-providers:amd64 (39.0-1) ...
+#19 13.59 Selecting previously unselected package libaio1:amd64.
+#19 13.60 Preparing to unpack .../35-libaio1_0.3.112-13build1_amd64.deb ...
+#19 13.60 Unpacking libaio1:amd64 (0.3.112-13build1) ...
+#19 13.61 Selecting previously unselected package libaio-dev:amd64.
+#19 13.61 Preparing to unpack .../36-libaio-dev_0.3.112-13build1_amd64.deb ...
+#19 13.61 Unpacking libaio-dev:amd64 (0.3.112-13build1) ...
+#19 13.63 Selecting previously unselected package libexpat1-dev:amd64.
+#19 13.63 Preparing to unpack .../37-libexpat1-dev_2.4.7-1ubuntu0.7_amd64.deb ...
+#19 13.63 Unpacking libexpat1-dev:amd64 (2.4.7-1ubuntu0.7) ...
+#19 13.65 Selecting previously unselected package libgpm2:amd64.
+#19 13.65 Preparing to unpack .../38-libgpm2_1.20.7-10build1_amd64.deb ...
+#19 13.65 Unpacking libgpm2:amd64 (1.20.7-10build1) ...
+#19 13.67 Preparing to unpack .../39-libnccl-dev_2.29.7-1+cuda13.2_amd64.deb ...
+#19 13.68 Unpacking libnccl-dev (2.29.7-1+cuda13.2) over (2.25.1-1+cuda12.8) ...
+#19 17.42 Preparing to unpack .../40-libnccl2_2.29.7-1+cuda13.2_amd64.deb ...
+#19 17.42 Unpacking libnccl2 (2.29.7-1+cuda13.2) over (2.25.1-1+cuda12.8) ...
+#19 19.30 Selecting previously unselected package libnl-3-dev:amd64.
+#19 19.31 Preparing to unpack .../41-libnl-3-dev_3.5.0-0.1_amd64.deb ...
+#19 19.31 Unpacking libnl-3-dev:amd64 (3.5.0-0.1) ...
+#19 19.33 Selecting previously unselected package libnl-route-3-dev:amd64.
+#19 19.34 Preparing to unpack .../42-libnl-route-3-dev_3.5.0-0.1_amd64.deb ...
+#19 19.34 Unpacking libnl-route-3-dev:amd64 (3.5.0-0.1) ...
+#19 19.35 Selecting previously unselected package libpython3.10:amd64.
+#19 19.35 Preparing to unpack .../43-libpython3.10_3.10.12-1~22.04.15_amd64.deb ...
+#19 19.36 Unpacking libpython3.10:amd64 (3.10.12-1~22.04.15) ...
+#19 19.38 Selecting previously unselected package libpython3.11-stdlib:amd64.
+#19 19.38 Preparing to unpack .../44-libpython3.11-stdlib_3.11.0~rc1-1~22.04_amd64.deb ...
+#19 19.38 Unpacking libpython3.11-stdlib:amd64 (3.11.0~rc1-1~22.04) ...
+#19 19.45 Selecting previously unselected package libpython3.11:amd64.
+#19 19.45 Preparing to unpack .../45-libpython3.11_3.11.0~rc1-1~22.04_amd64.deb ...
+#19 19.45 Unpacking libpython3.11:amd64 (3.11.0~rc1-1~22.04) ...
+#19 19.48 Selecting previously unselected package zlib1g-dev:amd64.
+#19 19.48 Preparing to unpack .../46-zlib1g-dev_1%3a1.2.11.dfsg-2ubuntu9.2_amd64.deb ...
+#19 19.48 Unpacking zlib1g-dev:amd64 (1:1.2.11.dfsg-2ubuntu9.2) ...
+#19 19.50 Selecting previously unselected package libpython3.11-dev:amd64.
+#19 19.50 Preparing to unpack .../47-libpython3.11-dev_3.11.0~rc1-1~22.04_amd64.deb ...
+#19 19.50 Unpacking libpython3.11-dev:amd64 (3.11.0~rc1-1~22.04) ...
+#19 19.59 Selecting previously unselected package libsodium23:amd64.
+#19 19.59 Preparing to unpack .../48-libsodium23_1.0.18-1ubuntu0.22.04.1_amd64.deb ...
+#19 19.59 Unpacking libsodium23:amd64 (1.0.18-1ubuntu0.22.04.1) ...
+#19 19.60 Selecting previously unselected package ninja-build.
+#19 19.61 Preparing to unpack .../49-ninja-build_1.10.1-1_amd64.deb ...
+#19 19.61 Unpacking ninja-build (1.10.1-1) ...
+#19 19.63 Selecting previously unselected package pkg-config.
+#19 19.63 Preparing to unpack .../50-pkg-config_0.29.2-1ubuntu3_amd64.deb ...
+#19 19.63 Unpacking pkg-config (0.29.2-1ubuntu3) ...
+#19 19.64 Selecting previously unselected package python3-lib2to3.
+#19 19.65 Preparing to unpack .../51-python3-lib2to3_3.10.8-1~22.04_all.deb ...
+#19 19.65 Unpacking python3-lib2to3 (3.10.8-1~22.04) ...
+#19 19.67 Selecting previously unselected package python3-distutils.
+#19 19.67 Preparing to unpack .../52-python3-distutils_3.10.8-1~22.04_all.deb ...
+#19 19.68 Unpacking python3-distutils (3.10.8-1~22.04) ...
+#19 19.70 Selecting previously unselected package python3-setuptools.
+#19 19.70 Preparing to unpack .../53-python3-setuptools_59.6.0-1.2ubuntu0.22.04.3_all.deb ...
+#19 19.70 Unpacking python3-setuptools (59.6.0-1.2ubuntu0.22.04.3) ...
+#19 19.73 Selecting previously unselected package python3-wheel.
+#19 19.74 Preparing to unpack .../54-python3-wheel_0.37.1-2ubuntu0.22.04.1_all.deb ...
+#19 19.74 Unpacking python3-wheel (0.37.1-2ubuntu0.22.04.1) ...
+#19 19.75 Selecting previously unselected package python3-pip.
+#19 19.75 Preparing to unpack .../55-python3-pip_22.0.2+dfsg-1ubuntu0.7_all.deb ...
+#19 19.75 Unpacking python3-pip (22.0.2+dfsg-1ubuntu0.7) ...
+#19 19.84 Selecting previously unselected package python3-pip-whl.
+#19 19.84 Preparing to unpack .../56-python3-pip-whl_22.0.2+dfsg-1ubuntu0.7_all.deb ...
+#19 19.84 Unpacking python3-pip-whl (22.0.2+dfsg-1ubuntu0.7) ...
+#19 19.85 Selecting previously unselected package python3-setuptools-whl.
+#19 19.86 Preparing to unpack .../57-python3-setuptools-whl_59.6.0-1.2ubuntu0.22.04.3_all.deb ...
+#19 19.86 Unpacking python3-setuptools-whl (59.6.0-1.2ubuntu0.22.04.3) ...
+#19 19.87 Selecting previously unselected package python3.11.
+#19 19.88 Preparing to unpack .../58-python3.11_3.11.0~rc1-1~22.04_amd64.deb ...
+#19 19.88 Unpacking python3.11 (3.11.0~rc1-1~22.04) ...
+#19 19.89 Selecting previously unselected package python3.11-dev.
+#19 19.89 Preparing to unpack .../59-python3.11-dev_3.11.0~rc1-1~22.04_amd64.deb ...
+#19 19.89 Unpacking python3.11-dev (3.11.0~rc1-1~22.04) ...
+#19 19.91 Selecting previously unselected package python3.11-venv.
+#19 19.91 Preparing to unpack .../60-python3.11-venv_3.11.0~rc1-1~22.04_amd64.deb ...
+#19 19.91 Unpacking python3.11-venv (3.11.0~rc1-1~22.04) ...
+#19 19.92 Selecting previously unselected package vim-runtime.
+#19 19.92 Preparing to unpack .../61-vim-runtime_2%3a8.2.3995-1ubuntu2.24_all.deb ...
+#19 19.93 Adding 'diversion of /usr/share/vim/vim82/doc/help.txt to /usr/share/vim/vim82/doc/help.txt.vim-tiny by vim-runtime'
+#19 19.94 Adding 'diversion of /usr/share/vim/vim82/doc/tags to /usr/share/vim/vim82/doc/tags.vim-tiny by vim-runtime'
+#19 19.94 Unpacking vim-runtime (2:8.2.3995-1ubuntu2.24) ...
+#19 20.21 Selecting previously unselected package vim.
+#19 20.22 Preparing to unpack .../62-vim_2%3a8.2.3995-1ubuntu2.24_amd64.deb ...
+#19 20.22 Unpacking vim (2:8.2.3995-1ubuntu2.24) ...
+#19 20.24 Selecting previously unselected package ibverbs-utils.
+#19 20.25 Preparing to unpack .../63-ibverbs-utils_39.0-1_amd64.deb ...
+#19 20.25 Unpacking ibverbs-utils (39.0-1) ...
+#19 20.26 Selecting previously unselected package libibumad3:amd64.
+#19 20.26 Preparing to unpack .../64-libibumad3_39.0-1_amd64.deb ...
+#19 20.27 Unpacking libibumad3:amd64 (39.0-1) ...
+#19 20.28 Selecting previously unselected package libibmad5:amd64.
+#19 20.28 Preparing to unpack .../65-libibmad5_39.0-1_amd64.deb ...
+#19 20.28 Unpacking libibmad5:amd64 (39.0-1) ...
+#19 20.30 Selecting previously unselected package libibnetdisc5:amd64.
+#19 20.30 Preparing to unpack .../66-libibnetdisc5_39.0-1_amd64.deb ...
+#19 20.30 Unpacking libibnetdisc5:amd64 (39.0-1) ...
+#19 20.31 Selecting previously unselected package infiniband-diags.
+#19 20.31 Preparing to unpack .../67-infiniband-diags_39.0-1_amd64.deb ...
+#19 20.31 Unpacking infiniband-diags (39.0-1) ...
+#19 20.34 Selecting previously unselected package libibverbs-dev:amd64.
+#19 20.34 Preparing to unpack .../68-libibverbs-dev_39.0-1_amd64.deb ...
+#19 20.34 Unpacking libibverbs-dev:amd64 (39.0-1) ...
+#19 20.37 Selecting previously unselected package librdmacm1:amd64.
+#19 20.37 Preparing to unpack .../69-librdmacm1_39.0-1_amd64.deb ...
+#19 20.37 Unpacking librdmacm1:amd64 (39.0-1) ...
+#19 20.39 Selecting previously unselected package librdmacm-dev:amd64.
+#19 20.39 Preparing to unpack .../70-librdmacm-dev_39.0-1_amd64.deb ...
+#19 20.39 Unpacking librdmacm-dev:amd64 (39.0-1) ...
+#19 20.40 Selecting previously unselected package rdmacm-utils.
+#19 20.41 Preparing to unpack .../71-rdmacm-utils_39.0-1_amd64.deb ...
+#19 20.41 Unpacking rdmacm-utils (39.0-1) ...
+#19 20.43 Setting up media-types (7.0.0) ...
+#19 20.44 Setting up python3-setuptools-whl (59.6.0-1.2ubuntu0.22.04.3) ...
+#19 20.44 Setting up libpsl5:amd64 (0.21.0-1.2build2) ...
+#19 20.45 Setting up libsodium23:amd64 (1.0.18-1ubuntu0.22.04.1) ...
+#19 20.45 Setting up libgpm2:amd64 (1.20.7-10build1) ...
+#19 20.45 Setting up python3-pip-whl (22.0.2+dfsg-1ubuntu0.7) ...
+#19 20.45 Setting up libglib2.0-0:amd64 (2.72.4-0ubuntu2.9) ...
+#19 20.46 No schema files found: doing nothing.
+#19 20.46 Setting up libnccl2 (2.29.7-1+cuda13.2) ...
+#19 20.47 Setting up libbrotli1:amd64 (1.0.9-2build6) ...
+#19 20.47 Setting up libnghttp2-14:amd64 (1.43.0-1ubuntu0.2) ...
+#19 20.47 Setting up libibumad3:amd64 (39.0-1) ...
+#19 20.48 Setting up libibmad5:amd64 (39.0-1) ...
+#19 20.48 Setting up xxd (2:8.2.3995-1ubuntu2.24) ...
+#19 20.48 Setting up ninja-build (1.10.1-1) ...
+#19 20.49 Setting up liberror-perl (0.17029-1) ...
+#19 20.49 Setting up libuv1:amd64 (1.43.0-1ubuntu0.1) ...
+#19 20.49 Setting up vim-common (2:8.2.3995-1ubuntu2.24) ...
+#19 20.50 Setting up libexpat1-dev:amd64 (2.4.7-1ubuntu0.7) ...
+#19 20.50 Setting up emacsen-common (3.0.4) ...
+#19 20.52 Setting up librtmp1:amd64 (2.4+20151223.gitfa8646d.1-2build4) ...
+#19 20.53 Setting up dh-elpa-helper (2.0.9ubuntu1) ...
+#19 20.53 Setting up libjsoncpp25:amd64 (1.9.5-3) ...
+#19 20.53 Setting up pkg-config (0.29.2-1ubuntu3) ...
+#19 20.55 Setting up libibnetdisc5:amd64 (39.0-1) ...
+#19 20.55 Setting up libssh-4:amd64 (0.9.6-2ubuntu0.22.04.6) ...
+#19 20.56 Setting up zlib1g-dev:amd64 (1:1.2.11.dfsg-2ubuntu9.2) ...
+#19 20.56 Setting up nano (6.2-1ubuntu0.1) ...
+#19 20.57 update-alternatives: using /bin/nano to provide /usr/bin/editor (editor) in auto mode
+#19 20.57 update-alternatives: warning: skip creation of /usr/share/man/man1/editor.1.gz because associated file /usr/share/man/man1/nano.1.gz (of link group editor) doesn't exist
+#19 20.57 update-alternatives: using /bin/nano to provide /usr/bin/pico (pico) in auto mode
+#19 20.57 update-alternatives: warning: skip creation of /usr/share/man/man1/pico.1.gz because associated file /usr/share/man/man1/nano.1.gz (of link group pico) doesn't exist
+#19 20.57 Setting up librhash0:amd64 (1.4.2-1ubuntu1) ...
+#19 20.57 Setting up libnccl-dev (2.29.7-1+cuda13.2) ...
+#19 20.58 Setting up libnl-3-200:amd64 (3.5.0-0.1) ...
+#19 20.58 Setting up libmpdec3:amd64 (2.5.1-2build2) ...
+#19 20.58 Setting up libcurl4:amd64 (7.81.0-1ubuntu1.23) ...
+#19 20.59 Setting up git-man (1:2.34.1-1ubuntu1.17) ...
+#19 20.59 Setting up cmake-data (3.22.1-1ubuntu1.22.04.2) ...
+#19 20.61 Setting up libpython3.11-minimal:amd64 (3.11.0~rc1-1~22.04) ...
+#19 20.63 Setting up curl (7.81.0-1ubuntu1.23) ...
+#19 20.63 Setting up vim-runtime (2:8.2.3995-1ubuntu2.24) ...
+#19 20.69 Setting up libaio1:amd64 (0.3.112-13build1) ...
+#19 20.69 Setting up libpopt0:amd64 (1.18-3build1) ...
+#19 20.69 Setting up libicu70:amd64 (70.1-2) ...
+#19 20.70 Setting up python3.11-minimal (3.11.0~rc1-1~22.04) ...
+#19 21.09 Setting up infiniband-diags (39.0-1) ...
+#19 21.09 Setting up libpython3.11-stdlib:amd64 (3.11.0~rc1-1~22.04) ...
+#19 21.10 Setting up libcurl3-gnutls:amd64 (7.81.0-1ubuntu1.23) ...
+#19 21.12 Setting up libaio-dev:amd64 (0.3.112-13build1) ...
+#19 21.12 Setting up libnl-route-3-200:amd64 (3.5.0-0.1) ...
+#19 21.12 Setting up libpython3.10-stdlib:amd64 (3.10.12-1~22.04.15) ...
+#19 21.12 Setting up git (1:2.34.1-1ubuntu1.17) ...
+#19 21.13 Setting up libnl-3-dev:amd64 (3.5.0-0.1) ...
+#19 21.13 Setting up libxml2:amd64 (2.9.13+dfsg-1ubuntu0.11) ...
+#19 21.14 Setting up rsync (3.2.7-0ubuntu0.22.04.4) ...
+#19 21.15 invoke-rc.d: could not determine current runlevel
+#19 21.15 invoke-rc.d: policy-rc.d denied execution of start.
+#19 21.20 Setting up libpython3-stdlib:amd64 (3.10.6-1~22.04.1) ...
+#19 21.21 Setting up python3.11 (3.11.0~rc1-1~22.04) ...
+#19 21.63 Setting up libpython3.10:amd64 (3.10.12-1~22.04.15) ...
+#19 21.63 Setting up libibverbs1:amd64 (39.0-1) ...
+#19 21.66 Setting up vim (2:8.2.3995-1ubuntu2.24) ...
+#19 21.67 update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/vim (vim) in auto mode
+#19 21.67 update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/vimdiff (vimdiff) in auto mode
+#19 21.67 update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/rvim (rvim) in auto mode
+#19 21.67 update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/rview (rview) in auto mode
+#19 21.67 update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/vi (vi) in auto mode
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/da/man1/vi.1.gz because associated file /usr/share/man/da/man1/vim.1.gz (of link group vi) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/de/man1/vi.1.gz because associated file /usr/share/man/de/man1/vim.1.gz (of link group vi) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/fr/man1/vi.1.gz because associated file /usr/share/man/fr/man1/vim.1.gz (of link group vi) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/it/man1/vi.1.gz because associated file /usr/share/man/it/man1/vim.1.gz (of link group vi) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/ja/man1/vi.1.gz because associated file /usr/share/man/ja/man1/vim.1.gz (of link group vi) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/pl/man1/vi.1.gz because associated file /usr/share/man/pl/man1/vim.1.gz (of link group vi) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/ru/man1/vi.1.gz because associated file /usr/share/man/ru/man1/vim.1.gz (of link group vi) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/man1/vi.1.gz because associated file /usr/share/man/man1/vim.1.gz (of link group vi) doesn't exist
+#19 21.67 update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/view (view) in auto mode
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/da/man1/view.1.gz because associated file /usr/share/man/da/man1/vim.1.gz (of link group view) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/de/man1/view.1.gz because associated file /usr/share/man/de/man1/vim.1.gz (of link group view) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/fr/man1/view.1.gz because associated file /usr/share/man/fr/man1/vim.1.gz (of link group view) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/it/man1/view.1.gz because associated file /usr/share/man/it/man1/vim.1.gz (of link group view) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/ja/man1/view.1.gz because associated file /usr/share/man/ja/man1/vim.1.gz (of link group view) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/pl/man1/view.1.gz because associated file /usr/share/man/pl/man1/vim.1.gz (of link group view) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/ru/man1/view.1.gz because associated file /usr/share/man/ru/man1/vim.1.gz (of link group view) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/man1/view.1.gz because associated file /usr/share/man/man1/vim.1.gz (of link group view) doesn't exist
+#19 21.67 update-alternatives: using /usr/bin/vim.basic to provide /usr/bin/ex (ex) in auto mode
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/da/man1/ex.1.gz because associated file /usr/share/man/da/man1/vim.1.gz (of link group ex) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/de/man1/ex.1.gz because associated file /usr/share/man/de/man1/vim.1.gz (of link group ex) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/fr/man1/ex.1.gz because associated file /usr/share/man/fr/man1/vim.1.gz (of link group ex) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/it/man1/ex.1.gz because associated file /usr/share/man/it/man1/vim.1.gz (of link group ex) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/ja/man1/ex.1.gz because associated file /usr/share/man/ja/man1/vim.1.gz (of link group ex) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/pl/man1/ex.1.gz because associated file /usr/share/man/pl/man1/vim.1.gz (of link group ex) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/ru/man1/ex.1.gz because associated file /usr/share/man/ru/man1/vim.1.gz (of link group ex) doesn't exist
+#19 21.67 update-alternatives: warning: skip creation of /usr/share/man/man1/ex.1.gz because associated file /usr/share/man/man1/vim.1.gz (of link group ex) doesn't exist
+#19 21.68 Setting up python3.10 (3.10.12-1~22.04.15) ...
+#19 22.06 Setting up libpython3.11:amd64 (3.11.0~rc1-1~22.04) ...
+#19 22.07 Setting up ibverbs-providers:amd64 (39.0-1) ...
+#19 22.09 Setting up libarchive13:amd64 (3.6.0-1ubuntu1.5) ...
+#19 22.09 Setting up python3 (3.10.6-1~22.04.1) ...
+#19 22.10 running python rtupdate hooks for python3.10...
+#19 22.10 running python post-rtupdate hooks for python3.10...
+#19 22.15 Setting up libnl-route-3-dev:amd64 (3.5.0-0.1) ...
+#19 22.15 Setting up ibverbs-utils (39.0-1) ...
+#19 22.15 Setting up libpython3.11-dev:amd64 (3.11.0~rc1-1~22.04) ...
+#19 22.16 Setting up cmake (3.22.1-1ubuntu1.22.04.2) ...
+#19 22.16 Setting up python3-lib2to3 (3.10.8-1~22.04) ...
+#19 22.28 Setting up python3-pkg-resources (59.6.0-1.2ubuntu0.22.04.3) ...
+#19 22.39 Setting up python3-distutils (3.10.8-1~22.04) ...
+#19 22.53 Setting up librdmacm1:amd64 (39.0-1) ...
+#19 22.53 Setting up python3-setuptools (59.6.0-1.2ubuntu0.22.04.3) ...
+#19 22.75 Setting up python3.11-dev (3.11.0~rc1-1~22.04) ...
+#19 22.75 Setting up libibverbs-dev:amd64 (39.0-1) ...
+#19 22.76 Setting up python3-wheel (0.37.1-2ubuntu0.22.04.1) ...
+#19 22.84 Setting up python3.11-venv (3.11.0~rc1-1~22.04) ...
+#19 22.87 Setting up librdmacm-dev:amd64 (39.0-1) ...
+#19 22.88 Setting up python3-pip (22.0.2+dfsg-1ubuntu0.7) ...
+#19 23.50 Setting up rdmacm-utils (39.0-1) ...
+#19 23.50 Processing triggers for libc-bin (2.35-0ubuntu3.8) ...
+#19 DONE 23.9s
+
+#20 [axolotl-builder  3/19] RUN python3.11 -m venv /opt/venv
+#20 DONE 2.1s
+
+#21 [axolotl-builder  4/19] WORKDIR /workspace
+#21 DONE 0.0s
+
+#22 [axolotl-builder  5/19] RUN pip install --upgrade pip packaging setuptools wheel psutil &&     pip install --no-cache-dir         torch==2.10.0+cu128 torchvision         --index-url https://download.pytorch.org/whl/cu128 &&     pip cache purge
+#22 0.504 Requirement already satisfied: pip in /opt/venv/lib/python3.11/site-packages (22.0.2)
+#22 0.599 Collecting pip
+#22 0.659   Downloading pip-26.0.1-py3-none-any.whl (1.8 MB)
+#22 0.778      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 15.3 MB/s eta 0:00:00
+#22 0.809 Collecting packaging
+#22 0.817   Downloading packaging-26.0-py3-none-any.whl (74 kB)
+#22 0.820      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 74.4/74.4 KB 42.3 MB/s eta 0:00:00
+#22 0.821 Requirement already satisfied: setuptools in /opt/venv/lib/python3.11/site-packages (59.6.0)
+#22 0.992 Collecting setuptools
+#22 0.999   Downloading setuptools-82.0.1-py3-none-any.whl (1.0 MB)
+#22 1.038      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 26.7 MB/s eta 0:00:00
+#22 1.069 Collecting wheel
+#22 1.076   Downloading wheel-0.46.3-py3-none-any.whl (30 kB)
+#22 1.182 Collecting psutil
+#22 1.189   Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl (155 kB)
+#22 1.194      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 155.6/155.6 KB 39.8 MB/s eta 0:00:00
+#22 1.328 Installing collected packages: setuptools, psutil, pip, packaging, wheel
+#22 1.328   Attempting uninstall: setuptools
+#22 1.328     Found existing installation: setuptools 59.6.0
+#22 1.370     Uninstalling setuptools-59.6.0:
+#22 1.440       Successfully uninstalled setuptools-59.6.0
+#22 1.838   Attempting uninstall: pip
+#22 1.838     Found existing installation: pip 22.0.2
+#22 1.997     Uninstalling pip-22.0.2:
+#22 2.202       Successfully uninstalled pip-22.0.2
+#22 2.747 Successfully installed packaging-26.0 pip-26.0.1 psutil-7.2.2 setuptools-82.0.1 wheel-0.46.3
+#22 2.996 Looking in indexes: https://download.pytorch.org/whl/cu128
+#22 3.431 Collecting torch==2.10.0+cu128
+#22 3.508   Downloading https://download.pytorch.org/whl/cu128/torch-2.10.0%2Bcu128-cp311-cp311-manylinux_2_28_x86_64.whl.metadata (30 kB)
+#22 3.682 Collecting torchvision
+#22 3.754   Downloading https://download.pytorch.org/whl/cu128/torchvision-0.25.0%2Bcu128-cp311-cp311-manylinux_2_28_x86_64.whl.metadata (5.4 kB)
+#22 3.879 Collecting filelock (from torch==2.10.0+cu128)
+#22 3.924   Downloading filelock-3.20.0-py3-none-any.whl.metadata (2.1 kB)
+#22 4.031 Collecting typing-extensions>=4.10.0 (from torch==2.10.0+cu128)
+#22 4.101   Downloading https://download.pytorch.org/whl/typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+#22 4.238 Collecting sympy>=1.13.3 (from torch==2.10.0+cu128)
+#22 4.246   Downloading sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+#22 4.407 Collecting networkx>=2.5.1 (from torch==2.10.0+cu128)
+#22 4.414   Downloading networkx-3.6.1-py3-none-any.whl.metadata (6.8 kB)
+#22 4.532 Collecting jinja2 (from torch==2.10.0+cu128)
+#22 4.601   Downloading https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+#22 4.769 Collecting fsspec>=0.8.5 (from torch==2.10.0+cu128)
+#22 4.776   Downloading fsspec-2025.12.0-py3-none-any.whl.metadata (10 kB)
+#22 4.917 Collecting cuda-bindings==12.9.4 (from torch==2.10.0+cu128)
+#22 4.987   Downloading https://download.pytorch.org/whl/cu128/cuda_bindings-12.9.4-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (2.6 kB)
+#22 5.066 Collecting nvidia-cuda-nvrtc-cu12==12.8.93 (from torch==2.10.0+cu128)
+#22 5.144   Downloading https://pypi.nvidia.com/nvidia-cuda-nvrtc-cu12/nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl (88.0 MB)
+#22 5.982      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 88.0/88.0 MB 107.7 MB/s  0:00:00
+#22 6.113 Collecting nvidia-cuda-runtime-cu12==12.8.90 (from torch==2.10.0+cu128)
+#22 6.122   Downloading https://pypi.nvidia.com/nvidia-cuda-runtime-cu12/nvidia_cuda_runtime_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (954 kB)
+#22 6.131      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 954.8/954.8 kB 123.5 MB/s  0:00:00
+#22 6.212 Collecting nvidia-cuda-cupti-cu12==12.8.90 (from torch==2.10.0+cu128)
+#22 6.221   Downloading https://pypi.nvidia.com/nvidia-cuda-cupti-cu12/nvidia_cuda_cupti_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (10.2 MB)
+#22 6.308      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10.2/10.2 MB 117.9 MB/s  0:00:00
+#22 6.397 Collecting nvidia-cudnn-cu12==9.10.2.21 (from torch==2.10.0+cu128)
+#22 6.406   Downloading https://pypi.nvidia.com/nvidia-cudnn-cu12/nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_x86_64.whl (706.8 MB)
+#22 12.60      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 706.8/706.8 MB 115.8 MB/s  0:00:06
+#22 13.05 Collecting nvidia-cublas-cu12==12.8.4.1 (from torch==2.10.0+cu128)
+#22 13.06   Downloading https://pypi.nvidia.com/nvidia-cublas-cu12/nvidia_cublas_cu12-12.8.4.1-py3-none-manylinux_2_27_x86_64.whl (594.3 MB)
+#22 18.46      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 594.3/594.3 MB 113.8 MB/s  0:00:05
+#22 18.87 Collecting nvidia-cufft-cu12==11.3.3.83 (from torch==2.10.0+cu128)
+#22 18.88   Downloading https://pypi.nvidia.com/nvidia-cufft-cu12/nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (193.1 MB)
+#22 20.56      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 193.1/193.1 MB 114.9 MB/s  0:00:01
+#22 20.74 Collecting nvidia-curand-cu12==10.3.9.90 (from torch==2.10.0+cu128)
+#22 20.75   Downloading https://pypi.nvidia.com/nvidia-curand-cu12/nvidia_curand_cu12-10.3.9.90-py3-none-manylinux_2_27_x86_64.whl (63.6 MB)
+#22 21.33      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 63.6/63.6 MB 109.9 MB/s  0:00:00
+#22 21.44 Collecting nvidia-cusolver-cu12==11.7.3.90 (from torch==2.10.0+cu128)
+#22 21.45   Downloading https://pypi.nvidia.com/nvidia-cusolver-cu12/nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_x86_64.whl (267.5 MB)
+#22 23.86      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 267.5/267.5 MB 110.8 MB/s  0:00:02
+#22 24.08 Collecting nvidia-cusparse-cu12==12.5.8.93 (from torch==2.10.0+cu128)
+#22 24.09   Downloading https://pypi.nvidia.com/nvidia-cusparse-cu12/nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (288.2 MB)
+#22 26.80      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 288.2/288.2 MB 105.4 MB/s  0:00:02
+#22 27.02 Collecting nvidia-cusparselt-cu12==0.7.1 (from torch==2.10.0+cu128)
+#22 27.03   Downloading https://pypi.nvidia.com/nvidia-cusparselt-cu12/nvidia_cusparselt_cu12-0.7.1-py3-none-manylinux2014_x86_64.whl (287.2 MB)
+#22 29.52      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 287.2/287.2 MB 115.5 MB/s  0:00:02
+#22 29.74 Collecting nvidia-nccl-cu12==2.27.5 (from torch==2.10.0+cu128)
+#22 29.75   Downloading https://pypi.nvidia.com/nvidia-nccl-cu12/nvidia_nccl_cu12-2.27.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (322.3 MB)
+#22 32.54      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 322.3/322.3 MB 115.5 MB/s  0:00:02
+#22 32.78 Collecting nvidia-nvshmem-cu12==3.4.5 (from torch==2.10.0+cu128)
+#22 32.79   Downloading https://pypi.nvidia.com/nvidia-nvshmem-cu12/nvidia_nvshmem_cu12-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (139.1 MB)
+#22 33.98      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 139.1/139.1 MB 117.0 MB/s  0:00:01
+#22 34.13 Collecting nvidia-nvtx-cu12==12.8.90 (from torch==2.10.0+cu128)
+#22 34.15   Downloading https://pypi.nvidia.com/nvidia-nvtx-cu12/nvidia_nvtx_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (89 kB)
+#22 34.23 Collecting nvidia-nvjitlink-cu12==12.8.93 (from torch==2.10.0+cu128)
+#22 34.24   Downloading https://pypi.nvidia.com/nvidia-nvjitlink-cu12/nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl (39.3 MB)
+#22 34.58      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 39.3/39.3 MB 114.7 MB/s  0:00:00
+#22 34.67 Collecting nvidia-cufile-cu12==1.13.1.3 (from torch==2.10.0+cu128)
+#22 34.68   Downloading https://pypi.nvidia.com/nvidia-cufile-cu12/nvidia_cufile_cu12-1.13.1.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (1.2 MB)
+#22 34.69      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 127.6 MB/s  0:00:00
+#22 34.83 Collecting triton==3.6.0 (from torch==2.10.0+cu128)
+#22 34.90   Downloading https://download.pytorch.org/whl/triton-3.6.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (1.7 kB)
+#22 35.01 Collecting cuda-pathfinder~=1.1 (from cuda-bindings==12.9.4->torch==2.10.0+cu128)
+#22 35.08   Downloading https://download.pytorch.org/whl/cuda_pathfinder-1.2.2-py3-none-any.whl.metadata (3.2 kB)
+#22 35.60 Collecting numpy (from torchvision)
+#22 35.61   Downloading numpy-2.3.5-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (62 kB)
+#22 35.88 Collecting pillow!=8.3.*,>=5.3.0 (from torchvision)
+#22 35.89   Downloading pillow-12.0.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (8.8 kB)
+#22 36.00 Collecting mpmath<1.4,>=1.1.0 (from sympy>=1.13.3->torch==2.10.0+cu128)
+#22 36.01   Downloading mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)
+#22 36.14 Collecting MarkupSafe>=2.0 (from jinja2->torch==2.10.0+cu128)
+#22 36.21   Downloading https://download.pytorch.org/whl/MarkupSafe-3.0.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.0 kB)
+#22 36.28 Downloading https://download.pytorch.org/whl/cu128/torch-2.10.0%2Bcu128-cp311-cp311-manylinux_2_28_x86_64.whl (916.8 MB)
+#22 51.53    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 916.8/916.8 MB 60.1 MB/s  0:00:15
+#22 51.60 Downloading https://download.pytorch.org/whl/cu128/cuda_bindings-12.9.4-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (12.2 MB)
+#22 51.79    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.2/12.2 MB 64.7 MB/s  0:00:00
+#22 51.86 Downloading https://download.pytorch.org/whl/triton-3.6.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (188.2 MB)
+#22 54.88    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 188.2/188.2 MB 62.3 MB/s  0:00:03
+#22 54.95 Downloading https://download.pytorch.org/whl/cuda_pathfinder-1.2.2-py3-none-any.whl (23 kB)
+#22 55.02 Downloading https://download.pytorch.org/whl/cu128/torchvision-0.25.0%2Bcu128-cp311-cp311-manylinux_2_28_x86_64.whl (8.1 MB)
+#22 55.15    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 8.1/8.1 MB 65.0 MB/s  0:00:00
+#22 55.15 Downloading fsspec-2025.12.0-py3-none-any.whl (201 kB)
+#22 55.17 Downloading networkx-3.6.1-py3-none-any.whl (2.1 MB)
+#22 55.19    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 97.7 MB/s  0:00:00
+#22 55.20 Downloading pillow-12.0.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (7.0 MB)
+#22 55.26    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.0/7.0 MB 117.9 MB/s  0:00:00
+#22 55.27 Downloading sympy-1.14.0-py3-none-any.whl (6.3 MB)
+#22 55.33    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.3/6.3 MB 108.2 MB/s  0:00:00
+#22 55.33 Downloading mpmath-1.3.0-py3-none-any.whl (536 kB)
+#22 55.34    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 536.2/536.2 kB 144.5 MB/s  0:00:00
+#22 55.41 Downloading https://download.pytorch.org/whl/typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+#22 55.41 Downloading filelock-3.20.0-py3-none-any.whl (16 kB)
+#22 55.48 Downloading https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl (134 kB)
+#22 55.56 Downloading https://download.pytorch.org/whl/MarkupSafe-3.0.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (23 kB)
+#22 55.57 Downloading numpy-2.3.5-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (16.9 MB)
+#22 55.72    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.9/16.9 MB 112.5 MB/s  0:00:00
+#22 56.45 Installing collected packages: nvidia-cusparselt-cu12, mpmath, typing-extensions, triton, sympy, pillow, nvidia-nvtx-cu12, nvidia-nvshmem-cu12, nvidia-nvjitlink-cu12, nvidia-nccl-cu12, nvidia-curand-cu12, nvidia-cufile-cu12, nvidia-cuda-runtime-cu12, nvidia-cuda-nvrtc-cu12, nvidia-cuda-cupti-cu12, nvidia-cublas-cu12, numpy, networkx, MarkupSafe, fsspec, filelock, cuda-pathfinder, nvidia-cusparse-cu12, nvidia-cufft-cu12, nvidia-cudnn-cu12, jinja2, cuda-bindings, nvidia-cusolver-cu12, torch, torchvision
+#22 94.93 
+#22 94.93 Successfully installed MarkupSafe-3.0.2 cuda-bindings-12.9.4 cuda-pathfinder-1.2.2 filelock-3.20.0 fsspec-2025.12.0 jinja2-3.1.6 mpmath-1.3.0 networkx-3.6.1 numpy-2.3.5 nvidia-cublas-cu12-12.8.4.1 nvidia-cuda-cupti-cu12-12.8.90 nvidia-cuda-nvrtc-cu12-12.8.93 nvidia-cuda-runtime-cu12-12.8.90 nvidia-cudnn-cu12-9.10.2.21 nvidia-cufft-cu12-11.3.3.83 nvidia-cufile-cu12-1.13.1.3 nvidia-curand-cu12-10.3.9.90 nvidia-cusolver-cu12-11.7.3.90 nvidia-cusparse-cu12-12.5.8.93 nvidia-cusparselt-cu12-0.7.1 nvidia-nccl-cu12-2.27.5 nvidia-nvjitlink-cu12-12.8.93 nvidia-nvshmem-cu12-3.4.5 nvidia-nvtx-cu12-12.8.90 pillow-12.0.0 sympy-1.14.0 torch-2.10.0+cu128 torchvision-0.25.0+cu128 triton-3.6.0 typing-extensions-4.15.0
+#22 96.02 Files removed: 10 (3.4 MB)
+#22 96.02 Directories removed: 49
+#22 DONE 97.8s
+
+#23 [axolotl-builder  6/19] RUN pip install --no-cache-dir causal-conv1d mamba-ssm 2>/dev/null ||     echo "Note: causal_conv1d/mamba_ssm prebuilt wheels not available, skipping" &&     pip cache purge
+#23 0.559 Collecting causal-conv1d
+#23 0.618   Downloading causal_conv1d-1.6.1.tar.gz (29 kB)
+#23 0.629   Installing build dependencies: started
+#23 60.75   Installing build dependencies: still running...
+#23 93.20   Installing build dependencies: finished with status 'done'
+#23 93.20   Getting requirements to build wheel: started
+#23 95.20   Getting requirements to build wheel: finished with status 'done'
+#23 95.20   Preparing metadata (pyproject.toml): started
+#23 96.40   Preparing metadata (pyproject.toml): finished with status 'done'
+#23 96.48 Collecting mamba-ssm
+#23 96.49   Downloading mamba_ssm-2.3.1.tar.gz (121 kB)
+#23 96.51   Installing build dependencies: started
+#23 133.8   Installing build dependencies: finished with status 'done'
+#23 133.8   Getting requirements to build wheel: started
+#23 135.8   Getting requirements to build wheel: finished with status 'done'
+#23 135.8   Preparing metadata (pyproject.toml): started
+#23 137.0   Preparing metadata (pyproject.toml): finished with status 'done'
+#23 137.0 Requirement already satisfied: torch in /opt/venv/lib/python3.11/site-packages (from causal-conv1d) (2.10.0+cu128)
+#23 137.0 Requirement already satisfied: packaging in /opt/venv/lib/python3.11/site-packages (from causal-conv1d) (26.0)
+#23 137.0 Collecting ninja (from causal-conv1d)
+#23 137.0   Downloading ninja-1.13.0-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (5.1 kB)
+#23 137.0 Requirement already satisfied: triton in /opt/venv/lib/python3.11/site-packages (from mamba-ssm) (3.6.0)
+#23 137.0 Collecting einops (from mamba-ssm)
+#23 137.0   Downloading einops-0.8.2-py3-none-any.whl.metadata (13 kB)
+#23 137.1 Collecting transformers (from mamba-ssm)
+#23 137.1   Downloading transformers-5.3.0-py3-none-any.whl.metadata (32 kB)
+#23 137.1 Requirement already satisfied: setuptools>=61.0.0 in /opt/venv/lib/python3.11/site-packages (from mamba-ssm) (82.0.1)
+#23 137.1 Requirement already satisfied: filelock in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (3.20.0)
+#23 137.1 Requirement already satisfied: typing-extensions>=4.10.0 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (4.15.0)
+#23 137.1 Requirement already satisfied: sympy>=1.13.3 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (1.14.0)
+#23 137.1 Requirement already satisfied: networkx>=2.5.1 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (3.6.1)
+#23 137.1 Requirement already satisfied: jinja2 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (3.1.6)
+#23 137.1 Requirement already satisfied: fsspec>=0.8.5 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (2025.12.0)
+#23 137.1 Requirement already satisfied: cuda-bindings==12.9.4 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (12.9.4)
+#23 137.1 Requirement already satisfied: nvidia-cuda-nvrtc-cu12==12.8.93 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (12.8.93)
+#23 137.1 Requirement already satisfied: nvidia-cuda-runtime-cu12==12.8.90 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (12.8.90)
+#23 137.1 Requirement already satisfied: nvidia-cuda-cupti-cu12==12.8.90 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (12.8.90)
+#23 137.1 Requirement already satisfied: nvidia-cudnn-cu12==9.10.2.21 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (9.10.2.21)
+#23 137.1 Requirement already satisfied: nvidia-cublas-cu12==12.8.4.1 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (12.8.4.1)
+#23 137.1 Requirement already satisfied: nvidia-cufft-cu12==11.3.3.83 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (11.3.3.83)
+#23 137.1 Requirement already satisfied: nvidia-curand-cu12==10.3.9.90 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (10.3.9.90)
+#23 137.1 Requirement already satisfied: nvidia-cusolver-cu12==11.7.3.90 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (11.7.3.90)
+#23 137.1 Requirement already satisfied: nvidia-cusparse-cu12==12.5.8.93 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (12.5.8.93)
+#23 137.1 Requirement already satisfied: nvidia-cusparselt-cu12==0.7.1 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (0.7.1)
+#23 137.1 Requirement already satisfied: nvidia-nccl-cu12==2.27.5 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (2.27.5)
+#23 137.1 Requirement already satisfied: nvidia-nvshmem-cu12==3.4.5 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (3.4.5)
+#23 137.1 Requirement already satisfied: nvidia-nvtx-cu12==12.8.90 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (12.8.90)
+#23 137.1 Requirement already satisfied: nvidia-nvjitlink-cu12==12.8.93 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (12.8.93)
+#23 137.1 Requirement already satisfied: nvidia-cufile-cu12==1.13.1.3 in /opt/venv/lib/python3.11/site-packages (from torch->causal-conv1d) (1.13.1.3)
+#23 137.1 Requirement already satisfied: cuda-pathfinder~=1.1 in /opt/venv/lib/python3.11/site-packages (from cuda-bindings==12.9.4->torch->causal-conv1d) (1.2.2)
+#23 137.1 Requirement already satisfied: mpmath<1.4,>=1.1.0 in /opt/venv/lib/python3.11/site-packages (from sympy>=1.13.3->torch->causal-conv1d) (1.3.0)
+#23 137.1 Requirement already satisfied: MarkupSafe>=2.0 in /opt/venv/lib/python3.11/site-packages (from jinja2->torch->causal-conv1d) (3.0.2)
+#23 137.2 Collecting huggingface-hub<2.0,>=1.3.0 (from transformers->mamba-ssm)
+#23 137.2   Downloading huggingface_hub-1.7.1-py3-none-any.whl.metadata (13 kB)
+#23 137.2 Requirement already satisfied: numpy>=1.17 in /opt/venv/lib/python3.11/site-packages (from transformers->mamba-ssm) (2.3.5)
+#23 137.2 Collecting pyyaml>=5.1 (from transformers->mamba-ssm)
+#23 137.2   Downloading pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+#23 137.5 Collecting regex!=2019.12.17 (from transformers->mamba-ssm)
+#23 137.5   Downloading regex-2026.2.28-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+#23 137.6 Collecting tokenizers<=0.23.0,>=0.22.0 (from transformers->mamba-ssm)
+#23 137.6   Downloading tokenizers-0.22.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+#23 137.6 Collecting typer (from transformers->mamba-ssm)
+#23 137.6   Downloading typer-0.24.1-py3-none-any.whl.metadata (16 kB)
+#23 137.7 Collecting safetensors>=0.4.3 (from transformers->mamba-ssm)
+#23 137.7   Downloading safetensors-0.7.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.1 kB)
+#23 137.7 Collecting tqdm>=4.27 (from transformers->mamba-ssm)
+#23 137.7   Downloading tqdm-4.67.3-py3-none-any.whl.metadata (57 kB)
+#23 137.8 Collecting hf-xet<2.0.0,>=1.4.2 (from huggingface-hub<2.0,>=1.3.0->transformers->mamba-ssm)
+#23 137.8   Downloading hf_xet-1.4.2-cp37-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (4.9 kB)
+#23 137.8 Collecting httpx<1,>=0.23.0 (from huggingface-hub<2.0,>=1.3.0->transformers->mamba-ssm)
+#23 137.8   Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+#23 137.8 Collecting anyio (from httpx<1,>=0.23.0->huggingface-hub<2.0,>=1.3.0->transformers->mamba-ssm)
+#23 137.8   Downloading anyio-4.12.1-py3-none-any.whl.metadata (4.3 kB)
+#23 137.8 Collecting certifi (from httpx<1,>=0.23.0->huggingface-hub<2.0,>=1.3.0->transformers->mamba-ssm)
+#23 137.9   Downloading certifi-2026.2.25-py3-none-any.whl.metadata (2.5 kB)
+#23 137.9 Collecting httpcore==1.* (from httpx<1,>=0.23.0->huggingface-hub<2.0,>=1.3.0->transformers->mamba-ssm)
+#23 137.9   Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+#23 137.9 Collecting idna (from httpx<1,>=0.23.0->huggingface-hub<2.0,>=1.3.0->transformers->mamba-ssm)
+#23 137.9   Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+#23 137.9 Collecting h11>=0.16 (from httpcore==1.*->httpx<1,>=0.23.0->huggingface-hub<2.0,>=1.3.0->transformers->mamba-ssm)
+#23 137.9   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+#23 137.9 Collecting click>=8.2.1 (from typer->transformers->mamba-ssm)
+#23 137.9   Downloading click-8.3.1-py3-none-any.whl.metadata (2.6 kB)
+#23 137.9 Collecting shellingham>=1.3.0 (from typer->transformers->mamba-ssm)
+#23 138.0   Downloading shellingham-1.5.4-py2.py3-none-any.whl.metadata (3.5 kB)
+#23 138.0 Collecting rich>=12.3.0 (from typer->transformers->mamba-ssm)
+#23 138.0   Downloading rich-14.3.3-py3-none-any.whl.metadata (18 kB)
+#23 138.0 Collecting annotated-doc>=0.0.2 (from typer->transformers->mamba-ssm)
+#23 138.0   Downloading annotated_doc-0.0.4-py3-none-any.whl.metadata (6.6 kB)
+#23 138.0 Collecting markdown-it-py>=2.2.0 (from rich>=12.3.0->typer->transformers->mamba-ssm)
+#23 138.0   Downloading markdown_it_py-4.0.0-py3-none-any.whl.metadata (7.3 kB)
+#23 138.0 Collecting pygments<3.0.0,>=2.13.0 (from rich>=12.3.0->typer->transformers->mamba-ssm)
+#23 138.0   Downloading pygments-2.19.2-py3-none-any.whl.metadata (2.5 kB)
+#23 138.0 Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->rich>=12.3.0->typer->transformers->mamba-ssm)
+#23 138.1   Downloading mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+#23 138.1 Downloading einops-0.8.2-py3-none-any.whl (65 kB)
+#23 138.1 Downloading ninja-1.13.0-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (180 kB)
+#23 138.1 Downloading transformers-5.3.0-py3-none-any.whl (10.7 MB)
+#23 138.2    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 10.7/10.7 MB 110.7 MB/s  0:00:00
+#23 138.2 Downloading huggingface_hub-1.7.1-py3-none-any.whl (616 kB)
+#23 138.2    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 616.3/616.3 kB 144.4 MB/s  0:00:00
+#23 138.2 Downloading hf_xet-1.4.2-cp37-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (4.2 MB)
+#23 138.3    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.2/4.2 MB 79.2 MB/s  0:00:00
+#23 138.3 Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+#23 138.3 Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+#23 138.3 Downloading tokenizers-0.22.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.3 MB)
+#23 138.3    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.3/3.3 MB 111.8 MB/s  0:00:00
+#23 138.3 Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+#23 138.3 Downloading pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (806 kB)
+#23 138.3    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 806.6/806.6 kB 129.0 MB/s  0:00:00
+#23 138.3 Downloading regex-2026.2.28-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (800 kB)
+#23 138.4    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 800.2/800.2 kB 115.1 MB/s  0:00:00
+#23 138.4 Downloading safetensors-0.7.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (507 kB)
+#23 138.4 Downloading tqdm-4.67.3-py3-none-any.whl (78 kB)
+#23 138.4 Downloading anyio-4.12.1-py3-none-any.whl (113 kB)
+#23 138.4 Downloading idna-3.11-py3-none-any.whl (71 kB)
+#23 138.4 Downloading certifi-2026.2.25-py3-none-any.whl (153 kB)
+#23 138.4 Downloading typer-0.24.1-py3-none-any.whl (56 kB)
+#23 138.4 Downloading annotated_doc-0.0.4-py3-none-any.whl (5.3 kB)
+#23 138.4 Downloading click-8.3.1-py3-none-any.whl (108 kB)
+#23 138.4 Downloading rich-14.3.3-py3-none-any.whl (310 kB)
+#23 138.4 Downloading pygments-2.19.2-py3-none-any.whl (1.2 MB)
+#23 138.4    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 108.5 MB/s  0:00:00
+#23 138.5 Downloading markdown_it_py-4.0.0-py3-none-any.whl (87 kB)
+#23 138.5 Downloading mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+#23 138.5 Downloading shellingham-1.5.4-py2.py3-none-any.whl (9.8 kB)
+#23 138.5 Building wheels for collected packages: causal-conv1d, mamba-ssm
+#23 138.5   Building wheel for causal-conv1d (pyproject.toml): started
+#23 596.1   Building wheel for causal-conv1d (pyproject.toml): still running...
+#23 612.1   Building wheel for causal-conv1d (pyproject.toml): finished with status 'done'
+#23 612.2   Created wheel for causal-conv1d: filename=causal_conv1d-1.6.1-cp311-cp311-linux_x86_64.whl size=254017364 sha256=20aef36564dc6f3e6723472862adc9f967b5a8eb099bdf52b0a6bf61a4610813
+#23 612.2   Stored in directory: /tmp/pip-ephem-wheel-cache-ijv4mo01/wheels/2d/35/b8/e4badf46e6d62d84dc8ae816038ae01187b0db883de58caf83
+#23 612.2   Building wheel for mamba-ssm (pyproject.toml): started
+#23 621.2   Building wheel for mamba-ssm (pyproject.toml): finished with status 'done'
+#23 621.5   Created wheel for mamba-ssm: filename=mamba_ssm-2.3.1-cp311-cp311-linux_x86_64.whl size=533587026 sha256=04ebab0968058c64592eb8bad43ea7a8a42ac9927b2d88679a60e7da6cf907c8
+#23 621.5   Stored in directory: /tmp/pip-ephem-wheel-cache-ijv4mo01/wheels/67/bd/ab/4253bcf5e56cc1973328ee70c72b36de9eb077ceb8b76bce25
+#23 621.5 Successfully built causal-conv1d mamba-ssm
+#23 621.6 Installing collected packages: tqdm, shellingham, safetensors, regex, pyyaml, pygments, ninja, mdurl, idna, hf-xet, h11, einops, click, certifi, annotated-doc, markdown-it-py, httpcore, anyio, rich, httpx, typer, causal-conv1d, huggingface-hub, tokenizers, transformers, mamba-ssm
+#23 631.4 
+#23 631.4 Successfully installed annotated-doc-0.0.4 anyio-4.12.1 causal-conv1d-1.6.1 certifi-2026.2.25 click-8.3.1 einops-0.8.2 h11-0.16.0 hf-xet-1.4.2 httpcore-1.0.9 httpx-0.28.1 huggingface-hub-1.7.1 idna-3.11 mamba-ssm-2.3.1 markdown-it-py-4.0.0 mdurl-0.1.2 ninja-1.13.0 pygments-2.19.2 pyyaml-6.0.3 regex-2026.2.28 rich-14.3.3 safetensors-0.7.0 shellingham-1.5.4 tokenizers-0.22.2 tqdm-4.67.3 transformers-5.3.0 typer-0.24.1
+#23 634.9 Files removed: 186 (4129.6 MB)
+#23 634.9 Directories removed: 0
+#23 DONE 635.4s
+
+#24 [axolotl-builder  7/19] RUN echo "=== BUILD PARALLELISM ===" &&     echo "MAX_JOBS=8" &&     echo "CMAKE_BUILD_PARALLEL_LEVEL=8" &&     echo "nproc=$(nproc)" &&     python -c "import os; print(f'Python os.cpu_count()={os.cpu_count()}'); print(f'MAX_JOBS from env={os.environ.get("MAX_JOBS", "NOT SET")}')"
+#24 0.213 === BUILD PARALLELISM ===
+#24 0.213 MAX_JOBS=8
+#24 0.213 CMAKE_BUILD_PARALLEL_LEVEL=8
+#24 0.214 nproc=32
+#24 0.221 Python os.cpu_count()=32
+#24 0.221 MAX_JOBS from env=8
+#24 DONE 0.2s
+
+#25 [axolotl-builder  8/19] RUN pip install --no-cache-dir flash-attn 2>/dev/null ||     (echo "Installing flash-attn from prebuilt wheel..." &&      PYTHON_CP="cp$(echo ${PYTHON_VERSION} | tr -d '.')" &&      TORCH_MAJOR_MINOR="$(echo 2.10.0 | grep -oP '^\d+\.\d+')" &&      TORCH_TAG="torch${TORCH_MAJOR_MINOR}" &&      case "amd64" in          amd64) ARCH_TAG="x86_64" ;;          arm64) ARCH_TAG="aarch64" ;;      esac &&      WHL_FILE="flash_attn-2.8.3+cu128${TORCH_TAG}-${PYTHON_CP}-${PYTHON_CP}-linux_${ARCH_TAG}.whl" &&      wget -q "https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.7.16/${WHL_FILE}" 2>/dev/null &&      pip install --no-cache-dir "${WHL_FILE}" &&      rm -f "${WHL_FILE}") ||     echo "Note: flash-attn not available, axolotl will use standard attention" &&     pip cache purge
+#25 0.577 Collecting flash-attn
+#25 0.655   Downloading flash_attn-2.8.3.tar.gz (8.4 MB)
+#25 0.787      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 8.4/8.4 MB 89.8 MB/s  0:00:00
+#25 2.074   Installing build dependencies: started
+#25 2.772   Installing build dependencies: finished with status 'done'
+#25 2.772   Getting requirements to build wheel: started
+#25 2.964   Getting requirements to build wheel: finished with status 'error'
+#25 3.235 Installing flash-attn from prebuilt wheel...
+#25 3.238 Note: flash-attn not available, axolotl will use standard attention
+#25 3.342 Files removed: 6 (1.2 MB)
+#25 3.342 Directories removed: 0
+#25 DONE 3.4s
+
+#26 [axolotl-builder  9/19] RUN git clone --depth=1 https://github.com/axolotl-ai-cloud/axolotl.git /workspace/axolotl-src
+#26 0.301 Cloning into '/workspace/axolotl-src'...
+#26 DONE 1.5s
+
+#27 [axolotl-builder 10/19] WORKDIR /workspace/axolotl-src
+#27 DONE 0.0s
+
+#28 [axolotl-builder 11/19] RUN pip uninstall -y causal_conv1d 2>/dev/null; true
+#28 0.452 Found existing installation: causal_conv1d 1.6.1
+#28 0.454 Uninstalling causal_conv1d-1.6.1:
+#28 0.906   Successfully uninstalled causal_conv1d-1.6.1
+#28 DONE 1.0s
+
+#29 [axolotl-builder 12/19] RUN pip install --no-build-isolation -e ".[flash-attn,ring-flash-attn,ray]" &&     pip cache purge
+#29 0.461 Obtaining file:///workspace/axolotl-src
+#29 0.462   Checking if build backend supports build_editable: started
+#29 0.548   Checking if build backend supports build_editable: finished with status 'done'
+#29 0.549   Preparing editable metadata (pyproject.toml): started
+#29 0.698   Preparing editable metadata (pyproject.toml): finished with status 'done'
+#29 0.769 Collecting bitsandbytes==0.49.1 (from axolotl==0.16.0.dev0)
+#29 0.813   Downloading bitsandbytes-0.49.1-py3-none-manylinux_2_24_x86_64.whl.metadata (10 kB)
+#29 0.818 Requirement already satisfied: triton>=3.4.0 in /opt/venv/lib/python3.11/site-packages (from axolotl==0.16.0.dev0) (3.6.0)
+#29 0.909 Collecting xformers>=0.0.23.post1 (from axolotl==0.16.0.dev0)
+#29 0.917   Downloading xformers-0.0.35-py39-none-manylinux_2_28_x86_64.whl.metadata (1.2 kB)
+#29 0.931 Collecting liger-kernel==0.7.0 (from axolotl==0.16.0.dev0)
+#29 0.939   Downloading liger_kernel-0.7.0-py3-none-any.whl.metadata (25 kB)
+#29 0.946 Requirement already satisfied: packaging==26.0 in /opt/venv/lib/python3.11/site-packages (from axolotl==0.16.0.dev0) (26.0)
+#29 0.946 Requirement already satisfied: huggingface_hub>=1.1.7 in /opt/venv/lib/python3.11/site-packages (from axolotl==0.16.0.dev0) (1.7.1)
+#29 0.961 Collecting peft>=0.18.1 (from axolotl==0.16.0.dev0)
+#29 0.969   Downloading peft-0.18.1-py3-none-any.whl.metadata (14 kB)
+#29 0.974 Requirement already satisfied: tokenizers>=0.22.1 in /opt/venv/lib/python3.11/site-packages (from axolotl==0.16.0.dev0) (0.22.2)
+#29 0.974 Requirement already satisfied: transformers==5.3.0 in /opt/venv/lib/python3.11/site-packages (from axolotl==0.16.0.dev0) (5.3.0)
+#29 0.999 Collecting accelerate==1.13.0 (from axolotl==0.16.0.dev0)
+#29 1.006   Downloading accelerate-1.13.0-py3-none-any.whl.metadata (19 kB)
+#29 1.029 Collecting datasets==4.5.0 (from axolotl==0.16.0.dev0)
+#29 1.038   Downloading datasets-4.5.0-py3-none-any.whl.metadata (19 kB)
+#29 1.070 Collecting trl==0.29.0 (from axolotl==0.16.0.dev0)
+#29 1.077   Downloading trl-0.29.0-py3-none-any.whl.metadata (11 kB)
+#29 1.122 Collecting hf_xet==1.3.2 (from axolotl==0.16.0.dev0)
+#29 1.129   Downloading hf_xet-1.3.2-cp37-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (4.9 kB)
+#29 1.215 Collecting kernels==0.12.2 (from axolotl==0.16.0.dev0)
+#29 1.222   Downloading kernels-0.12.2-py3-none-any.whl.metadata (2.3 kB)
+#29 1.316 Collecting fla-core==0.4.1 (from axolotl==0.16.0.dev0)
+#29 1.329   Downloading fla_core-0.4.1-py3-none-any.whl.metadata (38 kB)
+#29 1.347 Collecting flash-linear-attention==0.4.1 (from axolotl==0.16.0.dev0)
+#29 1.355   Downloading flash_linear_attention-0.4.1-py3-none-any.whl.metadata (39 kB)
+#29 1.436 Collecting trackio>=0.16.1 (from axolotl==0.16.0.dev0)
+#29 1.447   Downloading trackio-0.19.0-py3-none-any.whl.metadata (14 kB)
+#29 1.451 Requirement already satisfied: typing-extensions>=4.15.0 in /opt/venv/lib/python3.11/site-packages (from axolotl==0.16.0.dev0) (4.15.0)
+#29 1.466 Collecting optimum==1.16.2 (from axolotl==0.16.0.dev0)
+#29 1.475   Downloading optimum-1.16.2-py3-none-any.whl.metadata (17 kB)
+#29 1.511 Collecting hf_transfer (from axolotl==0.16.0.dev0)
+#29 1.518   Downloading hf_transfer-0.1.9-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (1.7 kB)
+#29 1.551 Collecting sentencepiece (from axolotl==0.16.0.dev0)
+#29 1.561   Downloading sentencepiece-0.2.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (10 kB)
+#29 1.687 Collecting gradio<7.0,>=6.2.0 (from axolotl==0.16.0.dev0)
+#29 1.694   Downloading gradio-6.9.0-py3-none-any.whl.metadata (16 kB)
+#29 1.826 Collecting modal==1.3.0.post1 (from axolotl==0.16.0.dev0)
+#29 1.834   Downloading modal-1.3.0.post1-py3-none-any.whl.metadata (2.5 kB)
+#29 1.907 Collecting pydantic>=2.10.6 (from axolotl==0.16.0.dev0)
+#29 1.914   Downloading pydantic-2.12.5-py3-none-any.whl.metadata (90 kB)
+#29 1.932 Collecting addict (from axolotl==0.16.0.dev0)
+#29 1.939   Downloading addict-2.4.0-py3-none-any.whl.metadata (1.0 kB)
+#29 1.950 Collecting fire (from axolotl==0.16.0.dev0)
+#29 1.959   Downloading fire-0.7.1-py3-none-any.whl.metadata (5.8 kB)
+#29 1.962 Requirement already satisfied: PyYAML>=6.0 in /opt/venv/lib/python3.11/site-packages (from axolotl==0.16.0.dev0) (6.0.3)
+#29 1.982 Collecting requests (from axolotl==0.16.0.dev0)
+#29 1.990   Downloading requests-2.32.5-py3-none-any.whl.metadata (4.9 kB)
+#29 2.041 Collecting wandb (from axolotl==0.16.0.dev0)
+#29 2.049   Downloading wandb-0.25.1-py3-none-manylinux_2_28_x86_64.whl.metadata (11 kB)
+#29 2.057 Requirement already satisfied: einops in /opt/venv/lib/python3.11/site-packages (from axolotl==0.16.0.dev0) (0.8.2)
+#29 2.071 Collecting colorama (from axolotl==0.16.0.dev0)
+#29 2.078   Downloading colorama-0.4.6-py2.py3-none-any.whl.metadata (17 kB)
+#29 2.139 Collecting numba>=0.61.2 (from axolotl==0.16.0.dev0)
+#29 2.147   Downloading numba-0.64.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.9 kB)
+#29 2.149 Requirement already satisfied: numpy>=2.2.6 in /opt/venv/lib/python3.11/site-packages (from axolotl==0.16.0.dev0) (2.3.5)
+#29 2.161 Collecting evaluate==0.4.1 (from axolotl==0.16.0.dev0)
+#29 2.170   Downloading evaluate-0.4.1-py3-none-any.whl.metadata (9.4 kB)
+#29 2.286 Collecting scipy (from axolotl==0.16.0.dev0)
+#29 2.293   Downloading scipy-1.17.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (62 kB)
+#29 2.310 Collecting nvidia-ml-py==12.560.30 (from axolotl==0.16.0.dev0)
+#29 2.319   Downloading nvidia_ml_py-12.560.30-py3-none-any.whl.metadata (8.6 kB)
+#29 2.337 Collecting art (from axolotl==0.16.0.dev0)
+#29 2.406   Downloading art-6.5-py3-none-any.whl.metadata (72 kB)
+#29 2.426 Collecting tensorboard (from axolotl==0.16.0.dev0)
+#29 2.444   Downloading tensorboard-2.20.0-py3-none-any.whl.metadata (1.8 kB)
+#29 2.458 Collecting python-dotenv==1.0.1 (from axolotl==0.16.0.dev0)
+#29 2.465   Downloading python_dotenv-1.0.1-py3-none-any.whl.metadata (23 kB)
+#29 2.482 Collecting s3fs>=2024.5.0 (from axolotl==0.16.0.dev0)
+#29 2.492   Downloading s3fs-2026.2.0-py3-none-any.whl.metadata (1.2 kB)
+#29 2.512 Collecting gcsfs>=2025.3.0 (from axolotl==0.16.0.dev0)
+#29 2.520   Downloading gcsfs-2026.2.0-py3-none-any.whl.metadata (2.1 kB)
+#29 2.535 Collecting adlfs>=2024.5.0 (from axolotl==0.16.0.dev0)
+#29 2.543   Downloading adlfs-2026.2.0-py3-none-any.whl.metadata (7.6 kB)
+#29 2.624 Collecting ocifs==1.3.2 (from axolotl==0.16.0.dev0)
+#29 2.633   Downloading ocifs-1.3.2-py3-none-any.whl.metadata (9.0 kB)
+#29 2.678 Collecting zstandard==0.22.0 (from axolotl==0.16.0.dev0)
+#29 2.688   Downloading zstandard-0.22.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (2.9 kB)
+#29 2.726 Collecting fastcore (from axolotl==0.16.0.dev0)
+#29 2.734   Downloading fastcore-1.12.24-py3-none-any.whl.metadata (3.4 kB)
+#29 2.749 Collecting lm_eval==0.4.7 (from axolotl==0.16.0.dev0)
+#29 2.757   Downloading lm_eval-0.4.7-py3-none-any.whl.metadata (46 kB)
+#29 2.777 Collecting langdetect==1.0.9 (from axolotl==0.16.0.dev0)
+#29 2.784   Downloading langdetect-1.0.9.tar.gz (981 kB)
+#29 2.814      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 981.5/981.5 kB 51.7 MB/s  0:00:00
+#29 2.843   Preparing metadata (pyproject.toml): started
+#29 2.967   Preparing metadata (pyproject.toml): finished with status 'done'
+#29 2.980 Collecting immutabledict==4.2.0 (from axolotl==0.16.0.dev0)
+#29 2.989   Downloading immutabledict-4.2.0-py3-none-any.whl.metadata (3.4 kB)
+#29 3.001 Collecting antlr4-python3-runtime==4.13.2 (from axolotl==0.16.0.dev0)
+#29 3.008   Downloading antlr4_python3_runtime-4.13.2-py3-none-any.whl.metadata (304 bytes)
+#29 3.025 Collecting torchao==0.16.0 (from axolotl==0.16.0.dev0)
+#29 3.033   Downloading torchao-0.16.0-cp310-abi3-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (20 kB)
+#29 3.111 Collecting openenv-core==0.1.0 (from axolotl==0.16.0.dev0)
+#29 3.119   Downloading openenv_core-0.1.0-py3-none-any.whl.metadata (6.5 kB)
+#29 3.135 Collecting schedulefree==1.4.1 (from axolotl==0.16.0.dev0)
+#29 3.144   Downloading schedulefree-1.4.1-py3-none-any.whl.metadata (9.7 kB)
+#29 3.233 Collecting axolotl-contribs-lgpl==0.0.7 (from axolotl==0.16.0.dev0)
+#29 3.240   Downloading axolotl_contribs_lgpl-0.0.7.tar.gz (10 kB)
+#29 3.246   Preparing metadata (pyproject.toml): started
+#29 3.380   Preparing metadata (pyproject.toml): finished with status 'done'
+#29 3.459 Collecting axolotl-contribs-mit==0.0.6 (from axolotl==0.16.0.dev0)
+#29 3.467   Downloading axolotl_contribs_mit-0.0.6.tar.gz (25 kB)
+#29 3.474   Preparing metadata (pyproject.toml): started
+#29 3.605   Preparing metadata (pyproject.toml): finished with status 'done'
+#29 3.627 Collecting posthog==6.7.11 (from axolotl==0.16.0.dev0)
+#29 3.635   Downloading posthog-6.7.11-py3-none-any.whl.metadata (6.0 kB)
+#29 3.652 Collecting mistral-common==1.8.8 (from axolotl==0.16.0.dev0)
+#29 3.660   Downloading mistral_common-1.8.8-py3-none-any.whl.metadata (5.3 kB)
+#29 3.664 Requirement already satisfied: torch==2.10.0+cu128 in /opt/venv/lib/python3.11/site-packages (from axolotl==0.16.0.dev0) (2.10.0+cu128)
+#29 3.680 Collecting flash-attn==2.8.3 (from axolotl==0.16.0.dev0)
+#29 3.688   Downloading flash_attn-2.8.3.tar.gz (8.4 MB)
+#29 3.809      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 8.4/8.4 MB 70.1 MB/s  0:00:00
+#29 5.079   Preparing metadata (pyproject.toml): started
+#29 6.940   Preparing metadata (pyproject.toml): finished with status 'done'
+#29 7.018 Collecting ring-flash-attn>=0.1.7 (from axolotl==0.16.0.dev0)
+#29 7.025   Downloading ring_flash_attn-0.1.8-py3-none-any.whl.metadata (9.4 kB)
+#29 7.128 Collecting ray>=2.52.1 (from ray[train]>=2.52.1; extra == "ray"->axolotl==0.16.0.dev0)
+#29 7.136   Downloading ray-2.54.0-cp311-cp311-manylinux2014_x86_64.whl.metadata (21 kB)
+#29 7.164 Requirement already satisfied: psutil in /opt/venv/lib/python3.11/site-packages (from accelerate==1.13.0->axolotl==0.16.0.dev0) (7.2.2)
+#29 7.165 Requirement already satisfied: safetensors>=0.4.3 in /opt/venv/lib/python3.11/site-packages (from accelerate==1.13.0->axolotl==0.16.0.dev0) (0.7.0)
+#29 7.170 Requirement already satisfied: filelock in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (3.20.0)
+#29 7.171 Requirement already satisfied: sympy>=1.13.3 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (1.14.0)
+#29 7.171 Requirement already satisfied: networkx>=2.5.1 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (3.6.1)
+#29 7.171 Requirement already satisfied: jinja2 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (3.1.6)
+#29 7.171 Requirement already satisfied: fsspec>=0.8.5 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (2025.12.0)
+#29 7.172 Requirement already satisfied: cuda-bindings==12.9.4 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (12.9.4)
+#29 7.172 Requirement already satisfied: nvidia-cuda-nvrtc-cu12==12.8.93 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (12.8.93)
+#29 7.172 Requirement already satisfied: nvidia-cuda-runtime-cu12==12.8.90 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (12.8.90)
+#29 7.173 Requirement already satisfied: nvidia-cuda-cupti-cu12==12.8.90 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (12.8.90)
+#29 7.173 Requirement already satisfied: nvidia-cudnn-cu12==9.10.2.21 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (9.10.2.21)
+#29 7.173 Requirement already satisfied: nvidia-cublas-cu12==12.8.4.1 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (12.8.4.1)
+#29 7.173 Requirement already satisfied: nvidia-cufft-cu12==11.3.3.83 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (11.3.3.83)
+#29 7.174 Requirement already satisfied: nvidia-curand-cu12==10.3.9.90 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (10.3.9.90)
+#29 7.174 Requirement already satisfied: nvidia-cusolver-cu12==11.7.3.90 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (11.7.3.90)
+#29 7.174 Requirement already satisfied: nvidia-cusparse-cu12==12.5.8.93 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (12.5.8.93)
+#29 7.175 Requirement already satisfied: nvidia-cusparselt-cu12==0.7.1 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (0.7.1)
+#29 7.175 Requirement already satisfied: nvidia-nccl-cu12==2.27.5 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (2.27.5)
+#29 7.175 Requirement already satisfied: nvidia-nvshmem-cu12==3.4.5 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (3.4.5)
+#29 7.176 Requirement already satisfied: nvidia-nvtx-cu12==12.8.90 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (12.8.90)
+#29 7.176 Requirement already satisfied: nvidia-nvjitlink-cu12==12.8.93 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (12.8.93)
+#29 7.176 Requirement already satisfied: nvidia-cufile-cu12==1.13.1.3 in /opt/venv/lib/python3.11/site-packages (from torch==2.10.0+cu128->axolotl==0.16.0.dev0) (1.13.1.3)
+#29 7.178 Requirement already satisfied: cuda-pathfinder~=1.1 in /opt/venv/lib/python3.11/site-packages (from cuda-bindings==12.9.4->torch==2.10.0+cu128->axolotl==0.16.0.dev0) (1.2.2)
+#29 7.234 Collecting pyarrow>=21.0.0 (from datasets==4.5.0->axolotl==0.16.0.dev0)
+#29 7.242   Downloading pyarrow-23.0.1-cp311-cp311-manylinux_2_28_x86_64.whl.metadata (3.1 kB)
+#29 7.259 Collecting dill<0.4.1,>=0.3.0 (from datasets==4.5.0->axolotl==0.16.0.dev0)
+#29 7.266   Downloading dill-0.4.0-py3-none-any.whl.metadata (10 kB)
+#29 7.333 Collecting pandas (from datasets==4.5.0->axolotl==0.16.0.dev0)
+#29 7.340   Downloading pandas-3.0.1-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (79 kB)
+#29 7.356 Requirement already satisfied: httpx<1.0.0 in /opt/venv/lib/python3.11/site-packages (from datasets==4.5.0->axolotl==0.16.0.dev0) (0.28.1)
+#29 7.356 Requirement already satisfied: tqdm>=4.66.3 in /opt/venv/lib/python3.11/site-packages (from datasets==4.5.0->axolotl==0.16.0.dev0) (4.67.3)
+#29 7.404 Collecting xxhash (from datasets==4.5.0->axolotl==0.16.0.dev0)
+#29 7.411   Downloading xxhash-3.6.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (13 kB)
+#29 7.440 Collecting multiprocess<0.70.19 (from datasets==4.5.0->axolotl==0.16.0.dev0)
+#29 7.448   Downloading multiprocess-0.70.18-py311-none-any.whl.metadata (7.5 kB)
+#29 7.469 Collecting fsspec>=0.8.5 (from torch==2.10.0+cu128->axolotl==0.16.0.dev0)
+#29 7.477   Downloading fsspec-2025.10.0-py3-none-any.whl.metadata (10 kB)
+#29 7.513 Collecting responses<0.19 (from evaluate==0.4.1->axolotl==0.16.0.dev0)
+#29 7.523   Downloading responses-0.18.0-py3-none-any.whl.metadata (29 kB)
+#29 7.606 Collecting six (from langdetect==1.0.9->axolotl==0.16.0.dev0)
+#29 7.613   Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+#29 7.639 Collecting jsonlines (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 7.646   Downloading jsonlines-4.0.0-py3-none-any.whl.metadata (1.6 kB)
+#29 7.690 Collecting numexpr (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 7.698   Downloading numexpr-2.14.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (9.0 kB)
+#29 7.716 Collecting pybind11>=2.6.2 (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 7.723   Downloading pybind11-3.0.2-py3-none-any.whl.metadata (10 kB)
+#29 7.747 Collecting pytablewriter (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 7.754   Downloading pytablewriter-1.2.1-py3-none-any.whl.metadata (38 kB)
+#29 7.773 Collecting rouge-score>=0.0.4 (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 7.780   Downloading rouge_score-0.1.2.tar.gz (17 kB)
+#29 7.794   Preparing metadata (pyproject.toml): started
+#29 7.908   Preparing metadata (pyproject.toml): finished with status 'done'
+#29 7.924 Collecting sacrebleu>=1.5.0 (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 7.931   Downloading sacrebleu-2.6.0-py3-none-any.whl.metadata (39 kB)
+#29 7.987 Collecting scikit-learn>=0.24.1 (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 7.996   Downloading scikit_learn-1.8.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (11 kB)
+#29 8.012 Collecting sqlitedict (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 8.018   Downloading sqlitedict-2.1.0.tar.gz (21 kB)
+#29 8.024   Preparing metadata (pyproject.toml): started
+#29 8.140   Preparing metadata (pyproject.toml): finished with status 'done'
+#29 8.153 Collecting tqdm-multiprocess (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 8.160   Downloading tqdm_multiprocess-0.0.11-py3-none-any.whl.metadata (5.7 kB)
+#29 8.193 Collecting word2number (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 8.201   Downloading word2number-1.1.zip (9.7 kB)
+#29 8.205   Preparing metadata (pyproject.toml): started
+#29 8.320   Preparing metadata (pyproject.toml): finished with status 'done'
+#29 8.337 Collecting more_itertools (from lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 8.344   Downloading more_itertools-10.8.0-py3-none-any.whl.metadata (39 kB)
+#29 8.367 Collecting jsonschema>=4.21.1 (from mistral-common==1.8.8->axolotl==0.16.0.dev0)
+#29 8.374   Downloading jsonschema-4.26.0-py3-none-any.whl.metadata (7.6 kB)
+#29 8.404 Collecting tiktoken>=0.7.0 (from mistral-common==1.8.8->axolotl==0.16.0.dev0)
+#29 8.410   Downloading tiktoken-0.12.0-cp311-cp311-manylinux_2_28_x86_64.whl.metadata (6.7 kB)
+#29 8.413 Requirement already satisfied: pillow>=10.3.0 in /opt/venv/lib/python3.11/site-packages (from mistral-common==1.8.8->axolotl==0.16.0.dev0) (12.0.0)
+#29 8.438 Collecting pydantic-extra-types>=2.10.5 (from pydantic-extra-types[pycountry]>=2.10.5->mistral-common==1.8.8->axolotl==0.16.0.dev0)
+#29 8.445   Downloading pydantic_extra_types-2.11.0-py3-none-any.whl.metadata (4.0 kB)
+#29 8.789 Collecting aiohttp (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 8.796   Downloading aiohttp-3.13.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+#29 8.848 Collecting cbor2 (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 8.855   Downloading cbor2-5.8.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (5.4 kB)
+#29 8.857 Requirement already satisfied: certifi in /opt/venv/lib/python3.11/site-packages (from modal==1.3.0.post1->axolotl==0.16.0.dev0) (2026.2.25)
+#29 8.857 Requirement already satisfied: click~=8.1 in /opt/venv/lib/python3.11/site-packages (from modal==1.3.0.post1->axolotl==0.16.0.dev0) (8.3.1)
+#29 8.869 Collecting grpclib<0.4.10,>=0.4.7 (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 8.876   Downloading grpclib-0.4.9-py3-none-any.whl.metadata (6.1 kB)
+#29 8.976 Collecting protobuf!=4.24.0,<7.0,>=3.19 (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 8.983   Downloading protobuf-6.33.5-cp39-abi3-manylinux2014_x86_64.whl.metadata (593 bytes)
+#29 8.985 Requirement already satisfied: rich>=12.0.0 in /opt/venv/lib/python3.11/site-packages (from modal==1.3.0.post1->axolotl==0.16.0.dev0) (14.3.3)
+#29 9.001 Collecting synchronicity~=0.11.1 (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 9.008   Downloading synchronicity-0.11.1-py3-none-any.whl.metadata (14 kB)
+#29 9.021 Collecting toml (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 9.027   Downloading toml-0.10.2-py2.py3-none-any.whl.metadata (7.1 kB)
+#29 9.030 Requirement already satisfied: typer>=0.9 in /opt/venv/lib/python3.11/site-packages (from modal==1.3.0.post1->axolotl==0.16.0.dev0) (0.24.1)
+#29 9.041 Collecting types-certifi (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 9.047   Downloading types_certifi-2021.10.8.3-py3-none-any.whl.metadata (1.4 kB)
+#29 9.060 Collecting types-toml (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 9.066   Downloading types_toml-0.10.8.20240310-py3-none-any.whl.metadata (1.5 kB)
+#29 9.113 Collecting watchfiles (from modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 9.120   Downloading watchfiles-1.1.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.9 kB)
+#29 9.266 Collecting oci>=2.43.1 (from ocifs==1.3.2->axolotl==0.16.0.dev0)
+#29 9.274   Downloading oci-2.168.1-py3-none-any.whl.metadata (5.8 kB)
+#29 9.310 Collecting fastapi>=0.104.0 (from openenv-core==0.1.0->axolotl==0.16.0.dev0)
+#29 9.317   Downloading fastapi-0.135.1-py3-none-any.whl.metadata (30 kB)
+#29 9.339 Collecting uvicorn>=0.24.0 (from openenv-core==0.1.0->axolotl==0.16.0.dev0)
+#29 9.347   Downloading uvicorn-0.41.0-py3-none-any.whl.metadata (6.7 kB)
+#29 9.365 Collecting coloredlogs (from optimum==1.16.2->axolotl==0.16.0.dev0)
+#29 9.371   Downloading coloredlogs-15.0.1-py2.py3-none-any.whl.metadata (12 kB)
+#29 9.391 Collecting python-dateutil>=2.2 (from posthog==6.7.11->axolotl==0.16.0.dev0)
+#29 9.400   Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+#29 9.416 Collecting backoff>=1.10.0 (from posthog==6.7.11->axolotl==0.16.0.dev0)
+#29 9.422   Downloading backoff-2.2.1-py3-none-any.whl.metadata (14 kB)
+#29 9.435 Collecting distro>=1.5.0 (from posthog==6.7.11->axolotl==0.16.0.dev0)
+#29 9.441   Downloading distro-1.9.0-py3-none-any.whl.metadata (6.8 kB)
+#29 9.475 Requirement already satisfied: regex!=2019.12.17 in /opt/venv/lib/python3.11/site-packages (from transformers==5.3.0->axolotl==0.16.0.dev0) (2026.2.28)
+#29 9.505 Collecting aiofiles<25.0,>=22.0 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#29 9.513   Downloading aiofiles-24.1.0-py3-none-any.whl.metadata (10 kB)
+#29 9.516 Requirement already satisfied: anyio<5.0,>=3.0 in /opt/venv/lib/python3.11/site-packages (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0) (4.12.1)
+#29 9.538 Collecting brotli>=1.1.0 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#29 9.545   Downloading brotli-1.2.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (6.1 kB)
+#29 9.565 Collecting ffmpy (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#29 9.573   Downloading ffmpy-1.0.0-py3-none-any.whl.metadata (3.0 kB)
+#29 9.593 Collecting gradio-client==2.3.0 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#29 9.601   Downloading gradio_client-2.3.0-py3-none-any.whl.metadata (7.1 kB)
+#29 9.615 Collecting groovy~=0.1 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#29 9.623   Downloading groovy-0.1.2-py3-none-any.whl.metadata (6.1 kB)
+#29 9.626 Requirement already satisfied: markupsafe<4.0,>=2.0 in /opt/venv/lib/python3.11/site-packages (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0) (3.0.2)
+#29 9.778 Collecting orjson~=3.0 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#29 9.785   Downloading orjson-3.11.7-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (41 kB)
+#29 9.825 Collecting pydub (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#29 9.832   Downloading pydub-0.25.1-py2.py3-none-any.whl.metadata (1.4 kB)
+#29 9.847 Collecting python-multipart>=0.0.18 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#29 9.853   Downloading python_multipart-0.0.22-py3-none-any.whl.metadata (1.8 kB)
+#29 9.880 Collecting pytz>=2017.2 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#29 9.887   Downloading pytz-2026.1.post1-py2.py3-none-any.whl.metadata (22 kB)
+#29 9.900 Collecting safehttpx<0.2.0,>=0.1.7 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#29 9.909   Downloading safehttpx-0.1.7-py3-none-any.whl.metadata (4.2 kB)
+#29 9.925 Collecting semantic-version~=2.0 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#29 9.937   Downloading semantic_version-2.10.0-py2.py3-none-any.whl.metadata (9.7 kB)
+#29 9.958 Collecting starlette<1.0,>=0.40.0 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#29 9.964   Downloading starlette-0.52.1-py3-none-any.whl.metadata (6.3 kB)
+#29 9.979 Collecting tomlkit<0.14.0,>=0.12.0 (from gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0)
+#29 9.986   Downloading tomlkit-0.13.3-py3-none-any.whl.metadata (2.8 kB)
+#29 9.995 Requirement already satisfied: idna>=2.8 in /opt/venv/lib/python3.11/site-packages (from anyio<5.0,>=3.0->gradio<7.0,>=6.2.0->axolotl==0.16.0.dev0) (3.11)
+#29 10.01 Collecting typing-inspection>=0.4.2 (from fastapi>=0.104.0->openenv-core==0.1.0->axolotl==0.16.0.dev0)
+#29 10.02   Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+#29 10.02 Requirement already satisfied: annotated-doc>=0.0.2 in /opt/venv/lib/python3.11/site-packages (from fastapi>=0.104.0->openenv-core==0.1.0->axolotl==0.16.0.dev0) (0.0.4)
+#29 10.03 Collecting h2<5,>=3.1.0 (from grpclib<0.4.10,>=0.4.7->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 10.04   Downloading h2-4.3.0-py3-none-any.whl.metadata (5.1 kB)
+#29 10.27 Collecting multidict (from grpclib<0.4.10,>=0.4.7->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 10.28   Downloading multidict-6.7.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (5.3 kB)
+#29 10.31 Collecting hyperframe<7,>=6.1 (from h2<5,>=3.1.0->grpclib<0.4.10,>=0.4.7->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 10.31   Downloading hyperframe-6.1.0-py3-none-any.whl.metadata (4.3 kB)
+#29 10.32 Collecting hpack<5,>=4.1 (from h2<5,>=3.1.0->grpclib<0.4.10,>=0.4.7->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 10.33   Downloading hpack-4.1.0-py3-none-any.whl.metadata (4.6 kB)
+#29 10.34 Requirement already satisfied: httpcore==1.* in /opt/venv/lib/python3.11/site-packages (from httpx<1.0.0->datasets==4.5.0->axolotl==0.16.0.dev0) (1.0.9)
+#29 10.34 Requirement already satisfied: h11>=0.16 in /opt/venv/lib/python3.11/site-packages (from httpcore==1.*->httpx<1.0.0->datasets==4.5.0->axolotl==0.16.0.dev0) (0.16.0)
+#29 10.35 INFO: pip is looking at multiple versions of huggingface-hub to determine which version is compatible with other requirements. This could take a while.
+#29 10.38 Collecting huggingface_hub>=1.1.7 (from axolotl==0.16.0.dev0)
+#29 10.40   Downloading huggingface_hub-1.7.0-py3-none-any.whl.metadata (13 kB)
+#29 10.44 Collecting annotated-types>=0.6.0 (from pydantic>=2.10.6->axolotl==0.16.0.dev0)
+#29 10.44   Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+#29 10.80 Collecting pydantic-core==2.41.5 (from pydantic>=2.10.6->axolotl==0.16.0.dev0)
+#29 10.81   Downloading pydantic_core-2.41.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.3 kB)
+#29 10.88 Collecting charset_normalizer<4,>=2 (from requests->axolotl==0.16.0.dev0)
+#29 10.89   Downloading charset_normalizer-3.4.6-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+#29 11.03 Collecting urllib3<3,>=1.21.1 (from requests->axolotl==0.16.0.dev0)
+#29 11.04   Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+#29 11.06 Requirement already satisfied: shellingham>=1.3.0 in /opt/venv/lib/python3.11/site-packages (from typer>=0.9->modal==1.3.0.post1->axolotl==0.16.0.dev0) (1.5.4)
+#29 11.08 Collecting azure-core<2.0.0,>=1.28.0 (from adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 11.09   Downloading azure_core-1.38.3-py3-none-any.whl.metadata (48 kB)
+#29 11.10 Collecting azure-datalake-store<0.1,>=0.0.53 (from adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 11.11   Downloading azure_datalake_store-0.0.53-py2.py3-none-any.whl.metadata (19 kB)
+#29 11.13 Collecting azure-identity (from adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 11.14   Downloading azure_identity-1.25.3-py3-none-any.whl.metadata (91 kB)
+#29 11.15 Collecting azure-storage-blob>=12.17.0 (from azure-storage-blob[aio]>=12.17.0->adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 11.16   Downloading azure_storage_blob-12.28.0-py3-none-any.whl.metadata (26 kB)
+#29 11.23 Collecting cffi (from azure-datalake-store<0.1,>=0.0.53->adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 11.23   Downloading cffi-2.0.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+#29 11.25 Collecting msal<2,>=1.16.0 (from azure-datalake-store<0.1,>=0.0.53->adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 11.25   Downloading msal-1.35.1-py3-none-any.whl.metadata (11 kB)
+#29 11.27 Collecting PyJWT<3,>=1.0.0 (from PyJWT[crypto]<3,>=1.0.0->msal<2,>=1.16.0->azure-datalake-store<0.1,>=0.0.53->adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 11.28   Downloading pyjwt-2.12.1-py3-none-any.whl.metadata (4.1 kB)
+#29 11.39 Collecting cryptography<49,>=2.5 (from msal<2,>=1.16.0->azure-datalake-store<0.1,>=0.0.53->adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 11.39   Downloading cryptography-46.0.5-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (5.7 kB)
+#29 11.42 Collecting aiohappyeyeballs>=2.5.0 (from aiohttp->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 11.43   Downloading aiohappyeyeballs-2.6.1-py3-none-any.whl.metadata (5.9 kB)
+#29 11.44 Collecting aiosignal>=1.4.0 (from aiohttp->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 11.45   Downloading aiosignal-1.4.0-py3-none-any.whl.metadata (3.7 kB)
+#29 11.46 Collecting attrs>=17.3.0 (from aiohttp->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 11.47   Downloading attrs-25.4.0-py3-none-any.whl.metadata (10 kB)
+#29 11.51 Collecting frozenlist>=1.1.1 (from aiohttp->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 11.52   Downloading frozenlist-1.8.0-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (20 kB)
+#29 11.56 Collecting propcache>=0.2.0 (from aiohttp->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 11.57   Downloading propcache-0.4.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (13 kB)
+#29 11.71 Collecting yarl<2.0,>=1.17.0 (from aiohttp->modal==1.3.0.post1->axolotl==0.16.0.dev0)
+#29 11.72   Downloading yarl-1.23.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (79 kB)
+#29 11.76 Collecting isodate>=0.6.1 (from azure-storage-blob>=12.17.0->azure-storage-blob[aio]>=12.17.0->adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 11.77   Downloading isodate-0.7.2-py3-none-any.whl.metadata (11 kB)
+#29 11.79 Collecting pycparser (from cffi->azure-datalake-store<0.1,>=0.0.53->adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 11.80   Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+#29 11.82 Collecting decorator>4.1.2 (from gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#29 11.82   Downloading decorator-5.2.1-py3-none-any.whl.metadata (3.9 kB)
+#29 11.83 INFO: pip is looking at multiple versions of gcsfs to determine which version is compatible with other requirements. This could take a while.
+#29 11.83 Collecting gcsfs>=2025.3.0 (from axolotl==0.16.0.dev0)
+#29 11.83   Downloading gcsfs-2026.1.0-py3-none-any.whl.metadata (2.1 kB)
+#29 11.84   Downloading gcsfs-2025.12.0-py3-none-any.whl.metadata (2.1 kB)
+#29 11.86   Downloading gcsfs-2025.10.0-py2.py3-none-any.whl.metadata (2.1 kB)
+#29 11.88 Collecting google-auth>=1.2 (from gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#29 11.89   Downloading google_auth-2.49.1-py3-none-any.whl.metadata (6.2 kB)
+#29 11.91 Collecting google-auth-oauthlib (from gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#29 11.91   Downloading google_auth_oauthlib-1.3.0-py3-none-any.whl.metadata (2.9 kB)
+#29 11.94 Collecting google-cloud-storage (from gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#29 11.94   Downloading google_cloud_storage-3.9.0-py3-none-any.whl.metadata (15 kB)
+#29 11.97 Collecting pyasn1-modules>=0.2.1 (from google-auth>=1.2->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#29 11.97   Downloading pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+#29 12.00 Collecting jsonschema-specifications>=2023.03.6 (from jsonschema>=4.21.1->mistral-common==1.8.8->axolotl==0.16.0.dev0)
+#29 12.01   Downloading jsonschema_specifications-2025.9.1-py3-none-any.whl.metadata (2.9 kB)
+#29 12.02 Collecting referencing>=0.28.4 (from jsonschema>=4.21.1->mistral-common==1.8.8->axolotl==0.16.0.dev0)
+#29 12.03   Downloading referencing-0.37.0-py3-none-any.whl.metadata (2.8 kB)
+#29 12.33 Collecting rpds-py>=0.25.0 (from jsonschema>=4.21.1->mistral-common==1.8.8->axolotl==0.16.0.dev0)
+#29 12.34   Downloading rpds_py-0.30.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.1 kB)
+#29 12.40 Collecting llvmlite<0.47,>=0.46.0dev0 (from numba>=0.61.2->axolotl==0.16.0.dev0)
+#29 12.41   Downloading llvmlite-0.46.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (5.0 kB)
+#29 12.44 Collecting pyOpenSSL<=25.3.0,>=17.5.0 (from oci>=2.43.1->ocifs==1.3.2->axolotl==0.16.0.dev0)
+#29 12.45   Downloading pyopenssl-25.3.0-py3-none-any.whl.metadata (17 kB)
+#29 12.46 Collecting circuitbreaker<3.0.0,>=1.3.1 (from oci>=2.43.1->ocifs==1.3.2->axolotl==0.16.0.dev0)
+#29 12.47   Downloading circuitbreaker-2.1.3-py3-none-any.whl.metadata (8.0 kB)
+#29 12.51 Collecting pyasn1<0.7.0,>=0.6.1 (from pyasn1-modules>=0.2.1->google-auth>=1.2->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#29 12.51   Downloading pyasn1-0.6.2-py3-none-any.whl.metadata (8.4 kB)
+#29 12.54 Collecting pycountry>=23 (from pydantic-extra-types[pycountry]>=2.10.5->mistral-common==1.8.8->axolotl==0.16.0.dev0)
+#29 12.55   Downloading pycountry-26.2.16-py3-none-any.whl.metadata (12 kB)
+#29 12.60 Collecting msgpack<2.0.0,>=1.0.0 (from ray>=2.52.1->ray[train]>=2.52.1; extra == "ray"->axolotl==0.16.0.dev0)
+#29 12.60   Downloading msgpack-1.1.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+#29 12.66 Collecting tensorboardX>=1.9 (from ray[train]>=2.52.1; extra == "ray"->axolotl==0.16.0.dev0)
+#29 12.66   Downloading tensorboardx-2.6.4-py3-none-any.whl.metadata (6.2 kB)
+#29 12.67 Requirement already satisfied: markdown-it-py>=2.2.0 in /opt/venv/lib/python3.11/site-packages (from rich>=12.0.0->modal==1.3.0.post1->axolotl==0.16.0.dev0) (4.0.0)
+#29 12.67 Requirement already satisfied: pygments<3.0.0,>=2.13.0 in /opt/venv/lib/python3.11/site-packages (from rich>=12.0.0->modal==1.3.0.post1->axolotl==0.16.0.dev0) (2.19.2)
+#29 12.68 Requirement already satisfied: mdurl~=0.1 in /opt/venv/lib/python3.11/site-packages (from markdown-it-py>=2.2.0->rich>=12.0.0->modal==1.3.0.post1->axolotl==0.16.0.dev0) (0.1.2)
+#29 12.70 Collecting absl-py (from rouge-score>=0.0.4->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 12.70   Downloading absl_py-2.4.0-py3-none-any.whl.metadata (3.3 kB)
+#29 12.72 Collecting nltk (from rouge-score>=0.0.4->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 12.72   Downloading nltk-3.9.3-py3-none-any.whl.metadata (3.2 kB)
+#29 12.75 Collecting aiobotocore<4.0.0,>=2.19.0 (from s3fs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 12.76   Downloading aiobotocore-3.2.1-py3-none-any.whl.metadata (26 kB)
+#29 12.76 INFO: pip is looking at multiple versions of s3fs to determine which version is compatible with other requirements. This could take a while.
+#29 12.76 Collecting s3fs>=2024.5.0 (from axolotl==0.16.0.dev0)
+#29 12.77   Downloading s3fs-2026.1.0-py3-none-any.whl.metadata (1.2 kB)
+#29 12.79   Downloading s3fs-2025.12.0-py3-none-any.whl.metadata (1.2 kB)
+#29 12.79 Collecting aiobotocore<3.0.0,>=2.5.4 (from s3fs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 12.80   Downloading aiobotocore-2.26.0-py3-none-any.whl.metadata (25 kB)
+#29 12.80 Collecting s3fs>=2024.5.0 (from axolotl==0.16.0.dev0)
+#29 12.81   Downloading s3fs-2025.10.0-py3-none-any.whl.metadata (1.4 kB)
+#29 12.83 Collecting aioitertools<1.0.0,>=0.5.1 (from aiobotocore<3.0.0,>=2.5.4->s3fs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 12.84   Downloading aioitertools-0.13.0-py3-none-any.whl.metadata (3.3 kB)
+#29 12.99 Collecting botocore<1.41.6,>=1.41.0 (from aiobotocore<3.0.0,>=2.5.4->s3fs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 13.00   Downloading botocore-1.41.5-py3-none-any.whl.metadata (5.9 kB)
+#29 13.03 Collecting jmespath<2.0.0,>=0.7.1 (from aiobotocore<3.0.0,>=2.5.4->s3fs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 13.04   Downloading jmespath-1.1.0-py3-none-any.whl.metadata (7.6 kB)
+#29 13.14 Collecting wrapt<2.0.0,>=1.10.10 (from aiobotocore<3.0.0,>=2.5.4->s3fs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 13.15   Downloading wrapt-1.17.3-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.4 kB)
+#29 13.17 Collecting portalocker (from sacrebleu>=1.5.0->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 13.18   Downloading portalocker-3.2.0-py3-none-any.whl.metadata (8.7 kB)
+#29 13.19 Collecting tabulate>=0.8.9 (from sacrebleu>=1.5.0->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 13.20   Downloading tabulate-0.10.0-py3-none-any.whl.metadata (40 kB)
+#29 13.31 Collecting lxml (from sacrebleu>=1.5.0->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 13.32   Downloading lxml-6.0.2-cp311-cp311-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl.metadata (3.6 kB)
+#29 13.34 Collecting joblib>=1.3.0 (from scikit-learn>=0.24.1->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 13.35   Downloading joblib-1.5.3-py3-none-any.whl.metadata (5.5 kB)
+#29 13.36 Collecting threadpoolctl>=3.2.0 (from scikit-learn>=0.24.1->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 13.37   Downloading threadpoolctl-3.6.0-py3-none-any.whl.metadata (13 kB)
+#29 13.38 Requirement already satisfied: mpmath<1.4,>=1.1.0 in /opt/venv/lib/python3.11/site-packages (from sympy>=1.13.3->torch==2.10.0+cu128->axolotl==0.16.0.dev0) (1.3.0)
+#29 13.42 Collecting pandas (from datasets==4.5.0->axolotl==0.16.0.dev0)
+#29 13.43   Downloading pandas-2.3.3-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (91 kB)
+#29 13.54 Collecting pillow>=10.3.0 (from mistral-common==1.8.8->axolotl==0.16.0.dev0)
+#29 13.55   Downloading pillow-11.3.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (9.0 kB)
+#29 13.57 Collecting plotly<7.0.0,>=6.0.0 (from trackio>=0.16.1->axolotl==0.16.0.dev0)
+#29 13.58   Downloading plotly-6.6.0-py3-none-any.whl.metadata (8.5 kB)
+#29 13.60 Collecting authlib (from gradio[oauth]<7.0.0,>=6.8.0->trackio>=0.16.1->axolotl==0.16.0.dev0)
+#29 13.61   Downloading authlib-1.6.9-py2.py3-none-any.whl.metadata (9.8 kB)
+#29 13.62 Collecting itsdangerous (from gradio[oauth]<7.0.0,>=6.8.0->trackio>=0.16.1->axolotl==0.16.0.dev0)
+#29 13.63   Downloading itsdangerous-2.2.0-py3-none-any.whl.metadata (1.9 kB)
+#29 13.65 Collecting tzdata>=2022.7 (from pandas->datasets==4.5.0->axolotl==0.16.0.dev0)
+#29 13.65   Downloading tzdata-2025.3-py2.py3-none-any.whl.metadata (1.4 kB)
+#29 13.69 Collecting narwhals>=1.15.1 (from plotly<7.0.0,>=6.0.0->trackio>=0.16.1->axolotl==0.16.0.dev0)
+#29 13.69   Downloading narwhals-2.18.0-py3-none-any.whl.metadata (14 kB)
+#29 13.73 Collecting msal-extensions>=1.2.0 (from azure-identity->adlfs>=2024.5.0->axolotl==0.16.0.dev0)
+#29 13.73   Downloading msal_extensions-1.3.1-py3-none-any.whl.metadata (7.8 kB)
+#29 13.76 Collecting humanfriendly>=9.1 (from coloredlogs->optimum==1.16.2->axolotl==0.16.0.dev0)
+#29 13.77   Downloading humanfriendly-10.0-py2.py3-none-any.whl.metadata (9.2 kB)
+#29 13.79 Collecting termcolor (from fire->axolotl==0.16.0.dev0)
+#29 13.79   Downloading termcolor-3.3.0-py3-none-any.whl.metadata (6.5 kB)
+#29 14.01 Collecting requests-oauthlib>=0.7.0 (from google-auth-oauthlib->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#29 14.02   Downloading requests_oauthlib-2.0.0-py2.py3-none-any.whl.metadata (11 kB)
+#29 14.03 Collecting oauthlib>=3.0.0 (from requests-oauthlib>=0.7.0->google-auth-oauthlib->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#29 14.04   Downloading oauthlib-3.3.1-py3-none-any.whl.metadata (7.9 kB)
+#29 14.07 Collecting google-api-core<3.0.0,>=2.27.0 (from google-cloud-storage->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#29 14.08   Downloading google_api_core-2.30.0-py3-none-any.whl.metadata (3.1 kB)
+#29 14.09 Collecting google-cloud-core<3.0.0,>=2.4.2 (from google-cloud-storage->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#29 14.10   Downloading google_cloud_core-2.5.0-py3-none-any.whl.metadata (3.1 kB)
+#29 14.11 Collecting google-resumable-media<3.0.0,>=2.7.2 (from google-cloud-storage->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#29 14.12   Downloading google_resumable_media-2.8.0-py3-none-any.whl.metadata (2.6 kB)
+#29 14.16 Collecting google-crc32c<2.0.0,>=1.1.3 (from google-cloud-storage->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#29 14.17   Downloading google_crc32c-1.8.0-cp311-cp311-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl.metadata (1.7 kB)
+#29 14.18 Collecting googleapis-common-protos<2.0.0,>=1.56.3 (from google-api-core<3.0.0,>=2.27.0->google-cloud-storage->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#29 14.19   Downloading googleapis_common_protos-1.73.0-py3-none-any.whl.metadata (9.4 kB)
+#29 14.22 Collecting proto-plus<2.0.0,>=1.22.3 (from google-api-core<3.0.0,>=2.27.0->google-cloud-storage->gcsfs>=2025.3.0->axolotl==0.16.0.dev0)
+#29 14.22   Downloading proto_plus-1.27.1-py3-none-any.whl.metadata (2.2 kB)
+#29 14.28 Requirement already satisfied: setuptools>=38.3.0 in /opt/venv/lib/python3.11/site-packages (from pytablewriter->lm_eval==0.4.7->axolotl==0.16.0.dev0) (82.0.1)
+#29 14.30 Collecting DataProperty<2,>=1.1.0 (from pytablewriter->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 14.31   Downloading DataProperty-1.1.0-py3-none-any.whl.metadata (11 kB)
+#29 14.33 Collecting mbstrdecoder<2,>=1.0.0 (from pytablewriter->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 14.34   Downloading mbstrdecoder-1.1.4-py3-none-any.whl.metadata (4.3 kB)
+#29 14.35 Collecting pathvalidate<4,>=2.3.0 (from pytablewriter->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 14.36   Downloading pathvalidate-3.3.1-py3-none-any.whl.metadata (12 kB)
+#29 14.38 Collecting tabledata<2,>=1.3.1 (from pytablewriter->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 14.39   Downloading tabledata-1.3.4-py3-none-any.whl.metadata (3.7 kB)
+#29 14.41 Collecting tcolorpy<1,>=0.0.5 (from pytablewriter->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 14.42   Downloading tcolorpy-0.1.7-py3-none-any.whl.metadata (6.3 kB)
+#29 14.43 Collecting typepy<2,>=1.3.2 (from typepy[datetime]<2,>=1.3.2->pytablewriter->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 14.44   Downloading typepy-1.3.4-py3-none-any.whl.metadata (9.2 kB)
+#29 14.46 Collecting chardet<6,>=3.0.4 (from mbstrdecoder<2,>=1.0.0->pytablewriter->lm_eval==0.4.7->axolotl==0.16.0.dev0)
+#29 14.47   Downloading chardet-5.2.0-py3-none-any.whl.metadata (3.4 kB)
+#29 14.76 Collecting grpcio>=1.48.2 (from tensorboard->axolotl==0.16.0.dev0)
+#29 14.77   Downloading grpcio-1.78.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (3.8 kB)
+#29 14.80 Collecting markdown>=2.6.8 (from tensorboard->axolotl==0.16.0.dev0)
+#29 14.80   Downloading markdown-3.10.2-py3-none-any.whl.metadata (5.1 kB)
+#29 14.83 Collecting tensorboard-data-server<0.8.0,>=0.7.0 (from tensorboard->axolotl==0.16.0.dev0)
+#29 14.84   Downloading tensorboard_data_server-0.7.2-py3-none-manylinux_2_31_x86_64.whl.metadata (1.1 kB)
+#29 14.86 Collecting werkzeug>=1.0.1 (from tensorboard->axolotl==0.16.0.dev0)
+#29 14.86   Downloading werkzeug-3.1.6-py3-none-any.whl.metadata (4.0 kB)
+#29 14.90 Collecting gitpython!=3.1.29,>=1.0.0 (from wandb->axolotl==0.16.0.dev0)
+#29 14.91   Downloading gitpython-3.1.46-py3-none-any.whl.metadata (13 kB)
+#29 14.92 Collecting platformdirs (from wandb->axolotl==0.16.0.dev0)
+#29 14.93   Downloading platformdirs-4.9.4-py3-none-any.whl.metadata (4.7 kB)
+#29 14.98 Collecting sentry-sdk>=2.0.0 (from wandb->axolotl==0.16.0.dev0)
+#29 14.98   Downloading sentry_sdk-2.54.0-py2.py3-none-any.whl.metadata (10 kB)
+#29 15.01 Collecting gitdb<5,>=4.0.1 (from gitpython!=3.1.29,>=1.0.0->wandb->axolotl==0.16.0.dev0)
+#29 15.02   Downloading gitdb-4.0.12-py3-none-any.whl.metadata (1.2 kB)
+#29 15.03 Collecting smmap<6,>=3.0.1 (from gitdb<5,>=4.0.1->gitpython!=3.1.29,>=1.0.0->wandb->axolotl==0.16.0.dev0)
+#29 15.04   Downloading smmap-5.0.3-py3-none-any.whl.metadata (4.6 kB)
+#29 15.06 Downloading accelerate-1.13.0-py3-none-any.whl (383 kB)
+#29 15.08 Downloading antlr4_python3_runtime-4.13.2-py3-none-any.whl (144 kB)
+#29 15.09 Downloading bitsandbytes-0.49.1-py3-none-manylinux_2_24_x86_64.whl (59.1 MB)
+#29 15.67    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 59.1/59.1 MB 101.6 MB/s  0:00:00
+#29 15.68 Downloading datasets-4.5.0-py3-none-any.whl (515 kB)
+#29 15.69 Downloading evaluate-0.4.1-py3-none-any.whl (84 kB)
+#29 15.71 Downloading fla_core-0.4.1-py3-none-any.whl (437 kB)
+#29 15.72 Downloading flash_linear_attention-0.4.1-py3-none-any.whl (287 kB)
+#29 15.73 Downloading hf_xet-1.3.2-cp37-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (4.2 MB)
+#29 15.78    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.2/4.2 MB 99.9 MB/s  0:00:00
+#29 15.79 Downloading immutabledict-4.2.0-py3-none-any.whl (4.7 kB)
+#29 15.80 Downloading kernels-0.12.2-py3-none-any.whl (55 kB)
+#29 15.81 Downloading liger_kernel-0.7.0-py3-none-any.whl (276 kB)
+#29 15.82 Downloading lm_eval-0.4.7-py3-none-any.whl (2.5 MB)
+#29 15.90    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.5/2.5 MB 28.6 MB/s  0:00:00
+#29 15.91 Downloading mistral_common-1.8.8-py3-none-any.whl (6.5 MB)
+#29 15.98    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.5/6.5 MB 100.3 MB/s  0:00:00
+#29 15.99 Downloading modal-1.3.0.post1-py3-none-any.whl (744 kB)
+#29 16.00    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 744.3/744.3 kB 79.7 MB/s  0:00:00
+#29 16.01 Downloading nvidia_ml_py-12.560.30-py3-none-any.whl (40 kB)
+#29 16.03 Downloading ocifs-1.3.2-py3-none-any.whl (67 kB)
+#29 16.04 Downloading openenv_core-0.1.0-py3-none-any.whl (30 kB)
+#29 16.06 Downloading optimum-1.16.2-py3-none-any.whl (402 kB)
+#29 16.07 Downloading posthog-6.7.11-py3-none-any.whl (138 kB)
+#29 16.08 Downloading python_dotenv-1.0.1-py3-none-any.whl (19 kB)
+#29 16.09 Downloading schedulefree-1.4.1-py3-none-any.whl (55 kB)
+#29 16.10 Downloading torchao-0.16.0-cp310-abi3-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (3.2 MB)
+#29 16.14    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.2/3.2 MB 100.0 MB/s  0:00:00
+#29 16.15 Downloading trl-0.29.0-py3-none-any.whl (528 kB)
+#29 16.15    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 528.8/528.8 kB 65.2 MB/s  0:00:00
+#29 16.18 Downloading zstandard-0.22.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (5.4 MB)
+#29 16.24    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.4/5.4 MB 97.5 MB/s  0:00:00
+#29 16.25 Downloading dill-0.4.0-py3-none-any.whl (119 kB)
+#29 16.26 Downloading fsspec-2025.10.0-py3-none-any.whl (200 kB)
+#29 16.28 Downloading gradio-6.9.0-py3-none-any.whl (42.9 MB)
+#29 16.93    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 42.9/42.9 MB 65.7 MB/s  0:00:00
+#29 16.94 Downloading gradio_client-2.3.0-py3-none-any.whl (58 kB)
+#29 16.95 Downloading aiofiles-24.1.0-py3-none-any.whl (15 kB)
+#29 16.96 Downloading fastapi-0.135.1-py3-none-any.whl (116 kB)
+#29 16.99 Downloading groovy-0.1.2-py3-none-any.whl (14 kB)
+#29 17.00 Downloading grpclib-0.4.9-py3-none-any.whl (77 kB)
+#29 17.01 Downloading h2-4.3.0-py3-none-any.whl (61 kB)
+#29 17.02 Downloading hpack-4.1.0-py3-none-any.whl (34 kB)
+#29 17.03 Downloading huggingface_hub-1.7.0-py3-none-any.whl (616 kB)
+#29 17.04    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 616.3/616.3 kB 57.0 MB/s  0:00:00
+#29 17.04 Downloading hyperframe-6.1.0-py3-none-any.whl (13 kB)
+#29 17.06 Downloading multiprocess-0.70.18-py311-none-any.whl (144 kB)
+#29 17.07 Downloading orjson-3.11.7-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (133 kB)
+#29 17.08 Downloading protobuf-6.33.5-cp39-abi3-manylinux2014_x86_64.whl (323 kB)
+#29 17.09 Downloading pydantic-2.12.5-py3-none-any.whl (463 kB)
+#29 17.11 Downloading pydantic_core-2.41.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+#29 17.14    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 68.2 MB/s  0:00:00
+#29 17.14 Downloading requests-2.32.5-py3-none-any.whl (64 kB)
+#29 17.15 Downloading charset_normalizer-3.4.6-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (204 kB)
+#29 17.16 Downloading responses-0.18.0-py3-none-any.whl (38 kB)
+#29 17.18 Downloading safehttpx-0.1.7-py3-none-any.whl (9.0 kB)
+#29 17.19 Downloading semantic_version-2.10.0-py2.py3-none-any.whl (15 kB)
+#29 17.19 Downloading starlette-0.52.1-py3-none-any.whl (74 kB)
+#29 17.20 Downloading synchronicity-0.11.1-py3-none-any.whl (40 kB)
+#29 17.21 Downloading tomlkit-0.13.3-py3-none-any.whl (38 kB)
+#29 17.22 Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+#29 17.23 Downloading adlfs-2026.2.0-py3-none-any.whl (45 kB)
+#29 17.24 Downloading azure_core-1.38.3-py3-none-any.whl (218 kB)
+#29 17.26 Downloading azure_datalake_store-0.0.53-py2.py3-none-any.whl (55 kB)
+#29 17.27 Downloading msal-1.35.1-py3-none-any.whl (119 kB)
+#29 17.28 Downloading cryptography-46.0.5-cp311-abi3-manylinux_2_34_x86_64.whl (4.5 MB)
+#29 17.34    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 70.8 MB/s  0:00:00
+#29 17.35 Downloading pyjwt-2.12.1-py3-none-any.whl (29 kB)
+#29 17.36 Downloading aiohttp-3.13.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.7 MB)
+#29 17.44    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.7/1.7 MB 27.3 MB/s  0:00:00
+#29 17.46 Downloading multidict-6.7.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (246 kB)
+#29 17.47 Downloading yarl-1.23.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (102 kB)
+#29 17.48 Downloading aiohappyeyeballs-2.6.1-py3-none-any.whl (15 kB)
+#29 17.49 Downloading aiosignal-1.4.0-py3-none-any.whl (7.5 kB)
+#29 17.50 Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+#29 17.51 Downloading attrs-25.4.0-py3-none-any.whl (67 kB)
+#29 17.52 Downloading azure_storage_blob-12.28.0-py3-none-any.whl (431 kB)
+#29 17.54 Downloading backoff-2.2.1-py3-none-any.whl (15 kB)
+#29 17.55 Downloading brotli-1.2.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (1.4 MB)
+#29 17.57    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.4/1.4 MB 77.8 MB/s  0:00:00
+#29 17.58 Downloading cffi-2.0.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (215 kB)
+#29 17.60 Downloading distro-1.9.0-py3-none-any.whl (20 kB)
+#29 17.60 Downloading frozenlist-1.8.0-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (231 kB)
+#29 17.64 Downloading gcsfs-2025.10.0-py2.py3-none-any.whl (36 kB)
+#29 17.65 Downloading decorator-5.2.1-py3-none-any.whl (9.2 kB)
+#29 17.66 Downloading google_auth-2.49.1-py3-none-any.whl (240 kB)
+#29 17.67 Downloading isodate-0.7.2-py3-none-any.whl (22 kB)
+#29 17.68 Downloading jsonschema-4.26.0-py3-none-any.whl (90 kB)
+#29 17.69 Downloading jsonschema_specifications-2025.9.1-py3-none-any.whl (18 kB)
+#29 17.71 Downloading numba-0.64.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (3.7 MB)
+#29 17.76    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.7/3.7 MB 77.3 MB/s  0:00:00
+#29 17.76 Downloading llvmlite-0.46.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (56.3 MB)
+#29 18.52    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 56.3/56.3 MB 75.2 MB/s  0:00:00
+#29 18.53 Downloading oci-2.168.1-py3-none-any.whl (34.0 MB)
+#29 19.06    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 34.0/34.0 MB 63.8 MB/s  0:00:00
+#29 19.07 Downloading circuitbreaker-2.1.3-py3-none-any.whl (7.7 kB)
+#29 19.07 Downloading pyopenssl-25.3.0-py3-none-any.whl (57 kB)
+#29 19.08 Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+#29 19.09 Downloading peft-0.18.1-py3-none-any.whl (556 kB)
+#29 19.10    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 557.0/557.0 kB 51.0 MB/s  0:00:00
+#29 19.11 Downloading propcache-0.4.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (210 kB)
+#29 19.12 Downloading pyarrow-23.0.1-cp311-cp311-manylinux_2_28_x86_64.whl (47.6 MB)
+#29 19.67    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 47.6/47.6 MB 86.7 MB/s  0:00:00
+#29 19.69 Downloading pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+#29 19.70 Downloading pyasn1-0.6.2-py3-none-any.whl (83 kB)
+#29 19.70 Downloading pybind11-3.0.2-py3-none-any.whl (310 kB)
+#29 19.72 Downloading pydantic_extra_types-2.11.0-py3-none-any.whl (74 kB)
+#29 19.72 Downloading pycountry-26.2.16-py3-none-any.whl (8.0 MB)
+#29 19.81    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 8.0/8.0 MB 94.5 MB/s  0:00:00
+#29 19.82 Downloading python_multipart-0.0.22-py3-none-any.whl (24 kB)
+#29 19.84 Downloading pytz-2026.1.post1-py2.py3-none-any.whl (510 kB)
+#29 19.85 Downloading ray-2.54.0-cp311-cp311-manylinux2014_x86_64.whl (72.9 MB)
+#29 20.82    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 72.9/72.9 MB 75.2 MB/s  0:00:00
+#29 20.83 Downloading msgpack-1.1.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (426 kB)
+#29 20.85 Downloading referencing-0.37.0-py3-none-any.whl (26 kB)
+#29 20.86 Downloading ring_flash_attn-0.1.8-py3-none-any.whl (25 kB)
+#29 20.87 Downloading rpds_py-0.30.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (390 kB)
+#29 20.88 Downloading s3fs-2025.10.0-py3-none-any.whl (30 kB)
+#29 20.90 Downloading aiobotocore-2.26.0-py3-none-any.whl (87 kB)
+#29 20.92 Downloading aioitertools-0.13.0-py3-none-any.whl (24 kB)
+#29 20.93 Downloading botocore-1.41.5-py3-none-any.whl (14.3 MB)
+#29 21.16    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 14.3/14.3 MB 63.9 MB/s  0:00:00
+#29 21.16 Downloading jmespath-1.1.0-py3-none-any.whl (20 kB)
+#29 21.17 Downloading wrapt-1.17.3-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (82 kB)
+#29 21.18 Downloading sacrebleu-2.6.0-py3-none-any.whl (100 kB)
+#29 21.19 Downloading scikit_learn-1.8.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (9.1 MB)
+#29 21.35    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.1/9.1 MB 59.4 MB/s  0:00:00
+#29 21.36 Downloading joblib-1.5.3-py3-none-any.whl (309 kB)
+#29 21.38 Downloading scipy-1.17.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (35.3 MB)
+#29 21.96    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.3/35.3 MB 60.7 MB/s  0:00:00
+#29 21.97 Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+#29 21.98 Downloading tabulate-0.10.0-py3-none-any.whl (39 kB)
+#29 21.99 Downloading tensorboardx-2.6.4-py3-none-any.whl (87 kB)
+#29 22.00 Downloading threadpoolctl-3.6.0-py3-none-any.whl (18 kB)
+#29 22.00 Downloading tiktoken-0.12.0-cp311-cp311-manylinux_2_28_x86_64.whl (1.2 MB)
+#29 22.02    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 59.3 MB/s  0:00:00
+#29 22.03 Downloading trackio-0.19.0-py3-none-any.whl (1.0 MB)
+#29 22.05    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 58.9 MB/s  0:00:00
+#29 22.06 Downloading pandas-2.3.3-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (12.8 MB)
+#29 22.24    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.8/12.8 MB 69.5 MB/s  0:00:00
+#29 22.25 Downloading pillow-11.3.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (6.6 MB)
+#29 22.35    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.6/6.6 MB 70.6 MB/s  0:00:00
+#29 22.36 Downloading plotly-6.6.0-py3-none-any.whl (9.9 MB)
+#29 22.51    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.9/9.9 MB 66.6 MB/s  0:00:00
+#29 22.51 Downloading pydub-0.25.1-py2.py3-none-any.whl (32 kB)
+#29 22.52 Downloading narwhals-2.18.0-py3-none-any.whl (444 kB)
+#29 22.54 Downloading sentencepiece-0.2.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (1.4 MB)
+#29 22.56    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.4/1.4 MB 70.9 MB/s  0:00:00
+#29 22.56 Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+#29 22.57 Downloading tzdata-2025.3-py2.py3-none-any.whl (348 kB)
+#29 22.58 Downloading uvicorn-0.41.0-py3-none-any.whl (68 kB)
+#29 22.59 Downloading xformers-0.0.35-py39-none-manylinux_2_28_x86_64.whl (3.3 MB)
+#29 22.64    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.3/3.3 MB 67.0 MB/s  0:00:00
+#29 22.65 Downloading absl_py-2.4.0-py3-none-any.whl (135 kB)
+#29 22.66 Downloading addict-2.4.0-py3-none-any.whl (3.8 kB)
+#29 22.67 Downloading art-6.5-py3-none-any.whl (610 kB)
+#29 22.68    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 610.4/610.4 kB 54.4 MB/s  0:00:00
+#29 22.69 Downloading authlib-1.6.9-py2.py3-none-any.whl (244 kB)
+#29 22.70 Downloading azure_identity-1.25.3-py3-none-any.whl (192 kB)
+#29 22.71 Downloading msal_extensions-1.3.1-py3-none-any.whl (20 kB)
+#29 22.72 Downloading cbor2-5.8.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (258 kB)
+#29 22.73 Downloading colorama-0.4.6-py2.py3-none-any.whl (25 kB)
+#29 22.74 Downloading coloredlogs-15.0.1-py2.py3-none-any.whl (46 kB)
+#29 22.75 Downloading humanfriendly-10.0-py2.py3-none-any.whl (86 kB)
+#29 22.76 Downloading fastcore-1.12.24-py3-none-any.whl (97 kB)
+#29 22.77 Downloading ffmpy-1.0.0-py3-none-any.whl (5.6 kB)
+#29 22.77 Downloading fire-0.7.1-py3-none-any.whl (115 kB)
+#29 22.78 Downloading google_auth_oauthlib-1.3.0-py3-none-any.whl (19 kB)
+#29 22.79 Downloading requests_oauthlib-2.0.0-py2.py3-none-any.whl (24 kB)
+#29 22.80 Downloading oauthlib-3.3.1-py3-none-any.whl (160 kB)
+#29 22.81 Downloading google_cloud_storage-3.9.0-py3-none-any.whl (321 kB)
+#29 22.83 Downloading google_api_core-2.30.0-py3-none-any.whl (173 kB)
+#29 22.84 Downloading google_cloud_core-2.5.0-py3-none-any.whl (29 kB)
+#29 22.84 Downloading google_crc32c-1.8.0-cp311-cp311-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl (33 kB)
+#29 22.85 Downloading google_resumable_media-2.8.0-py3-none-any.whl (81 kB)
+#29 22.86 Downloading googleapis_common_protos-1.73.0-py3-none-any.whl (297 kB)
+#29 22.87 Downloading proto_plus-1.27.1-py3-none-any.whl (50 kB)
+#29 22.88 Downloading hf_transfer-0.1.9-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.6 MB)
+#29 22.94    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.6/3.6 MB 70.9 MB/s  0:00:00
+#29 22.95 Downloading itsdangerous-2.2.0-py3-none-any.whl (16 kB)
+#29 22.95 Downloading jsonlines-4.0.0-py3-none-any.whl (8.7 kB)
+#29 22.96 Downloading lxml-6.0.2-cp311-cp311-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl (5.2 MB)
+#29 23.04    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.2/5.2 MB 70.7 MB/s  0:00:00
+#29 23.04 Downloading more_itertools-10.8.0-py3-none-any.whl (69 kB)
+#29 23.05 Downloading nltk-3.9.3-py3-none-any.whl (1.5 MB)
+#29 23.07    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.5/1.5 MB 69.7 MB/s  0:00:00
+#29 23.08 Downloading numexpr-2.14.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (442 kB)
+#29 23.10 Downloading portalocker-3.2.0-py3-none-any.whl (22 kB)
+#29 23.10 Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+#29 23.11 Downloading pytablewriter-1.2.1-py3-none-any.whl (91 kB)
+#29 23.12 Downloading DataProperty-1.1.0-py3-none-any.whl (27 kB)
+#29 23.13 Downloading mbstrdecoder-1.1.4-py3-none-any.whl (7.9 kB)
+#29 23.14 Downloading chardet-5.2.0-py3-none-any.whl (199 kB)
+#29 23.15 Downloading pathvalidate-3.3.1-py3-none-any.whl (24 kB)
+#29 23.16 Downloading tabledata-1.3.4-py3-none-any.whl (11 kB)
+#29 23.16 Downloading tcolorpy-0.1.7-py3-none-any.whl (8.1 kB)
+#29 23.17 Downloading typepy-1.3.4-py3-none-any.whl (31 kB)
+#29 23.18 Downloading tensorboard-2.20.0-py3-none-any.whl (5.5 MB)
+#29 23.25    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.5/5.5 MB 79.1 MB/s  0:00:00
+#29 23.26 Downloading tensorboard_data_server-0.7.2-py3-none-manylinux_2_31_x86_64.whl (6.6 MB)
+#29 23.34    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.6/6.6 MB 80.3 MB/s  0:00:00
+#29 23.35 Downloading grpcio-1.78.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (6.7 MB)
+#29 23.44    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 6.7/6.7 MB 80.0 MB/s  0:00:00
+#29 23.44 Downloading markdown-3.10.2-py3-none-any.whl (108 kB)
+#29 23.45 Downloading werkzeug-3.1.6-py3-none-any.whl (225 kB)
+#29 23.46 Downloading termcolor-3.3.0-py3-none-any.whl (7.7 kB)
+#29 23.47 Downloading toml-0.10.2-py2.py3-none-any.whl (16 kB)
+#29 23.48 Downloading tqdm_multiprocess-0.0.11-py3-none-any.whl (9.8 kB)
+#29 23.49 Downloading types_certifi-2021.10.8.3-py3-none-any.whl (2.1 kB)
+#29 23.50 Downloading types_toml-0.10.8.20240310-py3-none-any.whl (4.8 kB)
+#29 23.51 Downloading wandb-0.25.1-py3-none-manylinux_2_28_x86_64.whl (25.6 MB)
+#29 23.85    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 25.6/25.6 MB 75.7 MB/s  0:00:00
+#29 23.86 Downloading gitpython-3.1.46-py3-none-any.whl (208 kB)
+#29 23.87 Downloading gitdb-4.0.12-py3-none-any.whl (62 kB)
+#29 23.88 Downloading smmap-5.0.3-py3-none-any.whl (24 kB)
+#29 23.88 Downloading sentry_sdk-2.54.0-py2.py3-none-any.whl (439 kB)
+#29 23.90 Downloading platformdirs-4.9.4-py3-none-any.whl (21 kB)
+#29 23.91 Downloading watchfiles-1.1.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (456 kB)
+#29 23.92 Downloading xxhash-3.6.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (193 kB)
+#29 24.37 Building wheels for collected packages: axolotl, axolotl-contribs-lgpl, axolotl-contribs-mit, flash-attn, langdetect, rouge-score, sqlitedict, word2number
+#29 24.37   Building editable for axolotl (pyproject.toml): started
+#29 24.57   Building editable for axolotl (pyproject.toml): finished with status 'done'
+#29 24.57   Created wheel for axolotl: filename=axolotl-0.16.0.dev0-0.editable-py3-none-any.whl size=12203 sha256=5b8cd01ebca2356b3c4922bd080f945e99a2297b669ef59ab5173261df1ac78e
+#29 24.57   Stored in directory: /tmp/pip-ephem-wheel-cache-3ldzuxc4/wheels/0a/2f/66/311e56dbdf54e5c4069cd07f23b8be3ef1484f9a88e77d8554
+#29 24.57   Building wheel for axolotl-contribs-lgpl (pyproject.toml): started
+#29 24.71   Building wheel for axolotl-contribs-lgpl (pyproject.toml): finished with status 'done'
+#29 24.71   Created wheel for axolotl-contribs-lgpl: filename=axolotl_contribs_lgpl-0.0.7-py3-none-any.whl size=10889 sha256=b17b42b07a21361790d3ced944c27ab2a091889a8502ea00b51892ff9729599a
+#29 24.71   Stored in directory: /root/.cache/pip/wheels/da/42/8b/0f6b8aaadea546111e79e1c1940ad5139070b2abbf6a1b30d4
+#29 24.72   Building wheel for axolotl-contribs-mit (pyproject.toml): started
+#29 24.86   Building wheel for axolotl-contribs-mit (pyproject.toml): finished with status 'done'
+#29 24.86   Created wheel for axolotl-contribs-mit: filename=axolotl_contribs_mit-0.0.6-py3-none-any.whl size=29015 sha256=7896882487348118ef895f2dda33677070518c7d4f4605a7479c9c4dca22a317
+#29 24.86   Stored in directory: /root/.cache/pip/wheels/06/79/58/3dee7baf92ba4ceedf89c839b7095e17cb6edd14e0a50736d4
+#29 24.87   Building wheel for flash-attn (pyproject.toml): started
+#29 173.4   Building wheel for flash-attn (pyproject.toml): still running...
+#29 249.0   Building wheel for flash-attn (pyproject.toml): still running...
+#29 376.4   Building wheel for flash-attn (pyproject.toml): still running...
+#29 466.4   Building wheel for flash-attn (pyproject.toml): still running...
+#29 564.9   Building wheel for flash-attn (pyproject.toml): still running...
+#29 627.1   Building wheel for flash-attn (pyproject.toml): still running...
+#29 699.8   Building wheel for flash-attn (pyproject.toml): still running...
+#29 776.6   Building wheel for flash-attn (pyproject.toml): still running...
+#29 876.4   Building wheel for flash-attn (pyproject.toml): still running...
+#29 939.2   Building wheel for flash-attn (pyproject.toml): still running...
+#29 1043.2   Building wheel for flash-attn (pyproject.toml): still running...
+#29 1126.1   Building wheel for flash-attn (pyproject.toml): still running...
+#29 1187.9   Building wheel for flash-attn (pyproject.toml): still running...
+#29 1322.4   Building wheel for flash-attn (pyproject.toml): still running...
+#29 1392.7   Building wheel for flash-attn (pyproject.toml): still running...
+#29 1485.6   Building wheel for flash-attn (pyproject.toml): still running...
+#29 1554.3   Building wheel for flash-attn (pyproject.toml): still running...
+#29 1667.9   Building wheel for flash-attn (pyproject.toml): still running...
+#29 1770.6   Building wheel for flash-attn (pyproject.toml): still running...
+#29 1851.1   Building wheel for flash-attn (pyproject.toml): still running...
+#29 1912.1   Building wheel for flash-attn (pyproject.toml): still running...
+#29 1980.3   Building wheel for flash-attn (pyproject.toml): still running...
+#29 2054.6   Building wheel for flash-attn (pyproject.toml): still running...
+#29 2140.2   Building wheel for flash-attn (pyproject.toml): still running...
+#29 2141.2   Building wheel for flash-attn (pyproject.toml): finished with status 'done'
+#29 2141.3   Created wheel for flash-attn: filename=flash_attn-2.8.3-cp311-cp311-linux_x86_64.whl size=253771199 sha256=812f3c48bcc9494e4160acc5e1de6deb4dd6527707b78847c6b1e508d6e41b1e
+#29 2141.3   Stored in directory: /root/.cache/pip/wheels/42/31/1f/4b22dd7295b3cb064b8fa9038f6d58fb15c9571555b2d7c39c
+#29 2141.3   Building wheel for langdetect (pyproject.toml): started
+#29 2141.6   Building wheel for langdetect (pyproject.toml): finished with status 'done'
+#29 2141.6   Created wheel for langdetect: filename=langdetect-1.0.9-py3-none-any.whl size=993332 sha256=7539a28c97ad90cdf84a8fb5d0ab7780f53e8b95e3f345c326d40c092eed20c8
+#29 2141.6   Stored in directory: /root/.cache/pip/wheels/0a/f2/b2/e5ca405801e05eb7c8ed5b3b4bcf1fcabcd6272c167640072e
+#29 2141.6   Building wheel for rouge-score (pyproject.toml): started
+#29 2141.8   Building wheel for rouge-score (pyproject.toml): finished with status 'done'
+#29 2141.8   Created wheel for rouge-score: filename=rouge_score-0.1.2-py3-none-any.whl size=24988 sha256=a4ab67cf73a07f2ba6667f2a7dff175c189dd1e6b819a008c923924f3c2aec57
+#29 2141.8   Stored in directory: /root/.cache/pip/wheels/1e/19/43/8a442dc83660ca25e163e1bd1f89919284ab0d0c1475475148
+#29 2141.8   Building wheel for sqlitedict (pyproject.toml): started
+#29 2141.9   Building wheel for sqlitedict (pyproject.toml): finished with status 'done'
+#29 2141.9   Created wheel for sqlitedict: filename=sqlitedict-2.1.0-py3-none-any.whl size=16955 sha256=43e2154057b866920aead3917cc001431661bff0460b0e18c4421c797d44fa13
+#29 2141.9   Stored in directory: /root/.cache/pip/wheels/73/63/89/7210274f9b7fb033b8f22671f64c0e0b55083d30c3c046a3ff
+#29 2141.9   Building wheel for word2number (pyproject.toml): started
+#29 2142.0   Building wheel for word2number (pyproject.toml): finished with status 'done'
+#29 2142.0   Created wheel for word2number: filename=word2number-1.1-py3-none-any.whl size=5659 sha256=6bc8cfdcc7ebbd4e5340eb07f635369be3d3f484f4ff71090627882e5193b501
+#29 2142.0   Stored in directory: /root/.cache/pip/wheels/cd/ef/ae/073b491b14d25e2efafcffca9e16b2ee6d114ec5c643ba4f06
+#29 2142.0 Successfully built axolotl axolotl-contribs-lgpl axolotl-contribs-mit flash-attn langdetect rouge-score sqlitedict word2number
+#29 2142.4 Installing collected packages: word2number, types-certifi, torchao, sqlitedict, pytz, pydub, nvidia-ml-py, circuitbreaker, brotli, antlr4-python3-runtime, addict, zstandard, xxhash, wrapt, werkzeug, uvicorn, urllib3, tzdata, typing-inspection, types-toml, tomlkit, toml, threadpoolctl, termcolor, tensorboard-data-server, tcolorpy, tabulate, synchronicity, smmap, six, sentencepiece, semantic-version, scipy, rpds-py, ring-flash-attn, python-multipart, python-dotenv, PyJWT, pydantic-core, pycparser, pycountry, pybind11, pyasn1, pyarrow, protobuf, propcache, portalocker, platformdirs, pillow, pathvalidate, orjson, oauthlib, numexpr, narwhals, multidict, msgpack, more_itertools, markdown, lxml, llvmlite, joblib, jmespath, itsdangerous, isodate, immutabledict, hyperframe, humanfriendly, hpack, hf_xet, hf_transfer, grpcio, groovy, google-crc32c, fsspec, frozenlist, ffmpy, fastcore, distro, dill, decorator, colorama, charset_normalizer, chardet, cbor2, backoff, attrs, art, annotated-types, aioitertools, aiohappyeyeballs, aiofiles, absl-py, yarl, watchfiles, tqdm-multiprocess, tensorboardX, tensorboard, starlette, sentry-sdk, scikit-learn, sacrebleu, requests, referencing, python-dateutil, pydantic, pyasn1-modules, proto-plus, plotly, numba, nltk, multiprocess, mbstrdecoder, langdetect, jsonlines, h2, googleapis-common-protos, google-resumable-media, gitdb, fire, coloredlogs, cffi, aiosignal, typepy, tiktoken, safehttpx, rouge-score, responses, requests-oauthlib, pydantic-extra-types, posthog, pandas, jsonschema-specifications, grpclib, gitpython, fastapi, cryptography, botocore, azure-core, aiohttp, xformers, wandb, schedulefree, pyOpenSSL, openenv-core, modal, liger-kernel, jsonschema, huggingface_hub, google-auth, flash-attn, fla-core, bitsandbytes, azure-storage-blob, axolotl-contribs-mit, authlib, aiobotocore, s3fs, ray, oci, msal, mistral-common, kernels, gradio-client, google-auth-oauthlib, google-api-core, datasets, DataProperty, accelerate, tabledata, ocifs, msal-extensions, gradio, google-cloud-core, evaluate, azure-datalake-store, axolotl-contribs-lgpl, trl, pytablewriter, peft, google-cloud-storage, flash-linear-attention, azure-identity, trackio, optimum, lm_eval, gcsfs, adlfs, axolotl
+#29 2147.1   Attempting uninstall: pillow
+#29 2147.1     Found existing installation: pillow 12.0.0
+#29 2147.1     Uninstalling pillow-12.0.0:
+#29 2147.2       Successfully uninstalled pillow-12.0.0
+#29 2148.6   Attempting uninstall: hf_xet
+#29 2148.6     Found existing installation: hf-xet 1.4.2
+#29 2148.6     Uninstalling hf-xet-1.4.2:
+#29 2148.7       Successfully uninstalled hf-xet-1.4.2
+#29 2148.9   Attempting uninstall: fsspec
+#29 2148.9     Found existing installation: fsspec 2025.12.0
+#29 2148.9     Uninstalling fsspec-2025.12.0:
+#29 2148.9       Successfully uninstalled fsspec-2025.12.0
+#29 2160.0   Attempting uninstall: huggingface_hub
+#29 2160.0     Found existing installation: huggingface_hub 1.7.1
+#29 2160.0     Uninstalling huggingface_hub-1.7.1:
+#29 2160.1       Successfully uninstalled huggingface_hub-1.7.1
+#29 2181.7 
+#29 2181.7 Successfully installed DataProperty-1.1.0 PyJWT-2.12.1 absl-py-2.4.0 accelerate-1.13.0 addict-2.4.0 adlfs-2026.2.0 aiobotocore-2.26.0 aiofiles-24.1.0 aiohappyeyeballs-2.6.1 aiohttp-3.13.3 aioitertools-0.13.0 aiosignal-1.4.0 annotated-types-0.7.0 antlr4-python3-runtime-4.13.2 art-6.5 attrs-25.4.0 authlib-1.6.9 axolotl-0.16.0.dev0 axolotl-contribs-lgpl-0.0.7 axolotl-contribs-mit-0.0.6 azure-core-1.38.3 azure-datalake-store-0.0.53 azure-identity-1.25.3 azure-storage-blob-12.28.0 backoff-2.2.1 bitsandbytes-0.49.1 botocore-1.41.5 brotli-1.2.0 cbor2-5.8.0 cffi-2.0.0 chardet-5.2.0 charset_normalizer-3.4.6 circuitbreaker-2.1.3 colorama-0.4.6 coloredlogs-15.0.1 cryptography-46.0.5 datasets-4.5.0 decorator-5.2.1 dill-0.4.0 distro-1.9.0 evaluate-0.4.1 fastapi-0.135.1 fastcore-1.12.24 ffmpy-1.0.0 fire-0.7.1 fla-core-0.4.1 flash-attn-2.8.3 flash-linear-attention-0.4.1 frozenlist-1.8.0 fsspec-2025.10.0 gcsfs-2025.10.0 gitdb-4.0.12 gitpython-3.1.46 google-api-core-2.30.0 google-auth-2.49.1 google-auth-oauthlib-1.3.0 google-cloud-core-2.5.0 google-cloud-storage-3.9.0 google-crc32c-1.8.0 google-resumable-media-2.8.0 googleapis-common-protos-1.73.0 gradio-6.9.0 gradio-client-2.3.0 groovy-0.1.2 grpcio-1.78.0 grpclib-0.4.9 h2-4.3.0 hf_transfer-0.1.9 hf_xet-1.3.2 hpack-4.1.0 huggingface_hub-1.7.0 humanfriendly-10.0 hyperframe-6.1.0 immutabledict-4.2.0 isodate-0.7.2 itsdangerous-2.2.0 jmespath-1.1.0 joblib-1.5.3 jsonlines-4.0.0 jsonschema-4.26.0 jsonschema-specifications-2025.9.1 kernels-0.12.2 langdetect-1.0.9 liger-kernel-0.7.0 llvmlite-0.46.0 lm_eval-0.4.7 lxml-6.0.2 markdown-3.10.2 mbstrdecoder-1.1.4 mistral-common-1.8.8 modal-1.3.0.post1 more_itertools-10.8.0 msal-1.35.1 msal-extensions-1.3.1 msgpack-1.1.2 multidict-6.7.1 multiprocess-0.70.18 narwhals-2.18.0 nltk-3.9.3 numba-0.64.0 numexpr-2.14.1 nvidia-ml-py-12.560.30 oauthlib-3.3.1 oci-2.168.1 ocifs-1.3.2 openenv-core-0.1.0 optimum-1.16.2 orjson-3.11.7 pandas-2.3.3 pathvalidate-3.3.1 peft-0.18.1 pillow-11.3.0 platformdirs-4.9.4 plotly-6.6.0 portalocker-3.2.0 posthog-6.7.11 propcache-0.4.1 proto-plus-1.27.1 protobuf-6.33.5 pyOpenSSL-25.3.0 pyarrow-23.0.1 pyasn1-0.6.2 pyasn1-modules-0.4.2 pybind11-3.0.2 pycountry-26.2.16 pycparser-3.0 pydantic-2.12.5 pydantic-core-2.41.5 pydantic-extra-types-2.11.0 pydub-0.25.1 pytablewriter-1.2.1 python-dateutil-2.9.0.post0 python-dotenv-1.0.1 python-multipart-0.0.22 pytz-2026.1.post1 ray-2.54.0 referencing-0.37.0 requests-2.32.5 requests-oauthlib-2.0.0 responses-0.18.0 ring-flash-attn-0.1.8 rouge-score-0.1.2 rpds-py-0.30.0 s3fs-2025.10.0 sacrebleu-2.6.0 safehttpx-0.1.7 schedulefree-1.4.1 scikit-learn-1.8.0 scipy-1.17.1 semantic-version-2.10.0 sentencepiece-0.2.1 sentry-sdk-2.54.0 six-1.17.0 smmap-5.0.3 sqlitedict-2.1.0 starlette-0.52.1 synchronicity-0.11.1 tabledata-1.3.4 tabulate-0.10.0 tcolorpy-0.1.7 tensorboard-2.20.0 tensorboard-data-server-0.7.2 tensorboardX-2.6.4 termcolor-3.3.0 threadpoolctl-3.6.0 tiktoken-0.12.0 toml-0.10.2 tomlkit-0.13.3 torchao-0.16.0 tqdm-multiprocess-0.0.11 trackio-0.19.0 trl-0.29.0 typepy-1.3.4 types-certifi-2021.10.8.3 types-toml-0.10.8.20240310 typing-inspection-0.4.2 tzdata-2025.3 urllib3-2.6.3 uvicorn-0.41.0 wandb-0.25.1 watchfiles-1.1.1 werkzeug-3.1.6 word2number-1.1 wrapt-1.17.3 xformers-0.0.35 xxhash-3.6.0 yarl-1.23.0 zstandard-0.22.0
+#29 2184.1 Files removed: 1133 (808.3 MB)
+#29 2184.1 Directories removed: 29
+#29 DONE 2185.3s
+
+#30 [axolotl-builder 13/19] RUN python scripts/unsloth_install.py | sh 2>/dev/null; true
+#30 1.511 Traceback (most recent call last):
+#30 1.511   File "/workspace/axolotl-src/scripts/unsloth_install.py", line 19, in <module>
+#30 1.511     raise RuntimeError(f"CUDA = {cuda} not supported!")
+#30 1.511 RuntimeError: CUDA = 12.8 not supported!
+#30 DONE 1.9s
+
+#31 [axolotl-builder 14/19] RUN python scripts/cutcrossentropy_install.py | sh 2>/dev/null; true
+#31 1.394 Collecting cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129 (from cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129)
+#31 1.394   Cloning https://github.com/axolotl-ai-cloud/ml-cross-entropy.git (to revision e8ad129) to /tmp/pip-install-3qy39f17/cut-cross-entropy_e79628e51d344bada57c6364b4b607bf
+#31 2.403   Did not find branch or tag 'e8ad129', assuming revision or ref.
+#31 2.409   Resolved https://github.com/axolotl-ai-cloud/ml-cross-entropy.git to commit e8ad129
+#31 2.412   Installing build dependencies: started
+#31 3.454   Installing build dependencies: finished with status 'done'
+#31 3.454   Getting requirements to build wheel: started
+#31 3.760   Getting requirements to build wheel: finished with status 'done'
+#31 3.761   Preparing metadata (pyproject.toml): started
+#31 3.909   Preparing metadata (pyproject.toml): finished with status 'done'
+#31 3.912 Requirement already satisfied: torch>=2.4 in /opt/venv/lib/python3.11/site-packages (from cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (2.10.0+cu128)
+#31 3.912 Requirement already satisfied: triton>=3.0.0 in /opt/venv/lib/python3.11/site-packages (from cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (3.6.0)
+#31 3.913 Requirement already satisfied: transformers>=4.48.2 in /opt/venv/lib/python3.11/site-packages (from cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (5.3.0)
+#31 3.915 Requirement already satisfied: filelock in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (3.20.0)
+#31 3.915 Requirement already satisfied: typing-extensions>=4.10.0 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (4.15.0)
+#31 3.915 Requirement already satisfied: sympy>=1.13.3 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (1.14.0)
+#31 3.916 Requirement already satisfied: networkx>=2.5.1 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (3.6.1)
+#31 3.916 Requirement already satisfied: jinja2 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (3.1.6)
+#31 3.917 Requirement already satisfied: fsspec>=0.8.5 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (2025.10.0)
+#31 3.917 Requirement already satisfied: cuda-bindings==12.9.4 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (12.9.4)
+#31 3.917 Requirement already satisfied: nvidia-cuda-nvrtc-cu12==12.8.93 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (12.8.93)
+#31 3.918 Requirement already satisfied: nvidia-cuda-runtime-cu12==12.8.90 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (12.8.90)
+#31 3.918 Requirement already satisfied: nvidia-cuda-cupti-cu12==12.8.90 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (12.8.90)
+#31 3.918 Requirement already satisfied: nvidia-cudnn-cu12==9.10.2.21 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (9.10.2.21)
+#31 3.919 Requirement already satisfied: nvidia-cublas-cu12==12.8.4.1 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (12.8.4.1)
+#31 3.919 Requirement already satisfied: nvidia-cufft-cu12==11.3.3.83 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (11.3.3.83)
+#31 3.919 Requirement already satisfied: nvidia-curand-cu12==10.3.9.90 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (10.3.9.90)
+#31 3.920 Requirement already satisfied: nvidia-cusolver-cu12==11.7.3.90 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (11.7.3.90)
+#31 3.920 Requirement already satisfied: nvidia-cusparse-cu12==12.5.8.93 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (12.5.8.93)
+#31 3.920 Requirement already satisfied: nvidia-cusparselt-cu12==0.7.1 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (0.7.1)
+#31 3.920 Requirement already satisfied: nvidia-nccl-cu12==2.27.5 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (2.27.5)
+#31 3.921 Requirement already satisfied: nvidia-nvshmem-cu12==3.4.5 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (3.4.5)
+#31 3.921 Requirement already satisfied: nvidia-nvtx-cu12==12.8.90 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (12.8.90)
+#31 3.921 Requirement already satisfied: nvidia-nvjitlink-cu12==12.8.93 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (12.8.93)
+#31 3.922 Requirement already satisfied: nvidia-cufile-cu12==1.13.1.3 in /opt/venv/lib/python3.11/site-packages (from torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (1.13.1.3)
+#31 3.923 Requirement already satisfied: cuda-pathfinder~=1.1 in /opt/venv/lib/python3.11/site-packages (from cuda-bindings==12.9.4->torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (1.2.2)
+#31 3.945 Requirement already satisfied: mpmath<1.4,>=1.1.0 in /opt/venv/lib/python3.11/site-packages (from sympy>=1.13.3->torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (1.3.0)
+#31 3.983 Requirement already satisfied: huggingface-hub<2.0,>=1.3.0 in /opt/venv/lib/python3.11/site-packages (from transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (1.7.0)
+#31 3.983 Requirement already satisfied: numpy>=1.17 in /opt/venv/lib/python3.11/site-packages (from transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (2.3.5)
+#31 3.984 Requirement already satisfied: packaging>=20.0 in /opt/venv/lib/python3.11/site-packages (from transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (26.0)
+#31 3.984 Requirement already satisfied: pyyaml>=5.1 in /opt/venv/lib/python3.11/site-packages (from transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (6.0.3)
+#31 3.984 Requirement already satisfied: regex!=2019.12.17 in /opt/venv/lib/python3.11/site-packages (from transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (2026.2.28)
+#31 3.984 Requirement already satisfied: tokenizers<=0.23.0,>=0.22.0 in /opt/venv/lib/python3.11/site-packages (from transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (0.22.2)
+#31 3.985 Requirement already satisfied: typer in /opt/venv/lib/python3.11/site-packages (from transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (0.24.1)
+#31 3.985 Requirement already satisfied: safetensors>=0.4.3 in /opt/venv/lib/python3.11/site-packages (from transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (0.7.0)
+#31 3.985 Requirement already satisfied: tqdm>=4.27 in /opt/venv/lib/python3.11/site-packages (from transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (4.67.3)
+#31 3.993 Requirement already satisfied: hf-xet<2.0.0,>=1.3.2 in /opt/venv/lib/python3.11/site-packages (from huggingface-hub<2.0,>=1.3.0->transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (1.3.2)
+#31 3.993 Requirement already satisfied: httpx<1,>=0.23.0 in /opt/venv/lib/python3.11/site-packages (from huggingface-hub<2.0,>=1.3.0->transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (0.28.1)
+#31 3.996 Requirement already satisfied: anyio in /opt/venv/lib/python3.11/site-packages (from httpx<1,>=0.23.0->huggingface-hub<2.0,>=1.3.0->transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (4.12.1)
+#31 3.996 Requirement already satisfied: certifi in /opt/venv/lib/python3.11/site-packages (from httpx<1,>=0.23.0->huggingface-hub<2.0,>=1.3.0->transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (2026.2.25)
+#31 3.996 Requirement already satisfied: httpcore==1.* in /opt/venv/lib/python3.11/site-packages (from httpx<1,>=0.23.0->huggingface-hub<2.0,>=1.3.0->transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (1.0.9)
+#31 3.997 Requirement already satisfied: idna in /opt/venv/lib/python3.11/site-packages (from httpx<1,>=0.23.0->huggingface-hub<2.0,>=1.3.0->transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (3.11)
+#31 3.998 Requirement already satisfied: h11>=0.16 in /opt/venv/lib/python3.11/site-packages (from httpcore==1.*->httpx<1,>=0.23.0->huggingface-hub<2.0,>=1.3.0->transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (0.16.0)
+#31 4.010 Requirement already satisfied: MarkupSafe>=2.0 in /opt/venv/lib/python3.11/site-packages (from jinja2->torch>=2.4->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (3.0.2)
+#31 4.011 Requirement already satisfied: click>=8.2.1 in /opt/venv/lib/python3.11/site-packages (from typer->transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (8.3.1)
+#31 4.012 Requirement already satisfied: shellingham>=1.3.0 in /opt/venv/lib/python3.11/site-packages (from typer->transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (1.5.4)
+#31 4.012 Requirement already satisfied: rich>=12.3.0 in /opt/venv/lib/python3.11/site-packages (from typer->transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (14.3.3)
+#31 4.012 Requirement already satisfied: annotated-doc>=0.0.2 in /opt/venv/lib/python3.11/site-packages (from typer->transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (0.0.4)
+#31 4.014 Requirement already satisfied: markdown-it-py>=2.2.0 in /opt/venv/lib/python3.11/site-packages (from rich>=12.3.0->typer->transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (4.0.0)
+#31 4.014 Requirement already satisfied: pygments<3.0.0,>=2.13.0 in /opt/venv/lib/python3.11/site-packages (from rich>=12.3.0->typer->transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (2.19.2)
+#31 4.017 Requirement already satisfied: mdurl~=0.1 in /opt/venv/lib/python3.11/site-packages (from markdown-it-py>=2.2.0->rich>=12.3.0->typer->transformers>=4.48.2->cut-cross-entropy @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129->cut-cross-entropy[transformers] @ git+https://github.com/axolotl-ai-cloud/ml-cross-entropy.git@e8ad129) (0.1.2)
+#31 4.019 Building wheels for collected packages: cut-cross-entropy
+#31 4.021   Building wheel for cut-cross-entropy (pyproject.toml): started
+#31 4.198   Building wheel for cut-cross-entropy (pyproject.toml): finished with status 'done'
+#31 4.199   Created wheel for cut-cross-entropy: filename=cut_cross_entropy-25.5.2-py3-none-any.whl size=111022 sha256=7c7a719c0f662fec5d6ab3fdd4270a6b18fc2afa834f1619186a1592453fdb91
+#31 4.199   Stored in directory: /tmp/pip-ephem-wheel-cache-qhwh8zzf/wheels/b0/c5/62/8d9c73f0e59e87a57084de6a1953a29dfd002285f67f95c7f6
+#31 4.200 Successfully built cut-cross-entropy
+#31 4.392 Installing collected packages: cut-cross-entropy
+#31 4.484 Successfully installed cut-cross-entropy-25.5.2
+#31 DONE 4.6s
+
+#32 [axolotl-builder 15/19] RUN pip install --no-cache-dir pytest && pip cache purge
+#32 0.596 Collecting pytest
+#32 0.661   Downloading pytest-9.0.2-py3-none-any.whl.metadata (7.6 kB)
+#32 0.671 Collecting iniconfig>=1.0.1 (from pytest)
+#32 0.685   Downloading iniconfig-2.3.0-py3-none-any.whl.metadata (2.5 kB)
+#32 0.686 Requirement already satisfied: packaging>=22 in /opt/venv/lib/python3.11/site-packages (from pytest) (26.0)
+#32 0.695 Collecting pluggy<2,>=1.5 (from pytest)
+#32 0.709   Downloading pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+#32 0.710 Requirement already satisfied: pygments>=2.7.2 in /opt/venv/lib/python3.11/site-packages (from pytest) (2.19.2)
+#32 0.725 Downloading pytest-9.0.2-py3-none-any.whl (374 kB)
+#32 0.780 Downloading pluggy-1.6.0-py3-none-any.whl (20 kB)
+#32 0.794 Downloading iniconfig-2.3.0-py3-none-any.whl (7.5 kB)
+#32 1.064 Installing collected packages: pluggy, iniconfig, pytest
+#32 1.225 
+#32 1.245 Successfully installed iniconfig-2.3.0 pluggy-1.6.0 pytest-9.0.2
+#32 1.585 Files removed: 18 (1.4 MB)
+#32 1.585 Directories removed: 0
+#32 DONE 1.7s
+
+#33 [axolotl-builder 16/19] RUN pip install --no-cache-dir fastapi "uvicorn[standard]" aiofiles &&     pip cache purge
+#33 0.513 Requirement already satisfied: fastapi in /opt/venv/lib/python3.11/site-packages (0.135.1)
+#33 0.513 Requirement already satisfied: aiofiles in /opt/venv/lib/python3.11/site-packages (24.1.0)
+#33 0.513 Requirement already satisfied: uvicorn[standard] in /opt/venv/lib/python3.11/site-packages (0.41.0)
+#33 0.516 Requirement already satisfied: starlette>=0.46.0 in /opt/venv/lib/python3.11/site-packages (from fastapi) (0.52.1)
+#33 0.516 Requirement already satisfied: pydantic>=2.7.0 in /opt/venv/lib/python3.11/site-packages (from fastapi) (2.12.5)
+#33 0.516 Requirement already satisfied: typing-extensions>=4.8.0 in /opt/venv/lib/python3.11/site-packages (from fastapi) (4.15.0)
+#33 0.517 Requirement already satisfied: typing-inspection>=0.4.2 in /opt/venv/lib/python3.11/site-packages (from fastapi) (0.4.2)
+#33 0.517 Requirement already satisfied: annotated-doc>=0.0.2 in /opt/venv/lib/python3.11/site-packages (from fastapi) (0.0.4)
+#33 0.518 Requirement already satisfied: click>=7.0 in /opt/venv/lib/python3.11/site-packages (from uvicorn[standard]) (8.3.1)
+#33 0.518 Requirement already satisfied: h11>=0.8 in /opt/venv/lib/python3.11/site-packages (from uvicorn[standard]) (0.16.0)
+#33 0.617 Collecting httptools>=0.6.3 (from uvicorn[standard])
+#33 0.663   Downloading httptools-0.7.1-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (3.5 kB)
+#33 0.664 Requirement already satisfied: python-dotenv>=0.13 in /opt/venv/lib/python3.11/site-packages (from uvicorn[standard]) (1.0.1)
+#33 0.664 Requirement already satisfied: pyyaml>=5.1 in /opt/venv/lib/python3.11/site-packages (from uvicorn[standard]) (6.0.3)
+#33 0.709 Collecting uvloop>=0.15.1 (from uvicorn[standard])
+#33 0.717   Downloading uvloop-0.22.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (4.9 kB)
+#33 0.719 Requirement already satisfied: watchfiles>=0.20 in /opt/venv/lib/python3.11/site-packages (from uvicorn[standard]) (1.1.1)
+#33 0.787 Collecting websockets>=10.4 (from uvicorn[standard])
+#33 0.794   Downloading websockets-16.0-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.8 kB)
+#33 0.798 Requirement already satisfied: annotated-types>=0.6.0 in /opt/venv/lib/python3.11/site-packages (from pydantic>=2.7.0->fastapi) (0.7.0)
+#33 0.798 Requirement already satisfied: pydantic-core==2.41.5 in /opt/venv/lib/python3.11/site-packages (from pydantic>=2.7.0->fastapi) (2.41.5)
+#33 0.800 Requirement already satisfied: anyio<5,>=3.6.2 in /opt/venv/lib/python3.11/site-packages (from starlette>=0.46.0->fastapi) (4.12.1)
+#33 0.801 Requirement already satisfied: idna>=2.8 in /opt/venv/lib/python3.11/site-packages (from anyio<5,>=3.6.2->starlette>=0.46.0->fastapi) (3.11)
+#33 0.811 Downloading httptools-0.7.1-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (456 kB)
+#33 0.855 Downloading uvloop-0.22.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (3.8 MB)
+#33 0.989    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.8/3.8 MB 30.0 MB/s  0:00:00
+#33 0.995 Downloading websockets-16.0-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (184 kB)
+#33 1.282 Installing collected packages: websockets, uvloop, httptools
+#33 1.421 
+#33 1.441 Successfully installed httptools-0.7.1 uvloop-0.22.1 websockets-16.0
+#33 1.749 WARNING: No matching packages
+#33 1.749 Files removed: 0 (0 bytes)
+#33 1.749 Directories removed: 0
+#33 DONE 1.8s
+
+#34 [axolotl-builder 17/19] RUN git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" &&     git config --get remote.origin.fetch &&     git config --global credential.helper store
+#34 0.313 +refs/heads/*:refs/remotes/origin/*
+#34 DONE 0.3s
+
+#35 [axolotl-builder 18/19] COPY self.axolotl/.axolotl-complete.bash /root/.axolotl-complete.bash
+#35 DONE 0.0s
+
+#36 [axolotl-builder 19/19] RUN chmod +x /root/.axolotl-complete.bash &&     echo 'source /root/.axolotl-complete.bash' >> /root/.bashrc
+#36 DONE 0.3s
+
+#37 [runtime  5/11] COPY --from=axolotl-builder /opt/venv /opt/venv
+#37 DONE 24.7s
+
+#38 [runtime  6/11] COPY --from=axolotl-builder /workspace/axolotl-src /workspace/axolotl-src
+#38 DONE 0.8s
+
+#39 [runtime  7/11] COPY supervisord.conf /etc/supervisor/conf.d/llamolotl.conf
+#39 DONE 0.1s
+
+#40 [runtime  8/11] COPY entrypoint.sh /entrypoint.sh
+#40 DONE 0.0s
+
+#41 [runtime  9/11] RUN chmod +x /entrypoint.sh
+#41 DONE 0.2s
+
+#42 [runtime 10/11] COPY api/ /workspace/axolotl-src/api/
+#42 DONE 0.0s
+
+#43 [runtime 11/11] WORKDIR /workspace/axolotl-src
+#43 DONE 0.0s
+
+#44 exporting to image
+#44 exporting layers
+#44 exporting layers 239.6s done
+#44 exporting manifest sha256:b58d2990f71a0c18824dba4f6d3d13ab8d9c69d4f21844d072013d441336dbaf done
+#44 exporting config sha256:63714443548689713ce3777b3013e4758ab9c4bcb30ddb9afaa99f28348891df done
+#44 exporting attestation manifest sha256:7a986539e1da8df6974c83d15bd61b4d5384e76e988e3ffaaa55ef6d05ebaf4e done
+#44 exporting manifest list sha256:b2c6d6a6793683899f33040fd42fa6e068894d5204d7d19771690f79a5a91ba8 done
+#44 naming to docker.io/local/self-llamolotl:latest done
+#44 unpacking to docker.io/local/self-llamolotl:latest
+#44 unpacking to docker.io/local/self-llamolotl:latest 37.4s done
+#44 DONE 277.0s
+
+#45 resolving provenance for metadata file
+#45 DONE 0.0s
+ Image local/self-llamolotl:latest Built 
