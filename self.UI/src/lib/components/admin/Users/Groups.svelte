@@ -50,6 +50,7 @@
 			models: false,
 			knowledge: false,
 			prompts: false,
+			training: false,
 			tools: false
 		},
 		chat: {

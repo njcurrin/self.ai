@@ -4,6 +4,8 @@
 	import Leaderboard from './Evaluations/Leaderboard.svelte';
 	import Feedbacks from './Evaluations/Feedbacks.svelte';
 	import CodeTests from './Evaluations/CodeTests.svelte';
+	import LanguageTests from './Evaluations/LanguageTests.svelte';
+	import Schedule from './Evaluations/Schedule.svelte';
 
 	import { getAllFeedbacks } from '$lib/apis/evaluations';
 
@@ -114,6 +116,58 @@
 				</div>
 				<div class=" self-center">{$i18n.t('Code Tests')}</div>
 			</button>
+
+			<button
+				class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
+				'langtests'
+					? ''
+					: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				on:click={() => {
+					selectedTab = 'langtests';
+				}}
+			>
+				<div class=" self-center mr-2">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="size-4"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M11 5a.75.75 0 0 1 .688.452l3.25 7.5a.75.75 0 1 1-1.376.596L12.89 12H9.109l-.672 1.548a.75.75 0 1 1-1.376-.596l3.25-7.5A.75.75 0 0 1 11 5Zm-1.24 5.5h2.48L11 7.636 9.76 10.5ZM1.75 6a.75.75 0 0 1 .75.75v2.5h2.5v-2.5a.75.75 0 0 1 1.5 0v6.5a.75.75 0 0 1-1.5 0v-2.5H2.5v2.5a.75.75 0 0 1-1.5 0v-6.5A.75.75 0 0 1 1.75 6Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</div>
+				<div class=" self-center">{$i18n.t('Language Tests')}</div>
+			</button>
+
+			<button
+				class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
+				'schedule'
+					? ''
+					: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				on:click={() => {
+					selectedTab = 'schedule';
+				}}
+			>
+				<div class=" self-center mr-2">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="size-4"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M4 1.75a.75.75 0 0 1 1.5 0V3h5V1.75a.75.75 0 0 1 1.5 0V3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2V1.75ZM4.5 6a1 1 0 0 0-1 1v4.5a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-7Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</div>
+				<div class=" self-center">{$i18n.t('Schedule')}</div>
+			</button>
 		</div>
 
 		<div class="flex-1 mt-1 lg:mt-0 overflow-y-scroll">
@@ -123,6 +177,10 @@
 				<Feedbacks {feedbacks} />
 			{:else if selectedTab === 'codetests'}
 				<CodeTests />
+			{:else if selectedTab === 'langtests'}
+				<LanguageTests />
+			{:else if selectedTab === 'schedule'}
+				<Schedule />
 			{/if}
 		</div>
 	</div>

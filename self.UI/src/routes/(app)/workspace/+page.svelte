@@ -11,6 +11,10 @@
 				goto('/workspace/knowledge');
 			} else if ($user?.permissions?.workspace?.prompts) {
 				goto('/workspace/prompts');
+			} else if ($user?.permissions?.workspace?.training) {
+				goto('/workspace/training');
+			} else if ($user?.permissions?.workspace?.evaluations) {
+				goto('/workspace/evaluations');
 			} else if ($user?.permissions?.workspace?.tools) {
 				goto('/workspace/tools');
 			} else {

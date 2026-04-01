@@ -34,6 +34,16 @@
 				!$user?.permissions?.workspace?.prompts
 			) {
 				goto('/');
+			} else if (
+				$page.url.pathname.includes('/training') &&
+				!$user?.permissions?.workspace?.training
+			) {
+				goto('/');
+			} else if (
+				$page.url.pathname.includes('/evaluations') &&
+				!$user?.permissions?.workspace?.evaluations
+			) {
+				goto('/');
 			} else if ($page.url.pathname.includes('/tools') && !$user?.permissions?.workspace?.tools) {
 				goto('/');
 			}
@@ -109,6 +119,32 @@
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 								href="/workspace/prompts">{$i18n.t('Prompts')}</a
 							>
+						{/if}
+
+						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.training}
+							<a
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+									'/workspace/training'
+								)
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/training"
+							>
+								{$i18n.t('Training')}
+							</a>
+						{/if}
+
+						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.evaluations}
+							<a
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+									'/workspace/evaluations'
+								)
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/evaluations"
+							>
+								{$i18n.t('Evaluations')}
+							</a>
 						{/if}
 
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.tools}

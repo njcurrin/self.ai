@@ -11,8 +11,10 @@
 		cancelLlamolotlModelPull,
 		deleteLlamolotlModel,
 		getAvailableLlamolotlModels,
-		registerLlamolotlModel
+		registerLlamolotlModel,
+		inspectLlamolotlModel
 	} from '$lib/apis/llamolotl';
+	import type { ModelInspectResult } from '$lib/apis/llamolotl';
 	import { getModels } from '$lib/apis';
 
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -26,7 +28,7 @@
 	let showModelDeleteConfirm = false;
 	let loading = true;
 
-	let availableModels: { name: string; size: number; modified: number; registered?: boolean; shards?: number }[] = [];
+	let availableModels: { name: string; size: number; modified: number; registered?: boolean; shards?: number; hf_repo?: string; quant?: string; trainable?: boolean; source_type?: string; pulled_at?: string; bake_info?: { base_model: string; adapters: { path: string; weight: number }[]; outtype: string; quant_type?: string; baked_at: string } }[] = [];
 
 	const MAX_PARALLEL_DOWNLOADS = 3;
 
@@ -35,6 +37,10 @@
 	let selectedFilename: string | null = null;
 	let availableFiles: string[] = [];
 	let showFileSelector = false;
+
+	let inspecting = false;
+	let showDownloadConfirm = false;
+	let downloadInfo: ModelInspectResult | null = null;
 
 	let deleteModelName = '';
 
@@ -56,6 +62,24 @@
 			);
 			return;
 		}
+
+		// If we haven't confirmed yet, inspect first and show confirmation
+		if (!showDownloadConfirm) {
+			inspecting = true;
+			try {
+				downloadInfo = await inspectLlamolotlModel(localStorage.token, sanitizedModelTag, urlIdx);
+				showDownloadConfirm = true;
+			} catch (err: any) {
+				toast.error(err?.detail ?? err?.message ?? String(err));
+			} finally {
+				inspecting = false;
+			}
+			return;
+		}
+
+		// Confirmed — proceed with actual download
+		showDownloadConfirm = false;
+		downloadInfo = null;
 
 		const [res, controller] = await pullLlamolotlModel(
 			localStorage.token,
@@ -134,7 +158,10 @@
 							if (data.status) {
 								if (data.digest) {
 									let downloadProgress = 0;
-									if (data.total > 0 && data.completed) {
+									if (data.status === 'converting') {
+										// Conversion phase — always indeterminate
+										downloadProgress = -1;
+									} else if (data.total > 0 && data.completed) {
 										downloadProgress =
 											Math.round((data.completed / data.total) * 1000) / 10;
 									} else if (data.total > 0 && !data.completed) {
@@ -152,17 +179,16 @@
 											...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
 											pullProgress: downloadProgress,
 											digest: data.digest,
-											downloadedBytes: data.completed || 0
+											downloadedBytes: data.completed || 0,
+											...(data.log && { statusText: data.log })
 										}
 									});
-								} else {
-									toast.success(data.status);
-
+								} else if (data.status === 'success') {
 									MODEL_DOWNLOAD_POOL.set({
 										...$MODEL_DOWNLOAD_POOL,
 										[sanitizedModelTag]: {
 											...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
-											done: data.status === 'success'
+											done: true
 										}
 									});
 								}
@@ -203,6 +229,16 @@
 		availableFiles = [];
 		showFileSelector = false;
 		modelTransferring = false;
+	};
+
+	const confirmAndPull = async () => {
+		showDownloadConfirm = true; // flag so pullModelHandler skips inspect
+		await pullModelHandler();
+	};
+
+	const cancelDownloadInspect = () => {
+		showDownloadConfirm = false;
+		downloadInfo = null;
 	};
 
 	const selectFileAndPull = async (filename: string) => {
@@ -401,7 +437,61 @@
 									>
 								</div>
 
-								{#if showFileSelector && availableFiles.length > 0}
+								{#if inspecting}
+								<div class="mt-2 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+									<Spinner className="w-4 h-4" />
+									{$i18n.t('Checking download size...')}
+								</div>
+							{/if}
+
+							{#if showDownloadConfirm && downloadInfo}
+								{@const singleFile = downloadInfo.files.length === 1}
+								<div class="mt-2 rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+									{#if singleFile}
+										<div class="flex justify-between text-sm dark:text-gray-200">
+											<span class="truncate mr-2 text-gray-600 dark:text-gray-400">{downloadInfo.files[0].name}</span>
+											<span class="flex-shrink-0 font-semibold">
+												{downloadInfo.files[0].size > 0 ? (downloadInfo.files[0].size / 1024 ** 3).toFixed(2) + ' GB' : '?'}
+											</span>
+										</div>
+									{:else}
+										<details>
+											<summary class="cursor-pointer text-sm dark:text-gray-200 flex justify-between">
+												<span>{downloadInfo.files.length} files</span>
+												<span class="font-semibold">
+													{downloadInfo.total_size > 0 ? (downloadInfo.total_size / 1024 ** 3).toFixed(2) + ' GB' : '?'}
+												</span>
+											</summary>
+											<div class="mt-1.5 max-h-36 overflow-y-auto space-y-0.5">
+												{#each downloadInfo.files as file}
+													<div class="flex justify-between text-xs py-0.5">
+														<span class="truncate mr-2 text-gray-500 dark:text-gray-400">{file.name}</span>
+														<span class="flex-shrink-0 text-gray-600 dark:text-gray-300">
+															{file.size > 0 ? (file.size / 1024 ** 3).toFixed(2) + ' GB' : '?'}
+														</span>
+													</div>
+												{/each}
+											</div>
+										</details>
+									{/if}
+									<div class="flex justify-end gap-2 pt-1 border-t border-gray-200 dark:border-gray-700">
+										<button
+											class="px-3 py-1 text-xs rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 transition"
+											on:click={cancelDownloadInspect}
+										>
+											{$i18n.t('Cancel')}
+										</button>
+										<button
+											class="px-3 py-1 text-xs rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition"
+											on:click={confirmAndPull}
+										>
+											{$i18n.t('Download')}
+										</button>
+									</div>
+								</div>
+							{/if}
+
+							{#if showFileSelector && availableFiles.length > 0}
 									<div class="mt-2">
 										<div class="mb-2 text-sm font-medium">
 											{$i18n.t('Select a GGUF file to download')}
@@ -434,7 +524,9 @@
 																	class="dark:bg-gray-600 bg-gray-500 text-xs font-medium text-gray-100 text-center p-0.5 leading-none rounded-full animate-pulse"
 																	style="width: 100%"
 																>
-																	{#if $MODEL_DOWNLOAD_POOL[model].downloadedBytes}
+																	{#if $MODEL_DOWNLOAD_POOL[model].statusText}
+																		{$MODEL_DOWNLOAD_POOL[model].statusText.slice(0, 40)}
+																	{:else if $MODEL_DOWNLOAD_POOL[model].downloadedBytes}
 																		{($MODEL_DOWNLOAD_POOL[model].downloadedBytes / 1024 / 1024).toFixed(0)} MB
 																	{:else}
 																		downloading...
@@ -509,10 +601,32 @@
 												class="flex items-center justify-between rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850"
 											>
 												<div class="flex-1 truncate mr-2">
-													{model.name}
+													<div class="flex items-center gap-1.5">
+														{model.name}
+														{#if model.quant}
+															<span class="px-1.5 py-0.5 text-xs font-mono rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{model.quant}</span>
+														{/if}
+														{#if model.trainable}
+															<span class="px-1.5 py-0.5 text-xs rounded bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">trainable</span>
+														{/if}
+														{#if model.source_type === 'baked'}
+															<span class="px-1.5 py-0.5 text-xs rounded bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">baked</span>
+														{/if}
+													</div>
 													<span class="text-xs text-gray-400">
 														({(model.size / 1024 ** 3).toFixed(1)} GB{model.shards ? `, ${model.shards} shards` : ''})
+														{#if model.hf_repo}
+															&middot; {model.hf_repo}
+														{/if}
 													</span>
+													{#if model.bake_info}
+														<div class="text-xs text-gray-400 mt-0.5">
+															Base: {model.bake_info.base_model}
+															{#if model.bake_info.adapters.length > 0}
+																&middot; {model.bake_info.adapters.length} LoRA{model.bake_info.adapters.length > 1 ? 's' : ''} merged
+															{/if}
+														</div>
+													{/if}
 												</div>
 												<Tooltip content={$i18n.t('Register')}>
 													<button
@@ -547,9 +661,12 @@
 											{#each availableModels as model}
 												<option value={model.name} class="bg-gray-50 dark:bg-gray-700"
 													>{model.name +
+														(model.quant ? ` [${model.quant}]` : '') +
 														' (' +
 														(model.size / 1024 ** 3).toFixed(1) +
-														' GB)'}</option
+														' GB)' +
+														(model.hf_repo ? ` — ${model.hf_repo}` : '') +
+														(model.source_type === 'baked' ? ' [baked]' : '')}</option
 												>
 											{/each}
 										</select>

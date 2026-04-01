@@ -10,6 +10,8 @@
 			models: false,
 			knowledge: false,
 			prompts: false,
+			training: false,
+			evaluations: false,
 			tools: false
 		},
 		chat: {
@@ -146,6 +148,20 @@
 				{$i18n.t('Prompts Access')}
 			</div>
 			<Switch bind:state={permissions.workspace.prompts} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Training Access')}
+			</div>
+			<Switch bind:state={permissions.workspace.training} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Evaluations Access')}
+			</div>
+			<Switch bind:state={permissions.workspace.evaluations} />
 		</div>
 
 		<div class=" ">

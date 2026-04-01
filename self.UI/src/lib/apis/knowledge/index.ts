@@ -349,3 +349,19 @@ export const deleteKnowledgeById = async (token: string, id: string) => {
 
 	return res;
 };
+
+export const prepareKnowledgeInput = async (token: string, id: string) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/prepare-input`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { Authorization: `Bearer ${token}`})
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+	});
+	return res;
+};

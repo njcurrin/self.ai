@@ -4,6 +4,7 @@
 
 	const dispatch = createEventDispatcher();
 
+	import { getCuratorConfig, updateCuratorConfig } from '$lib/apis/curator';
 	import { getLlamolotlConfig, updateLlamolotlConfig } from '$lib/apis/llamolotl';
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
@@ -19,6 +20,7 @@
 	import OpenAIConnection from './Connections/OpenAIConnection.svelte';
 	import AddConnectionModal from './Connections/AddConnectionModal.svelte';
 	import OllamaConnection from './Connections/OllamaConnection.svelte';
+	import CuratorConnection from './Connections/CuratorConnection.svelte';
 	import LlamolotlConnection from './Connections/LlamolotlConnection.svelte';
 
 	const i18n = getContext('i18n');
@@ -29,6 +31,9 @@
 	};
 
 	// External
+	let CURATOR_BASE_URLS = [''];
+	let CURATOR_API_CONFIGS = {};
+
 	let LLAMOLOTL_BASE_URLS = [''];
 	let LLAMOLOTL_API_CONFIGS = {};
 
@@ -42,11 +47,13 @@
 	let ENABLE_OPENAI_API: null | boolean = null;
 	let ENABLE_OLLAMA_API: null | boolean = null;
 	let ENABLE_LLAMOLOTL_API: null | boolean = null;
+	let ENABLE_CURATOR_API: null | boolean = null;
 
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
 	let showAddOllamaConnectionModal = false;
 	let showAddLlamolotlConnectionModal = false;
+	let showAddCuratorConnectionModal = false;
 
 	const updateOpenAIHandler = async () => {
 		if (ENABLE_OPENAI_API !== null) {
@@ -164,11 +171,45 @@
 		await updateLlamolotlHandler();
 	};
 
+	const updateCuratorHandler = async () => {
+		if (ENABLE_CURATOR_API !== null) {
+			// Remove duplicate URLs
+			CURATOR_BASE_URLS = CURATOR_BASE_URLS.filter(
+				(url, urlIdx) => CURATOR_BASE_URLS.indexOf(url) === urlIdx && url !== ''
+			).map((url) => url.replace(/\/$/, ''));
+
+			if (CURATOR_BASE_URLS.length === 0) {
+				ENABLE_CURATOR_API = false;
+				toast.info($i18n.t('Curator API disabled'));
+			}
+
+			const res = await updateCuratorConfig(localStorage.token, {
+				ENABLE_CURATOR_API: ENABLE_CURATOR_API,
+				CURATOR_BASE_URLS: CURATOR_BASE_URLS,
+				CURATOR_API_CONFIGS: CURATOR_API_CONFIGS
+			}).catch((error) => {
+				toast.error(error);
+			});
+
+			if (res) {
+				toast.success($i18n.t('Curator API settings updated'));
+			}
+		}
+	};
+
+	const addCuratorConnectionHandler = async (connection) => {
+		CURATOR_BASE_URLS = [...CURATOR_BASE_URLS, connection.url];
+		CURATOR_API_CONFIGS[connection.url] = connection.config;
+
+		await updateCuratorHandler();
+	};
+
 	onMount(async () => {
 		if ($user.role === 'admin') {
 			let ollamaConfig = {};
 			let openaiConfig = {};
 			let llamolotlConfig = {};
+			let curatorConfig = {};
 
 			await Promise.all([
 				(async () => {
@@ -179,12 +220,16 @@
 				})(),
 				(async () => {
 					llamolotlConfig = await getLlamolotlConfig(localStorage.token);
+				})(),
+				(async () => {
+					curatorConfig = await getCuratorConfig(localStorage.token);
 				})()
 			]);
 
 			ENABLE_OPENAI_API = openaiConfig.ENABLE_OPENAI_API;
 			ENABLE_OLLAMA_API = ollamaConfig.ENABLE_OLLAMA_API;
 			ENABLE_LLAMOLOTL_API = llamolotlConfig.ENABLE_LLAMOLOTL_API;
+			ENABLE_CURATOR_API = curatorConfig.ENABLE_CURATOR_API;
 
 			OPENAI_API_BASE_URLS = openaiConfig.OPENAI_API_BASE_URLS;
 			OPENAI_API_KEYS = openaiConfig.OPENAI_API_KEYS;
@@ -195,6 +240,9 @@
 
 			LLAMOLOTL_BASE_URLS = llamolotlConfig.LLAMOLOTL_BASE_URLS;
 			LLAMOLOTL_API_CONFIGS = llamolotlConfig.LLAMOLOTL_API_CONFIGS;
+
+			CURATOR_BASE_URLS = curatorConfig.CURATOR_BASE_URLS;
+			CURATOR_API_CONFIGS = curatorConfig.CURATOR_API_CONFIGS;
 
 			if (ENABLE_OPENAI_API) {
 				for (const url of OPENAI_API_BASE_URLS) {
@@ -230,6 +278,14 @@
 					}
 				}
 			}
+
+			if (ENABLE_CURATOR_API) {
+				for (const url of CURATOR_BASE_URLS) {
+					if (!CURATOR_API_CONFIGS[url]) {
+						CURATOR_API_CONFIGS[url] = {};
+					}
+				}
+			}
 		}
 	});
 </script>
@@ -251,18 +307,25 @@
 	onSubmit={addLlamolotlConnectionHandler}
 />
 
+<AddConnectionModal
+	curator
+	bind:show={showAddCuratorConnectionModal}
+	onSubmit={addCuratorConnectionHandler}
+/>
+
 <form
 	class="flex flex-col h-full justify-between text-sm"
 	on:submit|preventDefault={() => {
 		updateOpenAIHandler();
 		updateOllamaHandler();
 		updateLlamolotlHandler();
+		updateCuratorHandler();
 
 		dispatch('save');
 	}}
 >
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
-		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && ENABLE_LLAMOLOTL_API !== null}
+		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && ENABLE_LLAMOLOTL_API !== null && ENABLE_CURATOR_API !== null}
 			<div class="my-2">
 				<div class="mt-2 space-y-2 pr-1.5">
 					<div class="flex justify-between items-center text-sm">
@@ -440,6 +503,63 @@
 										}}
 										onDelete={() => {
 											LLAMOLOTL_BASE_URLS = LLAMOLOTL_BASE_URLS.filter((url, urlIdx) => idx !== urlIdx);
+										}}
+									/>
+								{/each}
+							</div>
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			<hr class=" border-gray-50 dark:border-gray-850" />
+
+			<div class="pr-1.5 my-2">
+				<div class="flex justify-between items-center text-sm mb-2">
+					<div class="  font-medium">{$i18n.t('self.curator API')}</div>
+
+					<div class="mt-1">
+						<Switch
+							bind:state={ENABLE_CURATOR_API}
+							on:change={async () => {
+								updateCuratorHandler();
+							}}
+						/>
+					</div>
+				</div>
+
+				{#if ENABLE_CURATOR_API}
+					<hr class=" border-gray-50 dark:border-gray-850 my-2" />
+
+					<div class="">
+						<div class="flex justify-between items-center">
+							<div class="font-medium">{$i18n.t('Manage self.curator Connections')}</div>
+
+							<Tooltip content={$i18n.t(`Add Connection`)}>
+								<button
+									class="px-1"
+									on:click={() => {
+										showAddCuratorConnectionModal = true;
+									}}
+									type="button"
+								>
+									<Plus />
+								</button>
+							</Tooltip>
+						</div>
+
+						<div class="flex w-full gap-1.5">
+							<div class="flex-1 flex flex-col gap-1.5 mt-1.5">
+								{#each CURATOR_BASE_URLS as url, idx}
+									<CuratorConnection
+										bind:url
+										bind:config={CURATOR_API_CONFIGS[url]}
+										{idx}
+										onSubmit={() => {
+											updateCuratorHandler();
+										}}
+										onDelete={() => {
+											CURATOR_BASE_URLS = CURATOR_BASE_URLS.filter((url, urlIdx) => idx !== urlIdx);
 										}}
 									/>
 								{/each}
