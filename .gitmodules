@@ -1,9 +1,18 @@
 [submodule "self.Llama"]
 	path = self.llamolotl/self.Llama
 	url = https://github.com/njcurrin/self.llama.git
-[submodule "self.axolotl"]
-	path = self.llamolotl/self.axolotl
-	url = https://github.com/njcurrin/self.ai-axolotl.git
 [submodule "self.bigcode-eval"]
 	path = self.bigcode-eval
 	url = https://github.com/njcurrin/self.ai-bigcode-evaluation-harness.git
+[submodule "self.lm-evaluation-harness"]
+	path = self.lm-evaluation-harness
+	url = https://github.com/njcurrin/self.lm-evaluation-harness.git
+[submodule "self.kokoro-fastapi"]
+	path = self.kokoro-fastapi
+	url = https://github.com/njcurrin/Self.Kokoro-FastAPI.git
+[submodule "self.faster-whisper"]
+	path = self.faster-whisper
+	url = https://github.com/njcurrin/self.faster-whisper.git
+[submodule "self.curator"]
+	path = self.curator
+	url = https://github.com/njcurrin/Self.Curator.git
