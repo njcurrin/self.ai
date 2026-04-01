@@ -15,20 +15,75 @@ services:
       pull: false
     container_name: self-llamolotl
     volumes:
-      - /srv/ollama/models:/models
-      - ./self.llamolotl/self.axolotl:/workspace/axolotl
-      - axolotl-cache:/root/.cache/huggingface/
+      - /srv/llamolotl/models:/models
+      - /srv/llamolotl/loras:/workspace/training/outputs
+      - /srv/llamolotl/cache:/workspace/cache
     env_file:
       - ./self.llamolotl/self.Llama/.env
     environment:
-      - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME}
-      - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL}
-      - GIT_COMMITTER_NAME=${GIT_COMMITTER_NAME}
-      - GIT_COMMITTER_EMAIL=${GIT_COMMITTER_EMAIL}
-      - WANDB_API_KEY=${WANDB_API_KEY}
+      - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-}
+      - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-}
+      - GIT_COMMITTER_NAME=${GIT_COMMITTER_NAME:-}
+      - GIT_COMMITTER_EMAIL=${GIT_COMMITTER_EMAIL:-}
+      - WANDB_API_KEY=${WANDB_API_KEY:-}
+      - DEBUG=1
     ports:
       - 8091:8080
       - 8093:8093
+    networks:
+      - llama_internal
+      - proxy_llama
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  self-kokoro:
+    image: local/self-kokoro:latest
+    build:
+      context: ./self.kokoro-fastapi
+      dockerfile: docker/gpu/Dockerfile
+      pull: false
+    container_name: self-kokoro
+    volumes:
+      - /srv/kokoro/models:/app/api/src/models
+      - /srv/kokoro/voices:/app/api/src/voices
+    environment:
+      - DOWNLOAD_MODEL=true
+      - DEFAULT_VOICE=af_jessica
+      - USE_GPU=true
+      - CORS_ORIGINS=["*"]
+    ports:
+      - 8880:8880
+    networks:
+      - proxy_llama
+      - llama_internal
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  self-faster-whisper:
+    image: local/self-faster-whisper:latest
+    build:
+      context: ./self.faster-whisper
+      dockerfile: Dockerfile
+    container_name: self-faster-whisper
+    volumes:
+      - /srv/faster-whisper/models:/models
+    environment:
+      - WHISPER_MODEL=${WHISPER_MODEL:-base}
+      - WHISPER_COMPUTE_TYPE=${WHISPER_COMPUTE_TYPE:-float16}
+    ports:
+      - "8890:8890"
     networks:
       - llama_internal
       - proxy_llama
@@ -54,10 +109,13 @@ services:
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - TIMEZONE=America/Los_Angeles
+      - LM_EVAL_RESULTS_DIR=/app/backend/data/lm-eval-results
     volumes:
       - selfUI-data:/app/backend/data
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./self.bigcode-eval/results:/app/backend/data/bigcode-results:ro
+      - ./self.lm-evaluation-harness/results:/app/backend/data/lm-eval-results:ro
+      - ./self.lm-evaluation-harness/logs:/app/backend/data/lm-eval-logs:ro
     depends_on:
       #Databases
       - self-postgres
@@ -66,6 +124,9 @@ services:
       #Inference
       - self-llamolotl
       - self-ollama
+      #Speech-to-Text-to-Speech
+      - self-faster-whisper
+      - self-kokoro
       #HTTPS Proxy
       - self-traefik
     ports:
@@ -217,7 +278,7 @@ services:
     # profiles:
     #   - eval
     volumes:
-      - bigcode-hf-cache:/root/.cache/huggingface/
+      - hf-eval-cache:/root/.cache/huggingface/
       - ./self.bigcode-eval/results:/workspace/results
       - bigcode-logs:/workspace/logs
     environment:
@@ -227,28 +288,48 @@ services:
       - proxy_llama
     restart: unless-stopped
 
-  wyoming-whisper:
-    image: rhasspy/wyoming-whisper
-    container_name: wyoming-whisper
-    #entrypoint: ["script/run"]
-    command:
-      - --model
-      - tiny-int8
-      - --language
-      - en
-      - --uri
-      - tcp://0.0.0.0:10300
-      - --data-dir
-      - /data
-      - --download-dir
-      - /data
+  self-lm-eval:
+    image: local/self-lm-eval:latest
+    build:
+      context: ./self.lm-evaluation-harness
+      dockerfile: Dockerfile
+      pull: false
+    container_name: self-lm-eval
     ports:
-      - "10300:10300"
+      - 8097:8096
     volumes:
-      - ./wyoming-whisper/data:/data
-    stdin_open: true
-    tty: true
-    gpus: all
+      - hf-eval-cache:/root/.cache/huggingface/
+      - ./self.lm-evaluation-harness/results:/workspace/results
+      - ./self.lm-evaluation-harness/logs:/workspace/logs
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+    networks:
+      - llama_internal
+      - proxy_llama
+    restart: unless-stopped
+
+  self-curator:
+    image: local/self-curator:latest
+    build:
+      context: ./self.curator
+      dockerfile: Dockerfile.selfai
+      pull: false
+    container_name: self-curator
+    shm_size: '2gb'
+    volumes:
+      - selfUI-data:/workspace/ui-data
+      - /srv/curator/data:/workspace/curator/data
+      - /srv/curator/cache:/workspace/curator/cache
+      - /srv/curator/configs:/workspace/curator/configs
+      - /srv/curator/jobs:/workspace/curator/jobs
+      - /srv/curator/logs:/workspace/curator/logs
+      - /srv/curator/custom_stages:/workspace/curator/custom_stages
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+      - RAY_OBJECT_STORE_MEMORY=2000000000
+    networks:
+      - llama_internal
+    restart: unless-stopped
     deploy:
       resources:
         reservations:
@@ -256,7 +337,63 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-   
+
+  # wyoming-whisper:
+  #   image: rhasspy/wyoming-whisper
+  #   container_name: wyoming-whisper
+  #   #entrypoint: ["script/run"]
+  #   command:
+  #     - --model
+  #     - tiny-int8
+  #     - --language
+  #     - en
+  #     - --uri
+  #     - tcp://0.0.0.0:10300
+  #     - --data-dir
+  #     - /data
+  #     - --download-dir
+  #     - /data
+  #   ports:
+  #     - "10300:10300"
+  #   volumes:
+  #     - ./wyoming-whisper/data:/data
+  #   stdin_open: true
+  #   tty: true
+  #   gpus: all
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
+
+  comfyui:
+    image: yanwk/comfyui-boot:cu128-megapak-pt29
+    container_name: comfyui
+    ports:
+      - "8188:8188"
+    environment:
+      - CLI_ARGS="--disable-xformers"
+    volumes:
+      - /srv/comfyui/models:/root/ComfyUI/models 
+      - /srv/comfyui/models/hf-hub:/root/.cache/huggingface/hub
+      - /srv/comfyui/models/torch-hub:/root/.cache/torch/hub
+      - /srv/comfyui/models/input:/root/ComfyUI/input
+      - /srv/comfyui/models/output:/root/ComfyUI/output
+      - /srv/comfyui/models/workflows:/root/ComfyUI/user/default/workflows
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - proxy_llama
+      - llama_internal
+
+
 networks:
   proxy_llama:
     name: proxy_llama
@@ -268,9 +405,8 @@ volumes:
   ollama: {}
   open-webui: {}
   qdrant_config: {}
-  axolotl-cache: {}
   selfUI-data: {}
   selfUI-db: {}
   self-valkey-data: {}
-  bigcode-hf-cache: {}
+  hf-eval-cache: {}
   bigcode-logs: {}

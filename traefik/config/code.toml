@@ -1,0 +1,15 @@
+[http]
+  [http.routers]
+    [http.routers.code]
+      entryPoints = ["web", "websecure"]
+      rule = "Host(`code.home.mateysmarsh.com`)"
+      service = "code"
+      [http.routers.code.tls]
+        [[tls.certificates]]
+          certFile = "/letsEncrypt/live/code.home.mateysmarsh.com/fullchain.pem"
+          keyFile = "/letsEncrypt/live/code.home.mateysmarsh.com/privkey.pem"
+    [http.services]
+      [http.services.code.loadBalancer]
+        strategy = "wrr"
+      [[http.services.code.loadBalancer.servers]]
+        url = "http://host.docker.internal:8080/"
