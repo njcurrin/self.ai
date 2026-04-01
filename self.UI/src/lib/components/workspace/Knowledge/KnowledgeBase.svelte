@@ -188,6 +188,11 @@
 		if (existing) {
 			await updateFileDataContentById(localStorage.token, existing.id, JSON.stringify(pipelineConfig))
 			showPipelineModal = false;
+			if (pendingRun) {
+			    pendingRun = false;
+			    runPipelineHandler();
+			}
+			return;
 		} else {
 		const configFile = createPipelineFile(JSON.stringify(pipelineConfig));
 		
@@ -1190,6 +1195,7 @@
 							if (pipelineName !== 'Untitled') {
 								savePipelineHandler();
 							} else {
+								pendingRun = false;
 								pipelineModalMode = 'save';
 								showPipelineModal = true;
 							}

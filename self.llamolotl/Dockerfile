@@ -110,8 +110,6 @@ RUN pip install --no-cache-dir \
     pip cache purge
 
 # Heretic: abliteration / censorship removal tool for research
-COPY self.heretic/ /tmp/heretic/
-RUN pip install --no-cache-dir /tmp/heretic/ && rm -rf /tmp/heretic/ && pip cache purge
 
 # DeepSpeed: install with CUDA check skipped (13.1 system vs 13.0 torch — minor,
 # forward-compatible). Pre-build CPU Adam op so no JIT compilation needed at runtime.
@@ -161,8 +159,7 @@ ENV HF_HOME="/workspace/cache/hf-hub"
 ENV TOKENIZED_DATASETS="/workspace/cache/tokenized-datasets"
 
 RUN mkdir -p /workspace/cache/hf-datasets /workspace/cache/hf-hub /workspace/cache/tokenized-datasets \
-    /workspace/training/configs /workspace/training/outputs /workspace/training/logs \
-    /workspace/training/heretic
+    /workspace/training/configs /workspace/training/outputs /workspace/training/logs 
 
 # supervisord configuration
 COPY supervisord.conf /etc/supervisor/conf.d/llamolotl.conf
@@ -182,8 +179,6 @@ RUN chmod +x /entrypoint.sh
 COPY api/ /workspace/training/api/
 COPY deepspeed_configs/ /workspace/training/deepspeed_configs/
 
-# Heretic default configuration
-COPY self.heretic/config.default.toml /workspace/training/heretic/config.default.toml
 
 EXPOSE 8093
 
