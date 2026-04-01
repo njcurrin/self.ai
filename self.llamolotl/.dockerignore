@@ -1,6 +1,7 @@
 self.Llama/build/
 self.Llama/.git/
-self.axolotl/.git/
+self.axolotl/
+patches/
 Dockerfile
 Dockerfile.*
 .dockerignore

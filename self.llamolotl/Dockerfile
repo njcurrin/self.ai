@@ -1,14 +1,13 @@
 # syntax=docker/dockerfile:1.5
 #
-# Multi-stage build combining llama.cpp server and axolotl fine-tuning framework
+# Multi-stage build combining llama.cpp server and HF Trainer + DeepSpeed + PEFT
 # into a single container: self-llamolotl
 #
 
 # ─── Build Arguments ────────────────────────────────────────────────────────
 ARG UBUNTU_VERSION=22.04
 ARG CUDA_VERSION=13.1.0
-ARG CUDA_BUILD_VERSION=12.8.0
-ARG CUDA_SHORT=128
+ARG CUDA_SHORT=130
 ARG PYTHON_VERSION=3.11
 ARG PYTORCH_VERSION=2.10.0
 ARG TORCH_CUDA_ARCH_LIST="8.9+PTX"
@@ -37,19 +36,23 @@ RUN export LDFLAGS="-L/usr/local/cuda/lib64/stubs $LDFLAGS" && \
       . && \
     cmake --build build --config Release -j$(nproc)
 
-RUN mkdir -p /app && \
+RUN mkdir -p /app /app/convert && \
     cp build/bin/llama-server /app/llama-server && \
     cp build/bin/llama-bench /app/llama-bench && \
-    find build/bin -name "*.so*" -exec cp -P {} /app/ \;
+    cp build/bin/llama-quantize /app/llama-quantize && \
+    find build/bin -name "*.so*" -exec cp -P {} /app/ \; && \
+    cp convert_hf_to_gguf.py /app/convert/ && \
+    cp convert_lora_to_gguf.py /app/convert/ && \
+    cp -r gguf-py /app/convert/gguf-py
 
-# ─── Stage 2: Build axolotl Python environment ──────────────────────────────
-# Uses CUDA_BUILD_VERSION (12.8) to match PyTorch cu128 wheels for native
-# extension compilation (flash-attn, etc). The built venv is forward-compatible
-# and runs on the CUDA 13.1 runtime without issues.
-FROM nvidia/cuda:${CUDA_BUILD_VERSION}-devel-ubuntu${UBUNTU_VERSION} AS axolotl-builder
+# ─── Stage 2: Build Python training environment ─────────────────────────────
+# Uses CUDA 13.1 devel image matching the runtime, with PyTorch cu130 wheels.
+# DeepSpeed CPU ops are pre-built here so no JIT compilation is needed at runtime.
+FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION} AS python-builder
 
 ARG PYTORCH_VERSION
 ARG CUDA_SHORT
+ARG PYTHON_VERSION
 ARG TORCH_CUDA_ARCH_LIST
 ARG TARGETARCH
 
@@ -59,21 +62,18 @@ ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends --allow-change-held-packages \
-        python3.11 python3.11-dev python3.11-venv python3-pip git build-essential ninja-build \
-        cmake libaio-dev pkg-config vim curl nano libnccl2 libnccl-dev rsync \
-        ibverbs-providers ibverbs-utils infiniband-diags \
-        librdmacm-dev librdmacm1 rdmacm-utils && \
+        python3.11 python3.11-dev python3.11-venv python3-pip git build-essential \
+        cmake pkg-config libnccl2 libnccl-dev curl wget libopenmpi-dev && \
     rm -rf /var/cache/apt/archives && \
     rm -rf /var/lib/apt/lists/*
 
 # Create Python venv
 RUN python3.11 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:${PATH}"
-# Limit parallel CUDA kernel compilations to stay within ~100GB memory budget
-# Peak memory ≈ MAX_JOBS × NVCC_THREADS × 5GB = 8 × 2 × 5 = 80GB
 ENV MAX_JOBS="8"
 ENV NVCC_THREADS="2"
 ENV CMAKE_BUILD_PARALLEL_LEVEL="8"
+ENV TORCH_EXTENSIONS_DIR="/opt/venv/ds_extensions"
 
 WORKDIR /workspace
 
@@ -83,18 +83,6 @@ RUN pip install --upgrade pip packaging setuptools wheel psutil && \
         torch==${PYTORCH_VERSION}+cu${CUDA_SHORT} torchvision \
         --index-url https://download.pytorch.org/whl/cu${CUDA_SHORT} && \
     pip cache purge
-
-# causal_conv1d and mamba_ssm (optional, try prebuilt wheels first)
-RUN pip install --no-cache-dir causal-conv1d mamba-ssm 2>/dev/null || \
-    echo "Note: causal_conv1d/mamba_ssm prebuilt wheels not available, skipping" && \
-    pip cache purge
-
-# Debug: log parallelism settings and CPU count
-RUN echo "=== BUILD PARALLELISM ===" && \
-    echo "MAX_JOBS=$MAX_JOBS" && \
-    echo "CMAKE_BUILD_PARALLEL_LEVEL=$CMAKE_BUILD_PARALLEL_LEVEL" && \
-    echo "nproc=$(nproc)" && \
-    python -c "import os; print(f'Python os.cpu_count()={os.cpu_count()}'); print(f'MAX_JOBS from env={os.environ.get(\"MAX_JOBS\", \"NOT SET\")}')"
 
 # Install flash-attn (try pip install first, fallback to manual download)
 RUN pip install --no-cache-dir flash-attn 2>/dev/null || \
@@ -110,55 +98,43 @@ RUN pip install --no-cache-dir flash-attn 2>/dev/null || \
      wget -q "https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.7.16/${WHL_FILE}" 2>/dev/null && \
      pip install --no-cache-dir "${WHL_FILE}" && \
      rm -f "${WHL_FILE}") || \
-    echo "Note: flash-attn not available, axolotl will use standard attention" && \
+    echo "Note: flash-attn not available, will use standard attention" && \
     pip cache purge
 
-# Clone and install axolotl
-RUN git clone --depth=1 https://github.com/axolotl-ai-cloud/axolotl.git /workspace/axolotl-src
-
-WORKDIR /workspace/axolotl-src
-
-# Remove causal_conv1d if previously installed (conflicts with axolotl's pinned version)
-RUN pip uninstall -y causal_conv1d 2>/dev/null; true
-
-# Install axolotl with extras — this MUST succeed
-# MAX_JOBS limits parallel CUDA kernel compilations (~3-4GB each) to stay within memory budget
-RUN pip install --no-build-isolation -e ".[flash-attn,ring-flash-attn,ray]" && \
+# Core training stack: HF Trainer + DeepSpeed + PEFT + TRL
+RUN pip install --no-cache-dir \
+        transformers peft trl accelerate datasets \
+        bitsandbytes mpi4py \
+        fastapi "uvicorn[standard]" aiofiles gguf \
+        pyyaml scipy sentencepiece protobuf aiohttp && \
     pip cache purge
 
-# Optional post-install scripts (non-fatal)
-RUN python scripts/unsloth_install.py | sh 2>/dev/null; true
-RUN python scripts/cutcrossentropy_install.py | sh 2>/dev/null; true
+# Heretic: abliteration / censorship removal tool for research
+COPY self.heretic/ /tmp/heretic/
+RUN pip install --no-cache-dir /tmp/heretic/ && rm -rf /tmp/heretic/ && pip cache purge
 
-RUN pip install --no-cache-dir pytest && pip cache purge
-
-# Patch: disable @torch.jit.script in trainer.py — the create_weighted_mask JIT
-# compilation segfaults when 200+ C extension modules are loaded (PyTorch JIT bug
-# triggered by transitive imports from axolotl.utils.config pulling in sklearn,
-# scipy, pyarrow, numba, etc). The functions work identically without JIT.
-RUN sed -i 's/^@torch\.jit\.script$/# @torch.jit.script  # disabled: JIT segfault with extension module interaction/' \
-    /workspace/axolotl-src/src/axolotl/utils/trainer.py
-
-# Install FastAPI and dependencies for control API
-RUN pip install --no-cache-dir fastapi "uvicorn[standard]" aiofiles && \
+# DeepSpeed: install with CUDA check skipped (13.1 system vs 13.0 torch — minor,
+# forward-compatible). Pre-build CPU Adam op so no JIT compilation needed at runtime.
+# TORCH_EXTENSIONS_DIR is set to /opt/venv/ds_extensions so the compiled .so
+# survives the multi-stage COPY into the runtime image.
+RUN DS_SKIP_CUDA_CHECK=1 pip install --no-cache-dir deepspeed && \
+    DS_SKIP_CUDA_CHECK=1 DS_ACCELERATOR=cuda python3 -c "\
+from deepspeed.ops.op_builder import CPUAdamBuilder; \
+b = CPUAdamBuilder(); \
+b.load(verbose=True); \
+print('CPU Adam built OK')" && \
+    ls -la /opt/venv/ds_extensions/ && \
     pip cache purge
 
-# Git config for shallow clones
-RUN git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" && \
-    git config --get remote.origin.fetch && \
-    git config --global credential.helper store
-
-# bash completion
-COPY self.axolotl/.axolotl-complete.bash /root/.axolotl-complete.bash
-RUN chmod +x /root/.axolotl-complete.bash && \
-    echo 'source /root/.axolotl-complete.bash' >> /root/.bashrc
+# Git config for model downloads
+RUN git config --global credential.helper store
 
 # ─── Stage 3: Runtime image ────────────────────────────────────────────────
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION} AS runtime
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        curl supervisor python3.11 vim nano && \
+        curl supervisor python3.11 python3.11-dev build-essential vim nano libopenmpi-dev && \
     apt-get autoremove -y && \
     apt-get clean -y && \
     rm -rf /var/cache/apt/archives && \
@@ -168,31 +144,50 @@ RUN apt-get update && \
 # Create supervisor log directory
 RUN mkdir -p /var/log/supervisor
 
-# llama.cpp artifacts from builder (binaries + shared libraries)
+# llama.cpp artifacts from builder (binaries + shared libraries + conversion scripts)
 COPY --from=llama-builder /app/ /app/
 
-# axolotl Python venv and source tree from builder
-COPY --from=axolotl-builder /opt/venv /opt/venv
-COPY --from=axolotl-builder /workspace/axolotl-src /workspace/axolotl-src
+# Python venv from builder
+COPY --from=python-builder /opt/venv /opt/venv
 
 ENV PATH="/app:/opt/venv/bin:${PATH}"
 ENV LD_LIBRARY_PATH=/app:/usr/local/cuda/lib64
 ENV LLAMA_ARG_HOST=0.0.0.0
 ENV PYTHONUNBUFFERED=1
+ENV TORCH_EXTENSIONS_DIR="/opt/venv/ds_extensions"
+ENV DS_SKIP_CUDA_CHECK=1
+ENV HF_DATASETS_CACHE="/workspace/cache/hf-datasets"
+ENV HF_HOME="/workspace/cache/hf-hub"
+ENV TOKENIZED_DATASETS="/workspace/cache/tokenized-datasets"
+
+RUN mkdir -p /workspace/cache/hf-datasets /workspace/cache/hf-hub /workspace/cache/tokenized-datasets \
+    /workspace/training/configs /workspace/training/outputs /workspace/training/logs \
+    /workspace/training/heretic
 
 # supervisord configuration
 COPY supervisord.conf /etc/supervisor/conf.d/llamolotl.conf
+
+# Fixed chat templates (work around llama.cpp Jinja |items bug on string arguments)
+COPY chat-templates/ /app/chat-templates/
+
+# llama-server wrapper (reads /app/llama-server.args for dynamic LoRA flags)
+COPY llama-server-wrapper.sh /app/llama-server-wrapper.sh
+RUN chmod +x /app/llama-server-wrapper.sh
 
 # entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# FastAPI control server
-COPY api/ /workspace/axolotl-src/api/
+# Training API, scripts, and DeepSpeed configs
+COPY api/ /workspace/training/api/
+COPY deepspeed_configs/ /workspace/training/deepspeed_configs/
+
+# Heretic default configuration
+COPY self.heretic/config.default.toml /workspace/training/heretic/config.default.toml
 
 EXPOSE 8093
 
-WORKDIR /workspace/axolotl-src
+WORKDIR /workspace/training
 
 # Health check for llama-server
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
