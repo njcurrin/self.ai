@@ -58,9 +58,14 @@ class StorageProvider:
         except ClientError as e:
             raise RuntimeError(f"Error uploading file to S3: {e}")
 
-    def _upload_to_local(self, contents: bytes, filename: str) -> Tuple[bytes, str]:
+    def _upload_to_local(self, contents: bytes, filename: str, subdirectory: str = None) -> Tuple[bytes, str]:
         """Handles uploading of the file to local storage."""
-        file_path = f"{UPLOAD_DIR}/{filename}"
+        if subdirectory:
+            target_dir = f"{UPLOAD_DIR}/{subdirectory}"
+            os.makedirs(target_dir, exist_ok=True)
+            file_path = f"{target_dir}/{filename}"
+        else:
+            file_path = f"{UPLOAD_DIR}/{filename}"
         with open(file_path, "wb") as f:
             f.write(contents)
         return contents, file_path
@@ -92,11 +97,14 @@ class StorageProvider:
         except ClientError as e:
             raise RuntimeError(f"Error deleting file from S3: {e}")
 
-    def _delete_from_local(self, filename: str) -> None:
+    def _delete_from_local(self, file_path: str) -> None:
         """Handles deletion of the file from local storage."""
-        file_path = f"{UPLOAD_DIR}/{filename}"
         if os.path.isfile(file_path):
             os.remove(file_path)
+            # Clean up empty parent directory if it's a KB subdirectory
+            parent = os.path.dirname(file_path)
+            if parent != UPLOAD_DIR and os.path.isdir(parent) and not os.listdir(parent):
+                os.rmdir(parent)
         else:
             print(f"File {file_path} not found in local storage.")
 
@@ -130,15 +138,16 @@ class StorageProvider:
         else:
             print(f"Directory {UPLOAD_DIR} not found in local storage.")
 
-    def upload_file(self, file: BinaryIO, filename: str) -> Tuple[bytes, str]:
+    def upload_file(self, file: BinaryIO, filename: str, subdirectory: str = None) -> Tuple[bytes, str]:
         """Uploads a file either to S3 or the local file system."""
         contents = file.read()
         if not contents:
             raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
-        contents, file_path = self._upload_to_local(contents, filename)
+        contents, file_path = self._upload_to_local(contents, filename, subdirectory)
 
         if self.storage_provider == "s3":
-            return self._upload_to_s3(file_path, filename)
+            s3_key = f"{subdirectory}/{filename}" if subdirectory else filename
+            return self._upload_to_s3(file_path, s3_key)
         return contents, file_path
 
     def get_file(self, file_path: str) -> str:
@@ -149,13 +158,74 @@ class StorageProvider:
 
     def delete_file(self, file_path: str) -> None:
         """Deletes a file either from S3 or the local file system."""
-        filename = file_path.split("/")[-1]
-
         if self.storage_provider == "s3":
-            self._delete_from_s3(filename)
+            # Extract S3 key from s3://bucket/key path
+            if file_path.startswith("s3://"):
+                key = "/".join(file_path.split("//")[1].split("/")[1:])
+            else:
+                key = file_path.split("/")[-1]
+            self._delete_from_s3(key)
 
         # Always delete from local storage
-        self._delete_from_local(filename)
+        if file_path.startswith("s3://"):
+            # For S3, reconstruct local path from the key
+            key = "/".join(file_path.split("//")[1].split("/")[1:])
+            local_path = f"{UPLOAD_DIR}/{key}"
+        else:
+            local_path = file_path
+        self._delete_from_local(local_path)
+
+    def move_file(self, current_path: str, new_subdirectory: str) -> str:
+        """Moves a file to a new subdirectory within the upload directory."""
+        basename = os.path.basename(current_path)
+        target_dir = f"{UPLOAD_DIR}/{new_subdirectory}"
+        new_path = f"{target_dir}/{basename}"
+
+        if current_path == new_path:
+            return new_path
+
+        os.makedirs(target_dir, exist_ok=True)
+        shutil.move(current_path, new_path)
+
+        # Clean up empty source directory
+        source_dir = os.path.dirname(current_path)
+        if source_dir != UPLOAD_DIR and os.path.isdir(source_dir) and not os.listdir(source_dir):
+            os.rmdir(source_dir)
+
+        if self.storage_provider == "s3":
+            old_key = os.path.basename(current_path)
+            new_key = f"{new_subdirectory}/{basename}"
+            try:
+                self.s3_client.copy_object(
+                    Bucket=self.bucket_name,
+                    CopySource={"Bucket": self.bucket_name, "Key": old_key},
+                    Key=new_key,
+                )
+                self._delete_from_s3(old_key)
+                return f"s3://{self.bucket_name}/{new_key}"
+            except ClientError as e:
+                raise RuntimeError(f"Error moving file in S3: {e}")
+
+        return new_path
+
+    def delete_subdirectory(self, subdirectory: str) -> None:
+        """Deletes an entire subdirectory from storage."""
+        local_dir = f"{UPLOAD_DIR}/{subdirectory}"
+        if os.path.isdir(local_dir):
+            shutil.rmtree(local_dir, ignore_errors=True)
+
+        if self.storage_provider == "s3" and self.s3_client:
+            try:
+                response = self.s3_client.list_objects_v2(
+                    Bucket=self.bucket_name, Prefix=f"{subdirectory}/"
+                )
+                if "Contents" in response:
+                    for content in response["Contents"]:
+                        self.s3_client.delete_object(
+                            Bucket=self.bucket_name, Key=content["Key"]
+                        )
+            except ClientError as e:
+                print(f"Error deleting subdirectory from S3: {e}")
 
     def delete_all_files(self) -> None:
         """Deletes all files from the storage."""

@@ -22,14 +22,17 @@ from selfai_ui.functions import generate_function_chat_completion
 
 from selfai_ui.routers.openai import (
     generate_chat_completion as generate_openai_chat_completion,
+    generate_completion as generate_openai_completion,
 )
 
 from selfai_ui.routers.ollama import (
     generate_chat_completion as generate_ollama_chat_completion,
+    generate_openai_completion as generate_ollama_completion,
 )
 
 from selfai_ui.routers.llamolotl import (
     generate_chat_completion as generate_llamolotl_chat_completion,
+    generate_completion as generate_llamolotl_completion,
 )
 
 from selfai_ui.routers.pipelines import (
@@ -167,6 +170,45 @@ async def generate_chat_completion(
 
 
 chat_completion = generate_chat_completion
+
+
+async def generate_completion(
+    request: Request,
+    form_data: dict,
+    user: Any,
+    bypass_filter: bool = False,
+):
+    """Text completions dispatcher — routes to the correct backend."""
+    if BYPASS_MODEL_ACCESS_CONTROL:
+        bypass_filter = True
+
+    models = request.app.state.MODELS
+
+    model_id = form_data["model"]
+    if model_id not in models:
+        raise Exception("Model not found")
+
+    model = models[model_id]
+
+    # Check if user has access to the model
+    if not bypass_filter and user.role == "user":
+        try:
+            check_model_access(user, model)
+        except Exception as e:
+            raise e
+
+    if model["owned_by"] == "ollama":
+        return await generate_ollama_completion(
+            request=request, form_data=form_data, user=user
+        )
+    elif model["owned_by"] == "llamolotl":
+        return await generate_llamolotl_completion(
+            request=request, form_data=form_data, user=user, bypass_filter=bypass_filter
+        )
+    else:
+        return await generate_openai_completion(
+            request=request, form_data=form_data, user=user, bypass_filter=bypass_filter
+        )
 
 
 async def chat_completed(request: Request, form_data: dict, user: Any):

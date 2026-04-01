@@ -700,6 +700,43 @@ LLAMOLOTL_API_CONFIGS = PersistentConfig(
 )
 
 ####################################
+# CURATOR
+####################################
+
+ENABLE_CURATOR_API = PersistentConfig(
+    "ENABLE_CURATOR_API",
+    "curator.enable",
+    os.environ.get("ENABLE_CURATOR_API", "True").lower() == "true",
+)
+
+CURATOR_BASE_URLS = os.environ.get("CURATOR_BASE_URLS", "")
+if CURATOR_BASE_URLS == "":
+    CURATOR_BASE_URLS = os.environ.get(
+        "CURATOR_BASE_URL", "http://self-curator:8094"
+    )
+
+CURATOR_BASE_URLS = [url.strip() for url in CURATOR_BASE_URLS.split(";")]
+CURATOR_BASE_URLS = PersistentConfig(
+    "CURATOR_BASE_URLS", "curator.base_urls", CURATOR_BASE_URLS
+)
+
+CURATOR_API_CONFIGS = PersistentConfig(
+    "CURATOR_API_CONFIGS",
+    "curator.api_configs",
+    {},
+)
+
+####################################
+# ICEBERG
+####################################
+
+ICEBERG_BASE_URL = PersistentConfig(
+    "ICEBERG_BASE_URL",
+    "iceberg.base_url",
+    os.environ.get("ICEBERG_BASE_URL", ""),
+)
+
+####################################
 # OPENAI_API
 ####################################
 
@@ -853,6 +890,11 @@ USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS = (
     == "true"
 )
 
+USER_PERMISSIONS_WORKSPACE_TRAINING_ACCESS = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_TRAINING_ACCESS", "False").lower()
+    == "true"
+)
+
 USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS", "False").lower() == "true"
 )
@@ -881,6 +923,7 @@ USER_PERMISSIONS = PersistentConfig(
             "models": USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS,
             "knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS,
             "prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS,
+            "training": USER_PERMISSIONS_WORKSPACE_TRAINING_ACCESS,
             "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS,
         },
         "chat": {

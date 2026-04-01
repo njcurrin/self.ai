@@ -12,7 +12,7 @@ from selfai_ui.models.users import Users, UserResponse
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON
+from sqlalchemy import BigInteger, Column, ForeignKey, Index, String, Text, JSON
 
 from selfai_ui.utils.access_control import has_access
 
@@ -220,3 +220,97 @@ class KnowledgeTable:
 
 
 Knowledges = KnowledgeTable()
+
+
+####################
+# KnowledgeFile Join Table
+####################
+
+
+class KnowledgeFile(Base):
+    __tablename__ = "knowledge_file"
+
+    knowledge_id = Column(
+        Text,
+        ForeignKey("knowledge.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    file_id = Column(
+        String,
+        ForeignKey("file.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    created_at = Column(BigInteger)
+
+    __table_args__ = (
+        Index("ix_knowledge_file_file_id", "file_id"),
+    )
+
+
+class KnowledgeFilesTable:
+    def add_file_to_knowledge(self, knowledge_id: str, file_id: str) -> bool:
+        with get_db() as db:
+            try:
+                existing = (
+                    db.query(KnowledgeFile)
+                    .filter_by(knowledge_id=knowledge_id, file_id=file_id)
+                    .first()
+                )
+                if existing:
+                    return True
+                db.add(
+                    KnowledgeFile(
+                        knowledge_id=knowledge_id,
+                        file_id=file_id,
+                        created_at=int(time.time()),
+                    )
+                )
+                db.commit()
+                return True
+            except Exception as e:
+                log.exception(e)
+                return False
+
+    def remove_file_from_knowledge(self, knowledge_id: str, file_id: str) -> bool:
+        with get_db() as db:
+            try:
+                db.query(KnowledgeFile).filter_by(
+                    knowledge_id=knowledge_id, file_id=file_id
+                ).delete()
+                db.commit()
+                return True
+            except Exception:
+                return False
+
+    def get_file_ids_by_knowledge_id(self, knowledge_id: str) -> list[str]:
+        with get_db() as db:
+            rows = (
+                db.query(KnowledgeFile.file_id)
+                .filter_by(knowledge_id=knowledge_id)
+                .order_by(KnowledgeFile.created_at.desc())
+                .all()
+            )
+            return [row.file_id for row in rows]
+
+    def remove_all_files_from_knowledge(self, knowledge_id: str) -> bool:
+        with get_db() as db:
+            try:
+                db.query(KnowledgeFile).filter_by(
+                    knowledge_id=knowledge_id
+                ).delete()
+                db.commit()
+                return True
+            except Exception:
+                return False
+
+    def get_knowledge_id_for_file(self, file_id: str) -> Optional[str]:
+        with get_db() as db:
+            row = (
+                db.query(KnowledgeFile.knowledge_id)
+                .filter_by(file_id=file_id)
+                .first()
+            )
+            return row.knowledge_id if row else None
+
+
+KnowledgeFiles = KnowledgeFilesTable()

@@ -8,6 +8,7 @@ import shutil
 import sys
 import time
 import random
+from pathlib import Path
 
 from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
@@ -51,6 +52,7 @@ from selfai_ui.socket.main import (
 )
 from selfai_ui.routers import (
     audio,
+    curator,
     images,
     llamolotl,
     ollama,
@@ -75,6 +77,7 @@ from selfai_ui.routers import (
     users,
     utils,
     system,
+    training,
 )
 
 from selfai_ui.routers.retrieval import (
@@ -90,6 +93,12 @@ from selfai_ui.models.models import Models
 from selfai_ui.models.users import UserModel, Users
 
 from selfai_ui.config import (
+    # Curator
+    ENABLE_CURATOR_API,
+    CURATOR_BASE_URLS,
+    CURATOR_API_CONFIGS,
+    # Iceberg
+    ICEBERG_BASE_URL,
     # Llamolotl
     ENABLE_LLAMOLOTL_API,
     LLAMOLOTL_BASE_URLS,
@@ -287,6 +296,7 @@ from selfai_ui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     RESET_CONFIG_ON_START,
     OFFLINE_MODE,
+    DATA_DIR,
 )
 
 
@@ -297,6 +307,7 @@ from selfai_ui.utils.models import (
 )
 from selfai_ui.utils.chat import (
     generate_chat_completion as chat_completion_handler,
+    generate_completion as completion_handler,
     chat_completed as chat_completed_handler,
     chat_action as chat_action_handler,
 )
@@ -357,6 +368,7 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     asyncio.create_task(_resume_crawl_jobs(app.state))
+    asyncio.create_task(_run_gpu_queue(app.state))
     yield
 
 
@@ -364,6 +376,16 @@ async def _resume_crawl_jobs(app_state) -> None:
     """Thin wrapper so the import stays local to the lifespan."""
     from selfai_ui.routers.retrieval import resume_crawl_jobs_on_startup
     await resume_crawl_jobs_on_startup(app_state)
+
+
+async def _run_gpu_queue(app_state) -> None:
+    """Start the unified GPU job queue (training + eval)."""
+    import selfai_ui.utils.gpu_queue as gpu_queue
+    import selfai_ui.routers.training as training_mod
+
+    gpu_queue._app_state = app_state
+    training_mod._app_state = app_state
+    await gpu_queue.process_gpu_queue()
 
 
 app = FastAPI(
@@ -378,7 +400,27 @@ app.state.config = AppConfig()
 
 ########################################
 #
-# OLLAMA
+# CURATOR
+#
+########################################
+
+
+app.state.config.ENABLE_CURATOR_API = ENABLE_CURATOR_API
+app.state.config.CURATOR_BASE_URLS = CURATOR_BASE_URLS
+app.state.config.CURATOR_API_CONFIGS = CURATOR_API_CONFIGS
+
+########################################
+#
+# ICEBERG
+#
+########################################
+
+
+app.state.config.ICEBERG_BASE_URL = ICEBERG_BASE_URL
+
+########################################
+#
+# LLAMOLOTL
 #
 ########################################
 
@@ -389,6 +431,13 @@ app.state.config.LLAMOLOTL_CONTROL_BASE_URLS = LLAMOLOTL_CONTROL_BASE_URLS
 app.state.config.LLAMOLOTL_API_CONFIGS = LLAMOLOTL_API_CONFIGS
 
 app.state.LLAMOLOTL_MODELS = {}
+
+########################################
+#
+# OLLAMA
+#
+########################################
+
 
 app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
@@ -763,6 +812,7 @@ app.add_middleware(
 app.mount("/ws", socket_app)
 
 
+app.include_router(curator.router, prefix="/curator", tags=["curator"])
 app.include_router(llamolotl.router, prefix="/llamolotl", tags=["llamolotl"])
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
@@ -785,6 +835,7 @@ app.include_router(chats.router, prefix="/api/v1/chats", tags=["chats"])
 
 app.include_router(models.router, prefix="/api/v1/models", tags=["models"])
 app.include_router(knowledge.router, prefix="/api/v1/knowledge", tags=["knowledge"])
+app.include_router(training.router, prefix="/api/v1/training", tags=["training"])
 app.include_router(prompts.router, prefix="/api/v1/prompts", tags=["prompts"])
 app.include_router(tools.router, prefix="/api/v1/tools", tags=["tools"])
 
@@ -865,6 +916,116 @@ async def get_base_models(request: Request, user=Depends(get_admin_user)):
     return {"data": models}
 
 
+############################
+# Eval Live Event Logger
+############################
+
+# Counter per eval job for live event indexing
+_eval_event_counters: dict[str, int] = {}
+# Cache for total sample count per eval job (looked up once from job meta)
+_eval_total_cache: dict[str, int | None] = {}
+
+
+def _get_eval_total(job_id: str) -> int | None:
+    """Return the total sample count for an eval job, cached after first lookup."""
+    if job_id in _eval_total_cache:
+        return _eval_total_cache[job_id]
+    try:
+        from selfai_ui.models.eval_jobs import EvalJobs
+        job = EvalJobs.get_job_by_id(id=job_id)
+        if job and job.meta:
+            total = job.meta.get("total_samples")
+            if total is not None:
+                _eval_total_cache[job_id] = int(total)
+                return _eval_total_cache[job_id]
+    except Exception:
+        pass
+    _eval_total_cache[job_id] = None
+    return None
+
+
+def _log_eval_event(
+    job_id: str,
+    eval_type: str | None,
+    form_data: dict,
+    response,
+) -> None:
+    """Log a prompt/response pair from an eval job for live streaming.
+
+    Writes a JSONL event to DATA_DIR/eval-events/{job_id}.jsonl so the
+    live streaming endpoint can pick it up.
+    """
+    from datetime import datetime
+
+    events_dir = Path(DATA_DIR) / "eval-events"
+    events_dir.mkdir(parents=True, exist_ok=True)
+    events_file = events_dir / f"{job_id}.jsonl"
+
+    # Extract prompt from messages (chat) or prompt field (text completions)
+    messages = form_data.get("messages", [])
+    prompt = ""
+    if messages:
+        last_msg = messages[-1] if isinstance(messages, list) else messages
+        if isinstance(last_msg, dict):
+            prompt = last_msg.get("content", "")
+        else:
+            prompt = str(last_msg)
+    elif "prompt" in form_data:
+        prompt = form_data["prompt"]
+        if isinstance(prompt, list):
+            prompt = prompt[0] if prompt else ""
+
+    # Extract response content — handle dict (non-streaming) and Response objects
+    response_text = ""
+    thinking_text = ""
+    resp_data = None
+    if isinstance(response, dict):
+        resp_data = response
+    elif hasattr(response, "body"):
+        # JSONResponse / Response objects have a .body attribute
+        try:
+            resp_data = json.loads(response.body)
+        except Exception:
+            pass
+    if resp_data:
+        choices = resp_data.get("choices", [])
+        if choices:
+            choice = choices[0]
+            # Chat completions format: choices[0].message.content
+            msg = choice.get("message", {})
+            response_text = msg.get("content") or ""
+            thinking_text = msg.get("reasoning_content") or ""
+            # If no content but has reasoning, model ran out of tokens on thinking
+            if not response_text and thinking_text:
+                response_text = "(thinking only, no response generated)"
+            # Text completions format: choices[0].text (used by bigcode)
+            if not response_text:
+                response_text = choice.get("text", "")
+
+    # Increment counter
+    counter = _eval_event_counters.get(job_id, 0)
+    _eval_event_counters[job_id] = counter + 1
+
+    # Look up total sample count from job meta
+    total = _get_eval_total(job_id)
+
+    event = {
+        "type": "progress",
+        "index": counter,
+        "total": total,
+        "eval_type": eval_type,
+        "job_id": job_id,
+        "prompt": str(prompt)[:2000],
+        "thinking": str(thinking_text)[:4000],
+        "response": str(response_text)[:2000],
+        "model": form_data.get("model", ""),
+        "timestamp": datetime.now().isoformat(),
+    }
+
+    with open(events_file, "a") as f:
+        f.write(json.dumps(event, default=str, ensure_ascii=False) + "\n")
+
+
 @app.post("/api/chat/completions")
 async def chat_completion(
     request: Request,
@@ -908,8 +1069,28 @@ async def chat_completion(
             detail=str(e),
         )
 
+    # Detect eval job requests (authenticated via JIT token)
+    eval_job_id = getattr(request.state, "eval_job_id", None)
+    eval_type = getattr(request.state, "eval_type", None)
+
+    # Force non-streaming for eval requests so we get a dict response
+    # that _log_eval_event can extract content from.
+    # Allow thinking so reasoning is captured in the live view.
+    if eval_job_id:
+        form_data["stream"] = False
+
     try:
         response = await chat_completion_handler(request, form_data, user)
+
+        # Log eval request prompt/response for live streaming
+        if eval_job_id:
+            try:
+                _log_eval_event(
+                    eval_job_id, eval_type, form_data, response
+                )
+            except Exception:
+                pass  # never break eval inference
+
         return await process_chat_response(
             request, response, form_data, user, events, metadata, tasks
         )
@@ -923,6 +1104,63 @@ async def chat_completion(
 # Alias for chat_completion (Legacy)
 generate_chat_completions = chat_completion
 generate_chat_completion = chat_completion
+
+
+@app.post("/api/completions")
+async def text_completion(
+    request: Request,
+    form_data: dict,
+    user=Depends(get_verified_user),
+):
+    if not request.app.state.MODELS:
+        await get_all_models(request)
+
+    try:
+        model_id = form_data.get("model", None)
+        if model_id not in request.app.state.MODELS:
+            raise Exception("Model not found")
+
+        model = request.app.state.MODELS[model_id]
+
+        # Check if user has access to the model
+        if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":
+            try:
+                check_model_access(user, model)
+            except Exception as e:
+                raise e
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    # Detect eval job requests (authenticated via JIT token)
+    eval_job_id = getattr(request.state, "eval_job_id", None)
+    eval_type = getattr(request.state, "eval_type", None)
+
+    # Force non-streaming for eval requests so we get a dict response
+    if eval_job_id:
+        form_data["stream"] = False
+
+    try:
+        response = await completion_handler(request, form_data, user)
+
+        # Log eval request for live streaming
+        if eval_job_id:
+            try:
+                _log_eval_event(
+                    eval_job_id, eval_type, form_data, response
+                )
+            except Exception:
+                pass  # never break eval inference
+
+        return response
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 @app.post("/api/chat/completed")

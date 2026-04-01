@@ -1,4 +1,5 @@
 import logging
+import threading
 import uuid
 import jwt
 
@@ -16,6 +17,7 @@ from passlib.context import CryptContext
 
 logging.getLogger("passlib").setLevel(logging.ERROR)
 
+log = logging.getLogger(__name__)
 
 SESSION_SECRET = WEBUI_SECRET_KEY
 ALGORITHM = "HS256"
@@ -23,6 +25,56 @@ ALGORITHM = "HS256"
 ##############
 # Auth Utils
 ##############
+
+############################
+# JIT Eval Tokens
+############################
+
+# In-memory store: {token_str: {user_id, job_id, eval_type, created_at}}
+_eval_tokens: Dict[str, dict] = {}
+_eval_tokens_lock = threading.Lock()
+
+
+def create_eval_token(user_id: str, job_id: str, eval_type: str) -> str:
+    """Create a short-lived JIT token for an eval job.
+
+    The token authenticates eval container requests as the given user
+    and carries job metadata so the UI can identify and log eval traffic.
+    """
+    token = f"eval-{uuid.uuid4().hex[:16]}"
+    with _eval_tokens_lock:
+        _eval_tokens[token] = {
+            "user_id": user_id,
+            "job_id": job_id,
+            "eval_type": eval_type,
+            "created_at": datetime.now(UTC).isoformat(),
+        }
+    log.info(f"Created eval token for job {job_id} (user {user_id}, type {eval_type})")
+    return token
+
+
+def revoke_eval_token(token: str) -> None:
+    """Revoke a JIT eval token (call when job completes/fails/cancels)."""
+    with _eval_tokens_lock:
+        removed = _eval_tokens.pop(token, None)
+    if removed:
+        log.info(f"Revoked eval token for job {removed['job_id']}")
+
+
+def revoke_eval_tokens_for_job(job_id: str) -> None:
+    """Revoke all JIT tokens associated with a given job ID."""
+    with _eval_tokens_lock:
+        to_remove = [t for t, info in _eval_tokens.items() if info["job_id"] == job_id]
+        for t in to_remove:
+            del _eval_tokens[t]
+    if to_remove:
+        log.info(f"Revoked {len(to_remove)} eval token(s) for job {job_id}")
+
+
+def get_eval_token_info(token: str) -> Optional[dict]:
+    """Look up a JIT eval token. Returns metadata dict or None."""
+    with _eval_tokens_lock:
+        return _eval_tokens.get(token)
 
 bearer_security = HTTPBearer(auto_error=False)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -88,6 +140,25 @@ def get_current_user(
 
     if token is None:
         raise HTTPException(status_code=403, detail="Not authenticated")
+
+    # auth by JIT eval token
+    if token.startswith("eval-"):
+        eval_info = get_eval_token_info(token)
+        if eval_info is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Eval token expired or invalid",
+            )
+        user = Users.get_user_by_id(eval_info["user_id"])
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.INVALID_TOKEN,
+            )
+        # Attach eval metadata to request state for downstream handlers
+        request.state.eval_job_id = eval_info["job_id"]
+        request.state.eval_type = eval_info["eval_type"]
+        return user
 
     # auth by api key
     if token.startswith("sk-"):
