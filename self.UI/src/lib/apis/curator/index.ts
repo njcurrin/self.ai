@@ -121,11 +121,47 @@ type CurationJobCreate = {
 	stages: StageConfig[];
 	max_lines?: number | null;
 	output_format?: string;
+	scheduled_for?: string | null;
 };
 
-export const createCuratorJob = async (token: string = '', job: CurationJobCreate) => {
-	let error = null;
+async function curatorFetch<T>(token: string, path: string, options: RequestInit = {}): Promise<T> {
+	const res = await fetch(`${CURATOR_API_BASE_URL}${path}`, {
+		...options,
+		headers: {
+			'Content-Type': 'application/json',
+			...(token && { Authorization: `Bearer ${token}` }),
+			...((options.headers as Record<string, string>) ?? {})
+		}
+	});
+	if (!res.ok) {
+		const err = await res.json().catch(() => ({ detail: res.statusText }));
+		throw err?.detail ?? 'Request failed';
+	}
+	return res.json();
+}
 
+export const listCuratorJobs = (token: string = '') =>
+	curatorFetch<any[]>(token, '/api/jobs');
+
+export const getCuratorJobLogs = (token: string = '', jobId: string, tail = 50) =>
+	curatorFetch<{ lines: string[] }>(token, `/api/jobs/${jobId}/logs?tail=${tail}`);
+
+export const scheduleCuratorJob = (token: string = '', jobId: string, scheduledFor: number) =>
+	curatorFetch<any>(token, `/api/jobs/${jobId}/schedule`, {
+		method: 'POST',
+		body: JSON.stringify({ scheduled_for: scheduledFor })
+	});
+
+export const unscheduleCuratorJob = (token: string = '', jobId: string) =>
+	curatorFetch<any>(token, `/api/jobs/${jobId}/unschedule`, { method: 'POST', body: '{}' });
+
+export const approveCuratorJob = (token: string = '', jobId: string) =>
+	curatorFetch<any>(token, `/api/jobs/${jobId}/approve`, { method: 'POST', body: '{}' });
+
+export const cancelCuratorJob = (token: string = '', jobId: string) =>
+	curatorFetch<any>(token, `/api/jobs/${jobId}/cancel`, { method: 'POST', body: '{}' });
+
+export const createCuratorJob = async (token: string = '', job: CurationJobCreate) => {
 	const res = await fetch(`${CURATOR_API_BASE_URL}/api/jobs`, {
 		method: 'POST',
 		headers: {
@@ -140,6 +176,5 @@ export const createCuratorJob = async (token: string = '', job: CurationJobCreat
 			return res.json();
 		});
 
-	if (error) throw error;
 	return res;
 };
