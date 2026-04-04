@@ -9,6 +9,7 @@
 	export let hasInput: boolean = type !== 'source';
 	export let hasOutput: boolean = type !== 'sink';
 	export let headerColor: string = 'bg-blue-500';
+	export let selected: boolean = false;
 
 	const dispatch = createEventDispatcher();
 
@@ -42,6 +43,17 @@
 		dragging = false;
 	}
 
+	function handleClick(e: MouseEvent) {
+		e.stopPropagation();
+		dispatch('select', { id });
+	}
+
+	function handleContextMenu(e: MouseEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+		dispatch('nodecontextmenu', { id, clientX: e.clientX, clientY: e.clientY});
+	}
+
 	function toggleCollapse() {
 		nodeCollapsed = !nodeCollapsed;
 	}
@@ -54,13 +66,16 @@
 	on:pointerdown={onPointerDown}
 	on:pointermove={onPointerMove}
 	on:pointerup={onPointerUp}
+	on:click={handleClick}
+	on:contextmenu={handleContextMenu}
 	class:cursor-grabbing={dragging}
 	class:cursor-grab={!dragging}
 	>
 	<div
 		class="rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden"
-		class:ring-2={dragging}
+		class:ring-2={dragging || selected}
 		class:ring-blue-400={dragging}
+		class:ring-sky-400={selected && !dragging}
 		>
 		<!-- Header -->
 		<div class="flex items-center gap-1.5 px-3 py-2 {headerColor} text-white text-xs font-semibold node-header"

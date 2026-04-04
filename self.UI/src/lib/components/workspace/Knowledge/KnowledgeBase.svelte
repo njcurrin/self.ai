@@ -43,6 +43,7 @@
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import PipelineCanvas from './KnowledgeBase/PipelineCanvas.svelte';
+	import PipelineJobsPanel from './KnowledgeBase/PipelineJobsPanel.svelte';
 	import { createCuratorJob } from '$lib/apis/curator';
     import PipelineNode from './KnowledgeBase/PipelineNode.svelte';
 
@@ -89,6 +90,7 @@
 	let pipelineConnections = [];
 	let pipelineModalMode: 'save' | 'load' = 'save';
 	let pendingRun = false;
+
 
 	$: pipelineConfigs = (knowledge?.files ?? [])
 		.filter(f => (f.name ?? f.meta?.name)?.endsWith(`_pipeline.json`))
@@ -189,8 +191,8 @@
 			await updateFileDataContentById(localStorage.token, existing.id, JSON.stringify(pipelineConfig))
 			showPipelineModal = false;
 			if (pendingRun) {
-			    pendingRun = false;
-			    runPipelineHandler();
+				pendingRun = false;
+				scheduleHandler();
 			}
 			return;
 		} else {
@@ -221,12 +223,12 @@
 
 		if (pendingRun) {
 			pendingRun = false;
-			runPipelineHandler();
+			scheduleHandler();
 		}
 	};
 	};
 
-	const runPipelineHandler = async () => {
+	const scheduleHandler = async () => {
 		const source = pipelineNodes.find(n => n.type === 'source');
 		const sink = pipelineNodes.find(n => n.type === 'sink');
 
@@ -243,7 +245,7 @@
 			return;
 		}
 
-		//Walk connections from source to sink in order
+		// Walk connections from source to sink in order
 		const connMap = Object.fromEntries(pipelineConnections.map(c => [c.fromId, c.toId]));
 		const stages = [];
 		let currentId = source.id;
@@ -253,51 +255,49 @@
 			const node = pipelineNodes.find(n => n.id === currentId);
 			if (!node || node.type !== 'transform' || !node.config?.stage_type) {
 				toast.error(`Node "${node?.label ?? currentId}" is missing a stage type`);
-            	return;
+				return;
 			}
-			// Strip null params before sending
-	        const params = Object.fromEntries(
-	            Object.entries(node.config.params ?? {}).filter(([_, v]) => v !== null)
-	        );
-	        stages.push({ type: node.config.stage_type, params });
-	    }
+			const params = Object.fromEntries(
+				Object.entries(node.config.params ?? {}).filter(([_, v]) => v !== null)
+			);
+			stages.push({ type: node.config.stage_type, params });
+		}
 
-	    if (!connMap[source.id]) {
-	        toast.error('Source node is not connected');
-	        return;
-	    }
+		if (!connMap[source.id]) {
+			toast.error('Source node is not connected');
+			return;
+		}
 
 		const textField = source.config?.text_field || 'text';
 		const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-		//const filename = (sink.config?.filename || 'output').replace(/\.jsonl$/, '');
 		const outputPath = `/workspace/ui-data/uploads/${knowledge.id}/output/${pipelineName}`;
 
 		let inputPath: string;
-		let outputFormat: string = 'jsonl'
+		let outputFormat: string = 'jsonl';
 		try {
-		    const prepared = await prepareKnowledgeInput(localStorage.token, knowledge.id);
-		    toast.info(`Prepared ${prepared.file_count} files for curation`);
-		    inputPath = prepared.input_path;
+			const prepared = await prepareKnowledgeInput(localStorage.token, knowledge.id);
+			toast.info(`Prepared ${prepared.file_count} files for curation`);
+			inputPath = prepared.input_path;
 			outputFormat = prepared.output_format ?? 'jsonl';
-			} catch (e) {
+		} catch (e) {
 			toast.error(typeof e === 'string' ? e : (e?.detail ?? 'Failed to prepare input'));
-		    return;
+			return;
 		}
 
-
-	    try {
-	        const job = await createCuratorJob(localStorage.token, {
-	            name: `${pipelineName}-${timestamp}`,
-	            input_path: inputPath,
-	            output_path: outputPath,
-	            text_field: textField,
+		try {
+			const job = await createCuratorJob(localStorage.token, {
+				name: `${pipelineName}-${timestamp}`,
+				input_path: inputPath,
+				output_path: outputPath,
+				text_field: textField,
 				output_format: outputFormat,
-	            stages
-	        });
-	        toast.success(`Job started: ${job.job_id}`);
-	    } catch (e) {
-	        toast.error(typeof e === 'string' ? e : (e?.detail ?? 'Failed to start job'));
-	    }
+				stages,
+				scheduled_for: null
+			});
+			toast.success(`Job queued: ${job.job_id}`);
+		} catch (e) {
+			toast.error(typeof e === 'string' ? e : (e?.detail ?? 'Failed to queue job'));
+		}
 	};
 
 	const uploadFileHandler = async (file) => {
@@ -1074,6 +1074,7 @@
 	}}
 />
 
+
 <input
 	id="files-input"
 	bind:files={inputFiles}
@@ -1204,14 +1205,14 @@
 						{$i18n.t('Save')}
 					</button>
 					<button
-						class="bg-emerald-600 hover:bg-emerald-700 text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-						on:click={runPipelineHandler}
+						class="bg-violet-600 hover:bg-violet-700 text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
+						on:click={scheduleHandler}
 					>
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-3">
-							<path d="M3 3.732a1.5 1.5 0 0 1 2.305-1.265l6.706 4.267a1.5 1.5 0 0 1 0 2.531l-6.706 4.268A1.5 1.5 0 0 1 3 12.267V3.732Z" />
+							<path fill-rule="evenodd" d="M4 1.75a.75.75 0 0 1 1.5 0V3h5V1.75a.75.75 0 0 1 1.5 0V3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2V1.75ZM4.5 7a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7Zm0 2.5a.5.5 0 0 0 0 1h4a.5.5 0 0 0 0-1h-4Z" clip-rule="evenodd" />
 						</svg>
 						<span class="text-xs">
-							{$i18n.t('Run')}
+							{$i18n.t('Queue')}
 						</span>
 					</button>
 				</div>
@@ -1440,9 +1441,10 @@
 			</div>
 		</div>
 		{:else if activeTab === 'pipeline'}
-		<div style="height: calc(100vh - 190px);">
+		<div style="height: calc(100vh - 270px);">
 			<PipelineCanvas nodes={pipelineNodes} connections={pipelineConnections} on:configchange={(e) => { pipelineNodes = e.detail.nodes; e.detail.nodes; pipelineConnections = e.detail.connections; }}/>
 		</div>
+		<PipelineJobsPanel pipelineName={pipelineName} token={localStorage.token} />
 		{/if}
 	{:else}
 		<Spinner />

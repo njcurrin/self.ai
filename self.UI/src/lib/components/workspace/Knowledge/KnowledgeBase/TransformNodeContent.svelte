@@ -41,6 +41,24 @@
                     }}
                     class="w-full rounded bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1 text-[11px] text-gray-700 dark:text-gray-300 outline-none"
                 />
+            {:else if param.type === 'string_list'}
+                <textarea
+                    value={(params[param.name] ?? param.default ?? []).join('\n')}
+                    placeholder={param.required ? 'required (one per line)' : 'optional (one per line)'}
+                    on:input={(e) => updateParam(param.name, e.currentTarget.value.split('\n').filter(s => s.trim() !== ''))}
+                    rows="3"
+                    class="w-full rounded bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1 text-[11px] text-gray-700 dark:text-gray-300 outline-none resize-y"
+                />
+            {:else if param.type === 'select'}
+                <select
+                    value={params[param.name] ?? param.default ?? ''}
+                    on:change={(e) => updateParam(param.name, e.currentTarget.value)}
+                    class="w-full rounded bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1 text-[11px] text-gray-700 dark:text-gray-300 outline-none"
+                >
+                    {#each param.options ?? [] as opt}
+                        <option value={opt}>{opt}</option>
+                    {/each}
+                </select>
             {:else}
                 <input
 					type="text"
