@@ -18,6 +18,7 @@ services:
       - /srv/llamolotl/models:/models
       - /srv/llamolotl/loras:/workspace/training/outputs
       - /srv/llamolotl/cache:/workspace/cache
+      - /srv/llamolotl/hf-hub:/workspace/hf-hub
     env_file:
       - ./self.llamolotl/self.Llama/.env
     environment:
@@ -26,6 +27,7 @@ services:
       - GIT_COMMITTER_NAME=${GIT_COMMITTER_NAME:-}
       - GIT_COMMITTER_EMAIL=${GIT_COMMITTER_EMAIL:-}
       - WANDB_API_KEY=${WANDB_API_KEY:-}
+      - HF_HOME=/workspace/hf-hub
       - DEBUG=1
     ports:
       - 8091:8080
@@ -319,7 +321,7 @@ services:
     volumes:
       - selfUI-data:/workspace/ui-data
       - /srv/curator/data:/workspace/curator/data
-      - /srv/curator/cache:/workspace/curator/cache
+      - /srv/llamolotl/hf-hub:/workspace/curator/cache/hf-hub
       - /srv/curator/configs:/workspace/curator/configs
       - /srv/curator/jobs:/workspace/curator/jobs
       - /srv/curator/logs:/workspace/curator/logs
@@ -327,6 +329,9 @@ services:
     environment:
       - HF_TOKEN=${HF_TOKEN:-}
       - RAY_OBJECT_STORE_MEMORY=2000000000
+      - HF_HUB_CACHE=/workspace/curator/cache/hf-hub
+      - TRANSFORMERS_OFFLINE=1
+
     networks:
       - llama_internal
     restart: unless-stopped
