@@ -369,6 +369,7 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(periodic_usage_pool_cleanup())
     asyncio.create_task(_resume_crawl_jobs(app.state))
     asyncio.create_task(_run_gpu_queue(app.state))
+    asyncio.create_task(_ensure_curator_classifier_models(app.state))
     yield
 
 
@@ -386,6 +387,79 @@ async def _run_gpu_queue(app_state) -> None:
     gpu_queue._app_state = app_state
     training_mod._app_state = app_state
     await gpu_queue.process_gpu_queue()
+
+
+async def _ensure_curator_classifier_models(app_state) -> None:
+    """Once curator and llamolotl are both healthy, trigger classifier model
+    pre-fetching via llamolotl so the curator container can stay airgapped."""
+    POLL_INTERVAL = 15   # seconds between health checks
+    MAX_WAIT = 600       # give up after 10 minutes
+
+    elapsed = 0
+    curator_ok = False
+    llamolotl_ok = False
+
+    while elapsed < MAX_WAIT:
+        await asyncio.sleep(POLL_INTERVAL)
+        elapsed += POLL_INTERVAL
+
+        cfg = app_state.config
+
+        if not (cfg.ENABLE_CURATOR_API and cfg.CURATOR_BASE_URLS
+                and cfg.ENABLE_LLAMOLOTL_API and cfg.LLAMOLOTL_CONTROL_BASE_URLS):
+            return  # one or both services not configured — nothing to do
+
+        timeout = aiohttp.ClientTimeout(total=5)
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(f"{cfg.CURATOR_BASE_URLS[0]}/health") as r:
+                    curator_ok = r.status == 200
+        except Exception:
+            curator_ok = False
+
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(f"{cfg.LLAMOLOTL_CONTROL_BASE_URLS[0]}/health") as r:
+                    llamolotl_ok = r.status == 200
+        except Exception:
+            llamolotl_ok = False
+
+        if curator_ok and llamolotl_ok:
+            break
+
+    if not (curator_ok and llamolotl_ok):
+        log.warning(
+            "classifier model pre-fetch skipped: "
+            f"curator={'ok' if curator_ok else 'unreachable'}, "
+            f"llamolotl={'ok' if llamolotl_ok else 'unreachable'}"
+        )
+        return
+
+    log.info("curator + llamolotl healthy — ensuring classifier models are cached")
+    llamolotl_url = app_state.config.LLAMOLOTL_CONTROL_BASE_URLS[0].rstrip("/")
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"{llamolotl_url}/api/models/hf-cache/ensure",
+                json={},
+                timeout=aiohttp.ClientTimeout(total=None),
+            ) as r:
+                async for line in r.content:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        event = json.loads(line)
+                        repo = event.get("repo_id", "")
+                        status = event.get("status", "")
+                        if status == "error":
+                            log.warning(f"classifier model fetch failed: {repo} — {event.get('error')}")
+                        elif status in ("done", "cached"):
+                            log.info(f"classifier model {status}: {repo}")
+                    except Exception:
+                        pass
+    except Exception as e:
+        log.warning(f"classifier model pre-fetch request failed: {e}")
 
 
 app = FastAPI(

@@ -360,6 +360,47 @@ async def cancel_job(
     return result
 
 
+@router.post("/api/jobs/{job_id}/schedule")
+async def schedule_job(
+    request: Request, job_id: str, user=Depends(get_verified_user)
+):
+    url = get_curator_url(request)
+    body = await request.body()
+    return await send_post_request(
+        f"{url}/api/jobs/{job_id}/schedule", body.decode(), raise_on_error=True
+    )
+
+
+@router.post("/api/jobs/{job_id}/unschedule")
+async def unschedule_job(
+    request: Request, job_id: str, user=Depends(get_verified_user)
+):
+    url = get_curator_url(request)
+    return await send_post_request(
+        f"{url}/api/jobs/{job_id}/unschedule", "{}", raise_on_error=True
+    )
+
+
+@router.post("/api/jobs/{job_id}/approve")
+async def approve_job(
+    request: Request, job_id: str, user=Depends(get_verified_user)
+):
+    url = get_curator_url(request)
+    return await send_post_request(
+        f"{url}/api/jobs/{job_id}/approve", "{}", raise_on_error=True
+    )
+
+
+@router.post("/api/jobs/{job_id}/cancel")
+async def cancel_job_post(
+    request: Request, job_id: str, user=Depends(get_verified_user)
+):
+    url = get_curator_url(request)
+    return await send_post_request(
+        f"{url}/api/jobs/{job_id}/cancel", "{}", raise_on_error=True
+    )
+
+
 ##########################################
 # Proxy: Data
 ##########################################
