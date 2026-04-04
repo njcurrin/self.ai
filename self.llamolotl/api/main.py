@@ -2596,6 +2596,191 @@ async def get_heretic_config():
     return {"config": content}
 
 
+# ─── HF Cache Endpoint ────────────────────────────────────────────────
+
+HF_CACHE_DIR = Path(os.environ.get("HF_HOME", "/workspace/hf-hub"))
+
+# Classifier models required by the curator pipeline
+CURATOR_CLASSIFIER_REPOS = [
+    "nvidia/quality-classifier-deberta",
+    "nvidia/domain-classifier",
+    "nvidia/multilingual-domain-classifier",
+    "nvidia/content-type-classifier-deberta",
+    "HuggingFaceFW/fineweb-edu-classifier",
+    "nvidia/nemocurator-fineweb-mixtral-edu-classifier",
+    "nvidia/nemocurator-fineweb-nemotron-4-edu-classifier",
+    "nvidia/prompt-task-and-complexity-classifier",
+    "microsoft/deberta-v3-base",
+]
+
+
+class HfCacheEnsureRequest(BaseModel):
+    repos: List[str] = CURATOR_CLASSIFIER_REPOS
+
+
+def _is_repo_cached(repo_id: str, cache_dir: Path) -> bool:
+    """Return True if repo_id already has a complete snapshot in the HF cache."""
+    from huggingface_hub import scan_cache_dir
+    try:
+        cache_info = scan_cache_dir(cache_dir=str(cache_dir))
+        for repo in cache_info.repos:
+            if repo.repo_id == repo_id and repo.nb_snapshots > 0:
+                return True
+    except Exception:
+        pass
+    return False
+
+
+@app.post("/api/models/hf-cache/ensure")
+async def ensure_hf_cache(req: HfCacheEnsureRequest):
+    """Download HuggingFace model repos into the shared HF cache so the
+    curator container can load them with local_files_only=True.
+
+    Streams NDJSON progress. Skips repos that are already cached.
+    """
+    from huggingface_hub import snapshot_download
+
+    async def generate():
+        for repo_id in req.repos:
+            if _is_repo_cached(repo_id, HF_CACHE_DIR):
+                yield json.dumps({"repo_id": repo_id, "status": "cached"}) + "\n"
+                continue
+
+            yield json.dumps({"repo_id": repo_id, "status": "downloading"}) + "\n"
+
+            error_holder: list[str] = []
+            done_event = threading.Event()
+
+            def download_task():
+                try:
+                    snapshot_download(
+                        repo_id=repo_id,
+                        cache_dir=str(HF_CACHE_DIR),
+                        local_files_only=False,
+                    )
+                except Exception as e:
+                    error_holder.append(str(e))
+                finally:
+                    done_event.set()
+
+            t = threading.Thread(target=download_task, daemon=True)
+            t.start()
+
+            while not done_event.wait(timeout=2):
+                yield json.dumps({"repo_id": repo_id, "status": "downloading"}) + "\n"
+                await asyncio.sleep(0)
+
+            if error_holder:
+                yield json.dumps({"repo_id": repo_id, "status": "error", "error": error_holder[0]}) + "\n"
+            else:
+                yield json.dumps({"repo_id": repo_id, "status": "done"}) + "\n"
+
+    return StreamingResponse(generate(), media_type="application/x-ndjson")
+
+
+@app.get("/api/models/hf-cache/status")
+async def hf_cache_status():
+    """Return cached/missing status for all curator classifier repos."""
+    result = []
+    for repo_id in CURATOR_CLASSIFIER_REPOS:
+        result.append({
+            "repo_id": repo_id,
+            "cached": _is_repo_cached(repo_id, HF_CACHE_DIR),
+        })
+    return {"repos": result}
+
+
+# ─── Health Endpoint ───────────────────────────────────────────────────
+
+# ─── FastText Model Download Endpoints ────────────────────────────────────────
+
+CURATOR_FASTTEXT_DIR = HF_CACHE_DIR / "fasttext"
+
+# Well-known public FastText models (free download, no auth required).
+# These are stored in the shared HF cache volume so the curator container can
+# access them at /workspace/curator/cache/hf-hub/fasttext/.
+CURATOR_FASTTEXT_MODELS = [
+    {
+        "name": "lid.176.bin",
+        "url": "https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin",
+        "description": "FastText language identification model (full, ~125 MB)",
+        "curator_path": "/workspace/curator/cache/hf-hub/fasttext/lid.176.bin",
+    },
+    {
+        "name": "lid.176.ftz",
+        "url": "https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz",
+        "description": "FastText language identification model (compressed, ~917 KB)",
+        "curator_path": "/workspace/curator/cache/hf-hub/fasttext/lid.176.ftz",
+    },
+]
+
+
+@app.get("/api/models/fasttext/status")
+async def fasttext_model_status():
+    """Return cached/missing status for the known FastText models."""
+    result = []
+    for model in CURATOR_FASTTEXT_MODELS:
+        dest = CURATOR_FASTTEXT_DIR / model["name"]
+        result.append({
+            "name": model["name"],
+            "description": model["description"],
+            "cached": dest.exists(),
+            "curator_path": model["curator_path"],
+        })
+    return {"models": result}
+
+
+@app.post("/api/models/fasttext/ensure")
+async def ensure_fasttext_models():
+    """Download any missing FastText models into the shared HF cache volume.
+
+    Streams NDJSON progress. Skips models that are already downloaded.
+    """
+    import requests as _requests
+
+    async def generate():
+        CURATOR_FASTTEXT_DIR.mkdir(parents=True, exist_ok=True)
+        for model in CURATOR_FASTTEXT_MODELS:
+            dest = CURATOR_FASTTEXT_DIR / model["name"]
+            if dest.exists():
+                yield json.dumps({"name": model["name"], "status": "cached"}) + "\n"
+                continue
+
+            yield json.dumps({"name": model["name"], "status": "downloading"}) + "\n"
+            await asyncio.sleep(0)
+
+            error_holder: list[str] = []
+            done_event = threading.Event()
+
+            def download_task(url=model["url"], dest_path=dest):
+                try:
+                    response = _requests.get(url, stream=True, timeout=300)
+                    response.raise_for_status()
+                    tmp = dest_path.with_suffix(dest_path.suffix + ".downloading")
+                    with open(tmp, "wb") as f:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            f.write(chunk)
+                    tmp.rename(dest_path)
+                except Exception as e:
+                    error_holder.append(str(e))
+                finally:
+                    done_event.set()
+
+            t = threading.Thread(target=download_task, daemon=True)
+            t.start()
+
+            while not done_event.wait(timeout=2):
+                yield json.dumps({"name": model["name"], "status": "downloading"}) + "\n"
+                await asyncio.sleep(0)
+
+            if error_holder:
+                yield json.dumps({"name": model["name"], "status": "error", "error": error_holder[0]}) + "\n"
+            else:
+                yield json.dumps({"name": model["name"], "status": "done"}) + "\n"
+
+    return StreamingResponse(generate(), media_type="application/x-ndjson")
+
+
 # ─── Health Endpoint ───────────────────────────────────────────────────
 
 @app.get("/health")
