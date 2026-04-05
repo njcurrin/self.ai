@@ -1,7 +1,0 @@
-[[tls.certificates]]
-  certFile = "/letsEncrypt/live/supa.home.mateysmarsh.com/fullchain.pem"
-  keyFile = "/letsEncrypt/live/supa.home.mateysmarsh.com/privkey.pem"
-
-[[tls.certificates]]
-  certFile = "/letsEncrypt/live/base.home.mateysmarsh.com/fullchain.pem"
-  keyFile = "/letsEncrypt/live/base.home.mateysmarsh.com/privkey.pem"
