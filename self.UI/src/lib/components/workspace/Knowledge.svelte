@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { DropdownMenu } from 'bits-ui';
+	import { flyAndScale } from '$lib/utils/transitions';
 	import Fuse from 'fuse.js';
 
 	import dayjs from 'dayjs';
@@ -26,12 +28,14 @@
 	import Spinner from '../common/Spinner.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
 	import Tooltip from '../common/Tooltip.svelte';
+	import Dropdown from '../common/Dropdown.svelte';
 
 	let loaded = false;
 
 	let query = '';
 	let selectedItem = null;
 	let showDeleteConfirm = false;
+	let showAddMenu = false;
 
 	let fuse = null;
 
@@ -108,15 +112,51 @@
 			</div>
 
 			<div>
-				<button
-					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
-					aria-label={$i18n.t('Create Knowledge')}
-					on:click={() => {
-						goto('/workspace/knowledge/create');
-					}}
+				<Dropdown
+					bind:show={showAddMenu}
+					align="end"
 				>
-					<Plus className="size-3.5" />
-				</button>
+					<button
+						class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
+						aria-label={$i18n.t('Add')}
+					>
+						<Plus className="size-3.5" />
+					</button>
+
+					<div slot="content">
+						<DropdownMenu.Content
+							class="w-full max-w-56 rounded-xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow"
+							sideOffset={4}
+							side="bottom"
+							align="end"
+							transition={flyAndScale}
+						>
+							<DropdownMenu.Item
+								class="flex gap-2 items-center px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								on:click={() => {
+									goto('/workspace/knowledge/create');
+								}}
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+									<path d="M10.75 16.82A7.462 7.462 0 0115 15.5c.71 0 1.396.098 2.046.282A.75.75 0 0018 15.06v-11a.75.75 0 00-.546-.721A9.006 9.006 0 0015 3a8.963 8.963 0 00-4.25 1.065V16.82zM9.25 4.065A8.963 8.963 0 005 3c-.85 0-1.673.118-2.454.339A.75.75 0 002 4.06v11a.75.75 0 00.954.721A7.506 7.506 0 015 15.5c1.579 0 3.042.487 4.25 1.32V4.065z" />
+								</svg>
+								<div class="flex items-center">{$i18n.t('Create Knowledge Base')}</div>
+							</DropdownMenu.Item>
+
+							<DropdownMenu.Item
+								class="flex gap-2 items-center px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+								on:click={() => {
+									goto('/workspace/knowledge/dataset/create');
+								}}
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+									<path fill-rule="evenodd" d="M10 1c-1.828 0-3.623.149-5.371.435a.75.75 0 00-.629.74v.01c0 2.458.82 4.775 2.293 6.612A10.95 10.95 0 009.25 11.3V17h-2.5a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-2.5v-5.7a10.95 10.95 0 002.957-2.503A10.969 10.969 0 0016 2.185v-.01a.75.75 0 00-.629-.74A33.118 33.118 0 0010 1zM7.544 7.159A9.47 9.47 0 015.5 2.57c1.466-.17 2.967-.258 4.5-.258s3.034.088 4.5.258a9.47 9.47 0 01-2.044 4.589A9.45 9.45 0 0110 9.465a9.45 9.45 0 01-2.456-2.306z" clip-rule="evenodd" />
+								</svg>
+								<div class="flex items-center">{$i18n.t('Add Dataset')}</div>
+							</DropdownMenu.Item>
+						</DropdownMenu.Content>
+					</div>
+				</Dropdown>
 			</div>
 		</div>
 	</div>
@@ -139,7 +179,9 @@
 			>
 				<div class=" w-full">
 					<div class="flex items-center justify-between -mt-1">
-						{#if item?.meta?.document}
+						{#if item?.meta?.dataset}
+							<Badge type="info" content={$i18n.t('Dataset')} />
+						{:else if item?.meta?.document}
 							<Badge type="muted" content={$i18n.t('Document')} />
 						{:else}
 							<Badge type="success" content={$i18n.t('Collection')} />

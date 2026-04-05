@@ -6,7 +6,7 @@
 	import { onMount, getContext, tick } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
+	import { WEBUI_NAME, config, mobile, models as _models, settings, user, modelLoadStatus } from '$lib/stores';
 	import {
 		createNewModel,
 		deleteAllModels,
@@ -18,6 +18,7 @@
 	import { getModels } from '$lib/apis';
 	import Search from '$lib/components/icons/Search.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import ModelStatusDot from '$lib/components/common/ModelStatusDot.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
@@ -220,7 +221,10 @@
 									className=" w-fit"
 									placement="top-start"
 								>
-									<div class="  font-semibold line-clamp-1">{model.name}</div>
+									<div class="flex items-center gap-1.5 font-semibold line-clamp-1">
+										{model.name}
+										<ModelStatusDot status={$modelLoadStatus[model.id] ?? $modelLoadStatus[model?.base_model_id] ?? model?.status} />
+									</div>
 								</Tooltip>
 								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
 									<span class=" line-clamp-1">

@@ -662,6 +662,81 @@ OLLAMA_API_CONFIGS = PersistentConfig(
 )
 
 ####################################
+# LLAMOLOTL
+####################################
+
+ENABLE_LLAMOLOTL_API = PersistentConfig(
+    "ENABLE_LLAMOLOTL_API",
+    "llamolotl.enable",
+    os.environ.get("ENABLE_LLAMOLOTL_API", "True").lower() == "true",
+)
+
+LLAMOLOTL_BASE_URLS = os.environ.get("LLAMOLOTL_BASE_URLS", "")
+if LLAMOLOTL_BASE_URLS == "":
+    LLAMOLOTL_BASE_URLS = os.environ.get(
+        "LLAMOLOTL_BASE_URL", "http://self-llamolotl:8080"
+    )
+
+LLAMOLOTL_BASE_URLS = [url.strip() for url in LLAMOLOTL_BASE_URLS.split(";")]
+LLAMOLOTL_BASE_URLS = PersistentConfig(
+    "LLAMOLOTL_BASE_URLS", "llamolotl.base_urls", LLAMOLOTL_BASE_URLS
+)
+
+LLAMOLOTL_CONTROL_BASE_URLS = os.environ.get("LLAMOLOTL_CONTROL_BASE_URLS", "")
+if LLAMOLOTL_CONTROL_BASE_URLS == "":
+    LLAMOLOTL_CONTROL_BASE_URLS = os.environ.get(
+        "LLAMOLOTL_CONTROL_BASE_URL", "http://self-llamolotl:8093"
+    )
+
+LLAMOLOTL_CONTROL_BASE_URLS = [url.strip() for url in LLAMOLOTL_CONTROL_BASE_URLS.split(";")]
+LLAMOLOTL_CONTROL_BASE_URLS = PersistentConfig(
+    "LLAMOLOTL_CONTROL_BASE_URLS", "llamolotl.control_base_urls", LLAMOLOTL_CONTROL_BASE_URLS
+)
+
+LLAMOLOTL_API_CONFIGS = PersistentConfig(
+    "LLAMOLOTL_API_CONFIGS",
+    "llamolotl.api_configs",
+    {},
+)
+
+####################################
+# CURATOR
+####################################
+
+ENABLE_CURATOR_API = PersistentConfig(
+    "ENABLE_CURATOR_API",
+    "curator.enable",
+    os.environ.get("ENABLE_CURATOR_API", "True").lower() == "true",
+)
+
+CURATOR_BASE_URLS = os.environ.get("CURATOR_BASE_URLS", "")
+if CURATOR_BASE_URLS == "":
+    CURATOR_BASE_URLS = os.environ.get(
+        "CURATOR_BASE_URL", "http://self-curator:8094"
+    )
+
+CURATOR_BASE_URLS = [url.strip() for url in CURATOR_BASE_URLS.split(";")]
+CURATOR_BASE_URLS = PersistentConfig(
+    "CURATOR_BASE_URLS", "curator.base_urls", CURATOR_BASE_URLS
+)
+
+CURATOR_API_CONFIGS = PersistentConfig(
+    "CURATOR_API_CONFIGS",
+    "curator.api_configs",
+    {},
+)
+
+####################################
+# ICEBERG
+####################################
+
+ICEBERG_BASE_URL = PersistentConfig(
+    "ICEBERG_BASE_URL",
+    "iceberg.base_url",
+    os.environ.get("ICEBERG_BASE_URL", ""),
+)
+
+####################################
 # OPENAI_API
 ####################################
 
@@ -815,6 +890,11 @@ USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS = (
     == "true"
 )
 
+USER_PERMISSIONS_WORKSPACE_TRAINING_ACCESS = (
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_TRAINING_ACCESS", "False").lower()
+    == "true"
+)
+
 USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS", "False").lower() == "true"
 )
@@ -843,6 +923,7 @@ USER_PERMISSIONS = PersistentConfig(
             "models": USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS,
             "knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS,
             "prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS,
+            "training": USER_PERMISSIONS_WORKSPACE_TRAINING_ACCESS,
             "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS,
         },
         "chat": {

@@ -1,0 +1,74 @@
+# syntax=docker/dockerfile:1.5
+# Minimal llama.cpp + CUDA build for debugging
+
+ARG CUDA_VERSION=13.1.0
+ARG UBUNTU_VERSION=22.04
+
+FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION}
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential cmake git libssl-dev libgomp1 && \
+    rm -rf /var/cache/apt/archives /var/lib/apt/lists/*
+
+WORKDIR /llama-src
+COPY self.Llama/ .
+
+# === VERBOSE DEBUG OUTPUT ===
+RUN set -x && \
+    echo "========== CUDA ENVIRONMENT ==========" && \
+    which nvcc && \
+    nvcc --version && \
+    echo "========== CUDA LIBRARY PATHS ==========" && \
+    ls -lah /usr/local/cuda/lib64/ | grep -E "libcuda|libcudart" && \
+    echo "========== CUDA STUBS ==========" && \
+    ls -lah /usr/local/cuda/lib64/stubs/ 2>&1 || echo "No stubs directory" && \
+    echo "========== LD_LIBRARY_PATH ==========" && \
+    echo "$LD_LIBRARY_PATH" && \
+    echo "========== CMAKE VERSION ==========" && \
+    cmake --version && \
+    echo "========== STARTING CMAKE CONFIGURE ==========" && \
+    set +x
+
+# Run cmake with explicit stub linking via environment
+RUN export LDFLAGS="-L/usr/local/cuda/lib64/stubs $LDFLAGS" && \
+    cmake -B build \
+      -DGGML_NATIVE=OFF \
+      -DGGML_CUDA=ON \
+      -DLLAMA_BUILD_TESTS=OFF \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_VERBOSE_MAKEFILE=ON \
+      -DCMAKE_EXE_LINKER_FLAGS="-L/usr/local/cuda/lib64/stubs" \
+      -DCMAKE_SHARED_LINKER_FLAGS="-L/usr/local/cuda/lib64/stubs" \
+      --debug-output \
+      . 2>&1
+
+RUN echo "========== CMAKE BUILD OUTPUT ==========" && \
+    export LDFLAGS="-L/usr/local/cuda/lib64/stubs $LDFLAGS" && \
+    cmake --build build --config Release -j$(nproc) 2>&1
+
+RUN echo "========== CHECKING BUILD ARTIFACTS ==========" && \
+    ls -lah build/bin/ && \
+    echo "========== CHECKING LLAMA-SERVER DEPENDENCIES ==========" && \
+    ldd build/bin/llama-server 2>&1 || echo "ldd failed - checking nm instead" && \
+    nm build/bin/llama-server | grep -i cuda | head -20
+
+RUN mkdir -p /app && \
+    cp build/bin/llama-server /app/llama-server && \
+    cp build/bin/llama-bench /app/llama-bench
+
+FROM nvidia/cuda:${CUDA_VERSION}-runtime-ubuntu${UBUNTU_VERSION}
+
+RUN echo "========== RUNTIME ENVIRONMENT ==========" && \
+    ls -lah /usr/local/cuda/lib64/ | grep -E "libcuda|libcudart"
+
+COPY --from=0 /app/llama-server /app/llama-server
+COPY --from=0 /app/llama-bench /app/llama-bench
+
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/local/cuda/compat:$LD_LIBRARY_PATH
+WORKDIR /app
+
+RUN echo "========== FINAL CHECK ==========" && \
+    ldd /app/llama-server 2>&1 || echo "ldd failed"
+
+CMD ["/app/llama-server", "--help"]

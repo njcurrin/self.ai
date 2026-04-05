@@ -698,6 +698,161 @@ async def generate_chat_completion(
             await session.close()
 
 
+@router.post("/completions")
+async def generate_completion(
+    request: Request,
+    form_data: dict,
+    user=Depends(get_verified_user),
+    bypass_filter: Optional[bool] = False,
+):
+    """Text completions endpoint (non-chat). Proxies to backend /completions."""
+    if BYPASS_MODEL_ACCESS_CONTROL:
+        bypass_filter = True
+
+    idx = 0
+    payload = {**form_data}
+    if "metadata" in payload:
+        del payload["metadata"]
+
+    model_id = form_data.get("model")
+    model_info = Models.get_model_by_id(model_id)
+
+    if model_info:
+        if model_info.base_model_id:
+            payload["model"] = model_info.base_model_id
+            model_id = model_info.base_model_id
+
+        params = model_info.params.model_dump()
+        payload = apply_model_params_to_body_openai(params, payload)
+        # No system prompt for text completions
+
+        if not bypass_filter and user.role == "user":
+            if not (
+                user.id == model_info.user_id
+                or has_access(
+                    user.id, type="read", access_control=model_info.access_control
+                )
+            ):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Model not found",
+                )
+    elif not bypass_filter:
+        if user.role != "admin":
+            raise HTTPException(
+                status_code=403,
+                detail="Model not found",
+            )
+
+    model = request.app.state.OPENAI_MODELS.get(model_id)
+    if model:
+        idx = model["urlIdx"]
+    else:
+        raise HTTPException(
+            status_code=404,
+            detail="Model not found",
+        )
+
+    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
+        request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
+    )
+
+    prefix_id = api_config.get("prefix_id", None)
+    if prefix_id:
+        payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
+
+    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+    key = request.app.state.config.OPENAI_API_KEYS[idx]
+
+    # Convert max_completion_tokens to max_tokens for non-OpenAI backends
+    if "api.openai.com" not in url:
+        if "max_completion_tokens" in payload:
+            payload["max_tokens"] = payload["max_completion_tokens"]
+            del payload["max_completion_tokens"]
+
+    if "max_tokens" in payload and "max_completion_tokens" in payload:
+        del payload["max_tokens"]
+
+    payload = json.dumps(payload)
+
+    r = None
+    session = None
+    streaming = False
+    response = None
+
+    try:
+        session = aiohttp.ClientSession(
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        )
+
+        r = await session.request(
+            method="POST",
+            url=f"{url}/completions",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+                **(
+                    {
+                        "HTTP-Referer": "https://selfai.com/",
+                        "X-Title": "Self.AI UI",
+                    }
+                    if "openrouter.ai" in url
+                    else {}
+                ),
+                **(
+                    {
+                        "X-OpenWebUI-User-Name": user.name,
+                        "X-OpenWebUI-User-Id": user.id,
+                        "X-OpenWebUI-User-Email": user.email,
+                        "X-OpenWebUI-User-Role": user.role,
+                    }
+                    if ENABLE_FORWARD_USER_INFO_HEADERS
+                    else {}
+                ),
+            },
+        )
+
+        if "text/event-stream" in r.headers.get("Content-Type", ""):
+            streaming = True
+            return StreamingResponse(
+                r.content,
+                status_code=r.status,
+                headers=dict(r.headers),
+                background=BackgroundTask(
+                    cleanup_response, response=r, session=session
+                ),
+            )
+        else:
+            try:
+                response = await r.json()
+            except Exception as e:
+                log.error(e)
+                response = await r.text()
+
+            r.raise_for_status()
+            return response
+    except Exception as e:
+        log.exception(e)
+
+        detail = None
+        if isinstance(response, dict):
+            if "error" in response:
+                detail = f"{response['error']['message'] if 'message' in response['error'] else response['error']}"
+        elif isinstance(response, str):
+            detail = response
+
+        raise HTTPException(
+            status_code=r.status if r else 500,
+            detail=detail if detail else "Self.AI UI: Server Connection Error",
+        )
+    finally:
+        if not streaming and session:
+            if r:
+                r.close()
+            await session.close()
+
+
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     """

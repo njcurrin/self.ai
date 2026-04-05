@@ -1,0 +1,9 @@
+self.Llama/build/
+self.Llama/.git/
+self.axolotl/
+patches/
+Dockerfile
+Dockerfile.*
+.dockerignore
+**/__pycache__/
+**/*.pyc

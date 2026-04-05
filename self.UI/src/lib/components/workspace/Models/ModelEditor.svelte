@@ -13,6 +13,8 @@
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
+	import { getAvailableLlamolotlLoras } from '$lib/apis/llamolotl';
+	import type { AvailableLora } from '$lib/apis/llamolotl';
 	import AccessControl from '../common/AccessControl.svelte';
 	import { stringify } from 'postcss';
 	import { toast } from 'svelte-sonner';
@@ -85,6 +87,49 @@
 
 	let accessControl = {};
 
+	let availableLoras: AvailableLora[] = [];
+	let selectedLoras: { file: string; scale: number }[] = [];
+	let lorasLoading = false;
+
+	// Fetch available LoRAs when a llamolotl base model is selected
+	const fetchLorasForModel = async (base_model_id: string | null) => {
+		if (!base_model_id) {
+			availableLoras = [];
+			return;
+		}
+
+		const baseModel = $models.find((m) => m.id === base_model_id);
+		if (!baseModel || baseModel.owned_by !== 'llamolotl') {
+			availableLoras = [];
+			return;
+		}
+
+		lorasLoading = true;
+		try {
+			const allLoras = await getAvailableLlamolotlLoras(localStorage.token);
+			// Show all available LoRAs — the user can pick which to apply
+			availableLoras = allLoras;
+		} catch (err) {
+			console.error('Failed to fetch available LoRAs:', err);
+			availableLoras = [];
+		} finally {
+			lorasLoading = false;
+		}
+	};
+
+	const toggleLora = (file: string) => {
+		const idx = selectedLoras.findIndex((l) => l.file === file);
+		if (idx >= 0) {
+			selectedLoras = selectedLoras.filter((l) => l.file !== file);
+		} else {
+			selectedLoras = [...selectedLoras, { file, scale: 1.0 }];
+		}
+	};
+
+	const updateLoraScale = (file: string, scale: number) => {
+		selectedLoras = selectedLoras.map((l) => (l.file === file ? { ...l, scale } : l));
+	};
+
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
 
@@ -147,6 +192,14 @@
 			}
 		}
 
+		if (selectedLoras.length > 0) {
+			info.meta.active_loras = selectedLoras;
+		} else {
+			if (info.meta.active_loras) {
+				delete info.meta.active_loras;
+			}
+		}
+
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
 		Object.keys(info.params).forEach((key) => {
 			if (info.params[key] === '' || info.params[key] === null) {
@@ -202,6 +255,12 @@
 			toolIds = model?.meta?.toolIds ?? [];
 			filterIds = model?.meta?.filterIds ?? [];
 			actionIds = model?.meta?.actionIds ?? [];
+			selectedLoras = model?.meta?.active_loras ?? [];
+
+			// Fetch available LoRAs if editing a model with a llamolotl base
+			if (model.base_model_id) {
+				fetchLorasForModel(model.base_model_id);
+			}
 			knowledge = (model?.meta?.knowledge ?? []).map((item) => {
 				if (item?.collection_name) {
 					return {
@@ -457,6 +516,7 @@
 									bind:value={info.base_model_id}
 									on:change={(e) => {
 										addUsage(e.target.value);
+										fetchLorasForModel(e.target.value);
 									}}
 									required
 								>
@@ -469,6 +529,84 @@
 								</select>
 							</div>
 						</div>
+					{/if}
+
+					{#if availableLoras.length > 0}
+						<div class="my-2">
+							<div class="text-sm font-semibold mb-1">{$i18n.t('LoRA Adapters')}</div>
+							<div class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+								{$i18n.t('Select LoRA adapters to apply when using this model')}
+							</div>
+
+							<div class="flex flex-col gap-1.5">
+								{#each availableLoras as lora}
+									{@const isSelected = selectedLoras.some((l) => l.file === lora.file)}
+									{@const selectedEntry = selectedLoras.find((l) => l.file === lora.file)}
+									<div
+										class="flex items-center gap-2 p-2 rounded-lg border transition {isSelected
+											? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+											: 'border-gray-200 dark:border-gray-700'}"
+									>
+										<button
+											type="button"
+											class="flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition {isSelected
+												? 'bg-blue-500 border-blue-500 text-white'
+												: 'border-gray-300 dark:border-gray-600'}"
+											on:click={() => toggleLora(lora.file)}
+										>
+											{#if isSelected}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													class="h-3 w-3"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											{/if}
+										</button>
+
+										<div class="flex-1 min-w-0">
+											<div class="text-sm font-medium truncate">
+												{lora.file}
+												{#if lora.converting}
+													<span class="text-xs text-amber-500 ml-1">({$i18n.t('converting...')})</span>
+												{/if}
+											</div>
+											{#if lora.base_model}
+												<div class="text-xs text-gray-500 dark:text-gray-400 truncate">
+													{$i18n.t('Trained on')}: {lora.base_model}
+												</div>
+											{/if}
+										</div>
+
+										{#if isSelected}
+											<div class="flex items-center gap-1.5 flex-shrink-0">
+												<label class="text-xs text-gray-500 dark:text-gray-400"
+													>{$i18n.t('Scale')}:</label
+												>
+												<input
+													type="number"
+													min="0"
+													max="2"
+													step="0.1"
+													class="w-16 text-xs bg-transparent border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 outline-none"
+													value={selectedEntry?.scale ?? 1.0}
+													on:change={(e) =>
+														updateLoraScale(lora.file, parseFloat(e.target.value) || 1.0)}
+												/>
+											</div>
+										{/if}
+									</div>
+								{/each}
+							</div>
+						</div>
+					{:else if lorasLoading}
+						<div class="my-2 text-xs text-gray-500">{$i18n.t('Loading available LoRAs...')}</div>
 					{/if}
 
 					<div class="my-1">

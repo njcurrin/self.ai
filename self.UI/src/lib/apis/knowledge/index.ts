@@ -4,7 +4,9 @@ export const createNewKnowledge = async (
 	token: string,
 	name: string,
 	description: string,
-	accessControl: null | object
+	accessControl: null | object,
+	meta: object | null = null,
+	data: object | null = null
 ) => {
 	let error = null;
 
@@ -18,7 +20,9 @@ export const createNewKnowledge = async (
 		body: JSON.stringify({
 			name: name,
 			description: description,
-			access_control: accessControl
+			access_control: accessControl,
+			...(meta && { meta }),
+			...(data && { data })
 		})
 	})
 		.then(async (res) => {
@@ -343,5 +347,21 @@ export const deleteKnowledgeById = async (token: string, id: string) => {
 		throw error;
 	}
 
+	return res;
+};
+
+export const prepareKnowledgeInput = async (token: string, id: string) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/prepare-input`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { Authorization: `Bearer ${token}`})
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+	});
 	return res;
 };

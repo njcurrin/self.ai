@@ -1170,14 +1170,9 @@ def _sync_process_page_to_knowledge(request, page: dict, collection_name: str, u
     # PATH 1: content= + collection_name= → embeds directly into knowledge collection
     process_file(request, ProcessFileForm(file_id=file_id, content=markdown, collection_name=collection_name))
 
-    # Link file_id to the knowledge base record
-    knowledge = Knowledges.get_knowledge_by_id(collection_name)
-    if knowledge:
-        data = knowledge.data or {}
-        file_ids = data.get("file_ids", [])
-        if file_id not in file_ids:
-            file_ids.append(file_id)
-            Knowledges.update_knowledge_data_by_id(collection_name, {**data, "file_ids": file_ids})
+    # Link file_id to the knowledge base record via join table
+    from selfai_ui.models.knowledge import KnowledgeFiles
+    KnowledgeFiles.add_file_to_knowledge(collection_name, file_id)
 
     return file_id
 

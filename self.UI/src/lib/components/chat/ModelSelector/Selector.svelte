@@ -12,12 +12,13 @@
 
 	import { deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
 
-	import { user, MODEL_DOWNLOAD_POOL, models, mobile, temporaryChatEnabled } from '$lib/stores';
+	import { user, MODEL_DOWNLOAD_POOL, models, mobile, temporaryChatEnabled, modelLoadStatus } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import { capitalizeFirstLetter, sanitizeResponseContent, splitStream } from '$lib/utils';
 	import { getModels } from '$lib/apis';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import ModelStatusDot from '$lib/components/common/ModelStatusDot.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 	import { goto } from '$app/navigation';
@@ -330,6 +331,7 @@
 													class="rounded-full size-5 flex items-center mr-2"
 												/>
 												{item.label}
+												<ModelStatusDot status={$modelLoadStatus[item.value] ?? $modelLoadStatus[item.model?.info?.base_model_id] ?? item.model?.status} />
 											</Tooltip>
 										</div>
 									</div>

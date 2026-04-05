@@ -44,9 +44,23 @@ class ModelMeta(BaseModel):
 
     capabilities: Optional[dict] = None
 
-    model_config = ConfigDict(extra="allow")
+    # --- Lineage: base model provenance ---
+    hf_repo: Optional[str] = None
+    quant: Optional[str] = None
+    source_type: Optional[str] = None  # "gguf" | "safetensors_converted" | "baked"
+    trainable: Optional[bool] = None
+    pulled_at: Optional[str] = None
 
-    pass
+    # --- Lineage: baked LoRAs (permanently merged) ---
+    bake_info: Optional[dict] = None
+    # Structure: {"base_model": str, "adapters": [{"path": str, "weight": float}],
+    #             "outtype": str, "quant_type": str, "baked_at": str}
+
+    # --- Lineage: active LoRAs (dynamically loaded for testing) ---
+    active_loras: Optional[list] = None
+    # Structure: [{"file": str, "scale": float}]
+
+    model_config = ConfigDict(extra="allow")
 
 
 class Model(Base):

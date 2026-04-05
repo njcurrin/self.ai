@@ -11,7 +11,7 @@
 	import { page } from '$app/stores';
 	import { mobile, showSidebar, knowledge as _knowledge } from '$lib/stores';
 
-	import { updateFileDataContentById, uploadFile } from '$lib/apis/files';
+	import { updateFileDataContentById, uploadFile, getFileById } from '$lib/apis/files';
 	import {
 		addFileToKnowledgeById,
 		getKnowledgeById,
@@ -19,7 +19,8 @@
 		removeFileFromKnowledgeById,
 		resetKnowledgeById,
 		updateFileFromKnowledgeById,
-		updateKnowledgeById
+		updateKnowledgeById,
+		prepareKnowledgeInput
 	} from '$lib/apis/knowledge';
 
 	import { transcribeAudio } from '$lib/apis/audio';
@@ -30,18 +31,23 @@
 	import Files from './KnowledgeBase/Files.svelte';
 	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 
+	import SavePipelineModal from './KnowledgeBase/PipelineModal.svelte';
 	import AddContentMenu from './KnowledgeBase/AddContentMenu.svelte';
 	import AddTextContentModal from './KnowledgeBase/AddTextContentModal.svelte';
 	import AddWebUrlModal from './KnowledgeBase/AddWebUrlModal.svelte';
 
 	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
-	import EllipsisVertical from '$lib/components/icons/EllipsisVertical.svelte';
 	import Drawer from '$lib/components/common/Drawer.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import PipelineCanvas from './KnowledgeBase/PipelineCanvas.svelte';
+	import PipelineJobsPanel from './KnowledgeBase/PipelineJobsPanel.svelte';
+	import { createCuratorJob } from '$lib/apis/curator';
+    import PipelineNode from './KnowledgeBase/PipelineNode.svelte';
 
+	let activeTab: 'files' | 'pipeline' = 'files';
 	let largeScreen = true;
 
 	let pane;
@@ -76,6 +82,24 @@
 	let crawlTempItemId: string | null = null;
 	let lastProcessedPageIndex = 0;
 	let crawlLogs: string[] = [];
+
+	let pipelineCreatedAt = null;
+	let pipelineName = 'Untitled';
+	let showPipelineModal = false;
+	let pipelineNodes = [];
+	let pipelineConnections = [];
+	let pipelineModalMode: 'save' | 'load' = 'save';
+	let pendingRun = false;
+
+
+	$: pipelineConfigs = (knowledge?.files ?? [])
+		.filter(f => (f.name ?? f.meta?.name)?.endsWith(`_pipeline.json`))
+		.map(f => {
+			const raw = f.name ?? f.meta?.name ?? '';
+			const base = raw.length > 37 && raw[36] === '-' ? raw.substring(37) : raw;
+			const suffix = `_${knowledge.name}_pipeline.json`;
+			return { id: f.id, name: base.endsWith(suffix) ? base.slice(0, -suffix.length) : base };
+		});
 
 	let inputFiles = null;
 
@@ -120,6 +144,160 @@
 
 		console.log(file);
 		return file;
+	};
+
+	const createPipelineFile = (content) => {
+		const blob = new Blob([content], { type: 'application/json'})
+		const file = blobToFile(blob, `${pipelineName}_${knowledge.name}_pipeline.json`)
+
+		console.log(file);
+		return file;
+	}; 
+
+	const loadPipelineHandler = async (fileId) => {
+		try {
+			const loadedFile = await getFileById(localStorage.token, fileId);
+		
+			if (loadedFile) {
+				console.log(loadedFile);
+				const loadedContent = JSON.parse(loadedFile.data.content)
+				pipelineName = loadedContent.name;
+				pipelineCreatedAt = loadedContent.created_at;
+				pipelineNodes = loadedContent.nodes;
+				pipelineConnections = loadedContent.connections;
+			} else {
+				toast.error($i18n.t('Failed to load config'))
+				return null;
+			}
+		} catch (error) {
+			toast.error(error)
+		}
+	}
+
+	
+	const savePipelineHandler = async () => {
+		const existing = knowledge?.files.find(f => (f.name ?? f.meta?.name)?.endsWith(`${pipelineName}_${knowledge.name}_pipeline.json`))
+		const now = new Date().toISOString();
+		const createdAt = pipelineCreatedAt ?? now;
+		const pipelineConfig = {
+			created_at: createdAt,
+			updated_at: now,
+			name: pipelineName,
+			nodes: pipelineNodes,
+			connections: pipelineConnections
+		};
+		pipelineCreatedAt = createdAt
+		if (existing) {
+			await updateFileDataContentById(localStorage.token, existing.id, JSON.stringify(pipelineConfig))
+			showPipelineModal = false;
+			if (pendingRun) {
+				pendingRun = false;
+				scheduleHandler();
+			}
+			return;
+		} else {
+		const configFile = createPipelineFile(JSON.stringify(pipelineConfig));
+		
+		if (configFile.size == 0) {
+			toast.error($i18n.t('You cannot save an empty pipeline'))
+			return null;
+		}
+		try {
+		const uploadedPipeline = await uploadFile(localStorage.token, configFile);
+
+		if (uploadedPipeline) {
+			console.log(uploadedPipeline);
+			await addFileHandler(uploadedPipeline.id)
+			showPipelineModal = false;
+		} else {
+			toast.error($i18n.t('Failed to save config'))
+			showPipelineModal = false;
+			return null;
+		}
+
+		}
+		catch (e) {
+			toast.error(e);
+			showPipelineModal = false;
+		}
+
+		if (pendingRun) {
+			pendingRun = false;
+			scheduleHandler();
+		}
+	};
+	};
+
+	const scheduleHandler = async () => {
+		const source = pipelineNodes.find(n => n.type === 'source');
+		const sink = pipelineNodes.find(n => n.type === 'sink');
+
+		if (!knowledge) return;
+		if (pipelineName === 'Untitled') {
+			pendingRun = true;
+			pipelineModalMode = 'save';
+			showPipelineModal = true;
+			return;
+		}
+
+		if (!source || !sink) {
+			toast.error('Pipeline must have a Source and a Sink');
+			return;
+		}
+
+		// Walk connections from source to sink in order
+		const connMap = Object.fromEntries(pipelineConnections.map(c => [c.fromId, c.toId]));
+		const stages = [];
+		let currentId = source.id;
+
+		while (connMap[currentId] && connMap[currentId] !== sink.id) {
+			currentId = connMap[currentId];
+			const node = pipelineNodes.find(n => n.id === currentId);
+			if (!node || node.type !== 'transform' || !node.config?.stage_type) {
+				toast.error(`Node "${node?.label ?? currentId}" is missing a stage type`);
+				return;
+			}
+			const params = Object.fromEntries(
+				Object.entries(node.config.params ?? {}).filter(([_, v]) => v !== null)
+			);
+			stages.push({ type: node.config.stage_type, params });
+		}
+
+		if (!connMap[source.id]) {
+			toast.error('Source node is not connected');
+			return;
+		}
+
+		const textField = source.config?.text_field || 'text';
+		const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+		const outputPath = `/workspace/ui-data/uploads/${knowledge.id}/output/${pipelineName}`;
+
+		let inputPath: string;
+		let outputFormat: string = 'jsonl';
+		try {
+			const prepared = await prepareKnowledgeInput(localStorage.token, knowledge.id);
+			toast.info(`Prepared ${prepared.file_count} files for curation`);
+			inputPath = prepared.input_path;
+			outputFormat = prepared.output_format ?? 'jsonl';
+		} catch (e) {
+			toast.error(typeof e === 'string' ? e : (e?.detail ?? 'Failed to prepare input'));
+			return;
+		}
+
+		try {
+			const job = await createCuratorJob(localStorage.token, {
+				name: `${pipelineName}-${timestamp}`,
+				input_path: inputPath,
+				output_path: outputPath,
+				text_field: textField,
+				output_format: outputFormat,
+				stages,
+				scheduled_for: null
+			});
+			toast.success(`Job queued: ${job.job_id}`);
+		} catch (e) {
+			toast.error(typeof e === 'string' ? e : (e?.detail ?? 'Failed to queue job'));
+		}
 	};
 
 	const uploadFileHandler = async (file) => {
@@ -881,6 +1059,21 @@
 	}}
 />
 
+<SavePipelineModal
+	bind:show={showPipelineModal}
+	title="Set the name of the pipeline"
+	mode={pipelineModalMode}
+	{pipelineConfigs}
+	on:confirm={(e) => {
+		if (pipelineModalMode === 'load') {
+			loadPipelineHandler(e.detail.fileId)
+		} else if (pipelineModalMode === 'save'){
+			pipelineName = e.detail.name;
+			savePipelineHandler();
+		}
+	}}
+/>
+
 
 <input
 	id="files-input"
@@ -961,8 +1154,73 @@
 					</div>
 				</div>
 			</div>
+
+			<div class="flex items-center gap-1 px-1 mt-1 relative">
+				<button
+					class="px-3 py-1 text-sm font-medium rounded-lg transition {activeTab === 'files'
+						? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
+						: 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850'}"
+					on:click={() => {
+						activeTab = 'files';
+					}}
+				>
+					{$i18n.t('Files')}
+				</button>
+				<button
+					class="px-3 py-1 text-sm font-medium rounded-lg transition {activeTab === 'pipeline'
+						? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
+						: 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850'}"
+					on:click={() => {
+						activeTab = 'pipeline';
+					}}
+				>
+					{$i18n.t('Pipeline')}
+				</button>
+				{#if activeTab === 'pipeline'}
+				<span class="absolute left-1/2 -translate-x-1/2 text-xs font-medium text-gray-500 dark:text-gray-400 pointer-events-none">
+					{pipelineName}
+				</span>
+				<div class="ml-auto flex items-center gap-1">
+					<button
+						class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
+						on:click={() => {
+							pipelineModalMode = 'load'
+							showPipelineModal = true;
+						}}
+					>
+						{$i18n.t('Load')}
+					</button>
+					<button
+						class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
+						on:click={() => {
+							if (pipelineName !== 'Untitled') {
+								savePipelineHandler();
+							} else {
+								pendingRun = false;
+								pipelineModalMode = 'save';
+								showPipelineModal = true;
+							}
+						}}
+					>
+						{$i18n.t('Save')}
+					</button>
+					<button
+						class="bg-violet-600 hover:bg-violet-700 text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
+						on:click={scheduleHandler}
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-3">
+							<path fill-rule="evenodd" d="M4 1.75a.75.75 0 0 1 1.5 0V3h5V1.75a.75.75 0 0 1 1.5 0V3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2V1.75ZM4.5 7a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7Zm0 2.5a.5.5 0 0 0 0 1h4a.5.5 0 0 0 0-1h-4Z" clip-rule="evenodd" />
+						</svg>
+						<span class="text-xs">
+							{$i18n.t('Queue')}
+						</span>
+					</button>
+				</div>
+				{/if}
+			</div>
 		</div>
 
+		{#if activeTab === 'files'}
 		<div class="flex flex-row flex-1 h-full max-h-full pb-2.5 gap-3">
 			{#if largeScreen}
 				<div class="flex-1 flex justify-start w-full h-full max-h-full">
@@ -1182,6 +1440,12 @@
 				</div>
 			</div>
 		</div>
+		{:else if activeTab === 'pipeline'}
+		<div style="height: calc(100vh - 270px);">
+			<PipelineCanvas nodes={pipelineNodes} connections={pipelineConnections} on:configchange={(e) => { pipelineNodes = e.detail.nodes; e.detail.nodes; pipelineConnections = e.detail.connections; }}/>
+		</div>
+		<PipelineJobsPanel pipelineName={pipelineName} token={localStorage.token} />
+		{/if}
 	{:else}
 		<Spinner />
 	{/if}
