@@ -19,6 +19,7 @@
 	import ChartBar from '../icons/ChartBar.svelte';
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
 	import Evaluations from './Settings/Evaluations.svelte';
+	import Benchmarks from './Settings/Benchmarks.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -132,6 +133,23 @@
 				<DocumentChartBar />
 			</div>
 			<div class=" self-center">{$i18n.t('Evaluations')}</div>
+		</button>
+
+		<button
+			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
+			'benchmarks'
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				selectedTab = 'benchmarks';
+			}}
+		>
+			<div class=" self-center mr-2">
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+					<path d="M7.25 3.688a8.035 8.035 0 0 0-4.87 4.87.75.75 0 1 0 1.413.504 6.535 6.535 0 0 1 3.96-3.96.75.75 0 0 0-.503-1.414ZM8 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM.25 8a7.75 7.75 0 1 1 15.5 0A7.75 7.75 0 0 1 .25 8Zm7-6.25a.75.75 0 0 0-1.5 0v.75a.75.75 0 0 0 1.5 0V1.75ZM7 13.5a.75.75 0 0 0-1.5 0v.75a.75.75 0 0 0 1.5 0v-.75ZM14.25 7.25a.75.75 0 0 0 0 1.5H15a.75.75 0 0 0 0-1.5h-.75ZM1 7.25a.75.75 0 0 0 0 1.5h.75a.75.75 0 0 0 0-1.5H1Z" />
+				</svg>
+			</div>
+			<div class=" self-center">{$i18n.t('Benchmarks')}</div>
 		</button>
 
 		<button
@@ -346,6 +364,8 @@
 			<Models />
 		{:else if selectedTab === 'evaluations'}
 			<Evaluations />
+		{:else if selectedTab === 'benchmarks'}
+			<Benchmarks />
 		{:else if selectedTab === 'documents'}
 			<Documents
 				on:save={async () => {

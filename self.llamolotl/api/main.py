@@ -1403,7 +1403,12 @@ async def pull_model(req: ModelPullRequest):
 
                 # Last resort: check HF cache for this specific repo's incomplete files
                 if current_size == 0:
-                    hf_cache = Path.home() / ".cache" / "huggingface" / "hub"
+                    # Respect HF_HOME env var (set in docker-compose as /workspace/hf-hub)
+                    hf_home = os.environ.get("HF_HOME")
+                    if hf_home:
+                        hf_cache = Path(hf_home) / "hub"
+                    else:
+                        hf_cache = Path.home() / ".cache" / "huggingface" / "hub"
                     # HF cache uses a sanitized repo name
                     cache_repo_dir = hf_cache / ("models--" + repo_id.replace("/", "--"))
                     if cache_repo_dir.exists():

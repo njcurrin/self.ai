@@ -727,6 +727,46 @@ CURATOR_API_CONFIGS = PersistentConfig(
 )
 
 ####################################
+# LM-EVAL
+####################################
+
+ENABLE_LM_EVAL_API = PersistentConfig(
+    "ENABLE_LM_EVAL_API",
+    "lm_eval.enable",
+    os.environ.get("ENABLE_LM_EVAL_API", "False").lower() == "true",
+)
+
+LM_EVAL_BASE_URLS = os.environ.get("LM_EVAL_BASE_URLS", "")
+if LM_EVAL_BASE_URLS == "":
+    LM_EVAL_BASE_URLS = os.environ.get(
+        "LM_EVAL_BASE_URL", "http://self-lm-eval:8096"
+    )
+LM_EVAL_BASE_URLS = [url.strip() for url in LM_EVAL_BASE_URLS.split(";")]
+LM_EVAL_BASE_URLS = PersistentConfig(
+    "LM_EVAL_BASE_URLS", "lm_eval.base_urls", LM_EVAL_BASE_URLS
+)
+
+####################################
+# BIGCODE-EVAL
+####################################
+
+ENABLE_BIGCODE_EVAL_API = PersistentConfig(
+    "ENABLE_BIGCODE_EVAL_API",
+    "bigcode_eval.enable",
+    os.environ.get("ENABLE_BIGCODE_EVAL_API", "False").lower() == "true",
+)
+
+BIGCODE_EVAL_BASE_URLS = os.environ.get("BIGCODE_EVAL_BASE_URLS", "")
+if BIGCODE_EVAL_BASE_URLS == "":
+    BIGCODE_EVAL_BASE_URLS = os.environ.get(
+        "BIGCODE_EVAL_BASE_URL", "http://self-bigcode-eval:8094"
+    )
+BIGCODE_EVAL_BASE_URLS = [url.strip() for url in BIGCODE_EVAL_BASE_URLS.split(";")]
+BIGCODE_EVAL_BASE_URLS = PersistentConfig(
+    "BIGCODE_EVAL_BASE_URLS", "bigcode_eval.base_urls", BIGCODE_EVAL_BASE_URLS
+)
+
+####################################
 # ICEBERG
 ####################################
 

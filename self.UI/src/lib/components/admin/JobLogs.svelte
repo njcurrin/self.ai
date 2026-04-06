@@ -2,9 +2,11 @@
 	import { getContext, onMount } from 'svelte';
 	import Schedule from './Schedule.svelte';
 	import CalendarView from './JobLogs/CalendarView.svelte';
+	import WindowsView from './JobLogs/WindowsView.svelte';
+	import QueueMonitor from './JobLogs/QueueMonitor.svelte';
 	import { getAllScheduledJobs, type ScheduledJob } from '$lib/apis/schedule';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	let selectedTab = 'schedule';
 
@@ -50,6 +52,34 @@
 		</button>
 
 		<button
+			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab === 'windows'
+				? ''
+				: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => { selectedTab = 'windows'; }}
+		>
+			<div class="self-center mr-2">
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+					<path d="M2 2.75A.75.75 0 0 1 2.75 2h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 2.75ZM2 8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 8Zm.75 4.5a.75.75 0 0 0 0 1.5h10.5a.75.75 0 0 0 0-1.5H2.75Z" />
+				</svg>
+			</div>
+			<div class="self-center">{$i18n.t('Windows')}</div>
+		</button>
+
+		<button
+			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab === 'queue'
+				? ''
+				: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => { selectedTab = 'queue'; }}
+		>
+			<div class="self-center mr-2">
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+					<path d="M3 4.75a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM6.25 3a.75.75 0 0 0 0 1.5h7a.75.75 0 0 0 0-1.5h-7ZM6.25 7.25a.75.75 0 0 0 0 1.5h7a.75.75 0 0 0 0-1.5h-7ZM6.25 11.5a.75.75 0 0 0 0 1.5h7a.75.75 0 0 0 0-1.5h-7ZM4 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM3 13.25a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" />
+				</svg>
+			</div>
+			<div class="self-center">{$i18n.t('Queue')}</div>
+		</button>
+
+		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab === 'job-logs'
 				? ''
 				: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
@@ -70,6 +100,10 @@
 			<Schedule />
 		{:else if selectedTab === 'schedule'}
 			<CalendarView {jobs} />
+		{:else if selectedTab === 'windows'}
+			<WindowsView />
+		{:else if selectedTab === 'queue'}
+			<QueueMonitor />
 		{/if}
 	</div>
 </div>
