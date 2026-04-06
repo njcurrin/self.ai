@@ -44,7 +44,7 @@
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import PipelineCanvas from './KnowledgeBase/PipelineCanvas.svelte';
 	import PipelineJobsPanel from './KnowledgeBase/PipelineJobsPanel.svelte';
-	import { createCuratorJob } from '$lib/apis/curator';
+	import { queueCuratorJob } from '$lib/apis/curator';
     import PipelineNode from './KnowledgeBase/PipelineNode.svelte';
 
 	let activeTab: 'files' | 'pipeline' = 'files';
@@ -285,16 +285,18 @@
 		}
 
 		try {
-			const job = await createCuratorJob(localStorage.token, {
-				name: `${pipelineName}-${timestamp}`,
-				input_path: inputPath,
-				output_path: outputPath,
-				text_field: textField,
-				output_format: outputFormat,
-				stages,
-				scheduled_for: null
+			const job = await queueCuratorJob(localStorage.token, {
+				pipeline_id: knowledge.id,
+				pipeline_config: {
+					name: `${pipelineName}-${timestamp}`,
+					input_path: inputPath,
+					output_path: outputPath,
+					text_field: textField,
+					output_format: outputFormat,
+					stages,
+				}
 			});
-			toast.success(`Job queued: ${job.job_id}`);
+			toast.success(`Job queued: ${job.id}`);
 		} catch (e) {
 			toast.error(typeof e === 'string' ? e : (e?.detail ?? 'Failed to queue job'));
 		}

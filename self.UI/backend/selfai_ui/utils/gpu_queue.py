@@ -38,6 +38,7 @@ _app_state = None
 
 POLL_INTERVAL = 30  # seconds
 LOCK_TIMEOUT = 60   # seconds -- must be > POLL_INTERVAL
+STALE_RUNNING_TIMEOUT = 24 * 3600  # seconds before a stuck "running" job is auto-failed
 
 
 ####################################
@@ -111,6 +112,26 @@ async def _sync_running_jobs() -> None:
     from selfai_ui.routers.evaluations import _sync_running_jobs as _sync_eval
     await _sync_eval()
     await _sync_running_curator_jobs()
+    _expire_stale_training_jobs()
+
+
+def _expire_stale_training_jobs() -> None:
+    """Mark training jobs stuck in 'running' for too long as failed."""
+    stale_before = int(time.time()) - STALE_RUNNING_TIMEOUT
+    with get_db() as db:
+        rows = (
+            db.query(TrainingJob)
+            .filter(TrainingJob.status == "running", TrainingJob.updated_at < stale_before)
+            .all()
+        )
+        for row in rows:
+            age_h = (int(time.time()) - row.updated_at) / 3600
+            log.warning(f"Training job {row.id} stuck running for {age_h:.1f}h — marking failed")
+        if rows:
+            db.query(TrainingJob).filter(
+                TrainingJob.status == "running", TrainingJob.updated_at < stale_before
+            ).update({"status": "failed", "updated_at": int(time.time())})
+            db.commit()
 
 
 async def _sync_running_curator_jobs() -> None:
@@ -148,6 +169,17 @@ async def _sync_running_curator_jobs() -> None:
                 remote = resp.json()
         except Exception as e:
             log.error(f"Failed to check curator job {job.curator_job_id}: {e}")
+            stale_before = int(time.time()) - STALE_RUNNING_TIMEOUT
+            if job.updated_at < stale_before:
+                age_h = (int(time.time()) - job.updated_at) / 3600
+                log.warning(f"Curator job {job.id} unreachable and stuck for {age_h:.1f}h — marking failed")
+                CuratorJobs.update_job_status(
+                    id=job.id,
+                    update=CuratorJobStatusUpdate(
+                        status="failed",
+                        error_message=f"Worker unreachable for >{STALE_RUNNING_TIMEOUT//3600}h: {e}",
+                    ),
+                )
             continue
 
         remote_status = remote.get("status", "")
@@ -168,7 +200,8 @@ async def _sync_running_curator_jobs() -> None:
 
 
 async def _promote_scheduled_jobs() -> None:
-    """Move due scheduled -> queued for all job types. Runs every cycle."""
+    """Move due scheduled -> queued, and pending (no schedule) -> queued for all job types."""
+    # Scheduled jobs whose time has come
     for job in EvalJobs.get_due_scheduled_jobs():
         log.info(f"GPU queue: eval job {job.id} due, promoting to queued")
         EvalJobs.update_job_status(id=job.id, update=EvalJobStatusUpdate(status="queued"))
@@ -180,6 +213,25 @@ async def _promote_scheduled_jobs() -> None:
     for job in CuratorJobs.get_due_scheduled_jobs():
         log.info(f"GPU queue: curator job {job.id} due, promoting to queued")
         CuratorJobs.update_job_status(id=job.id, update=CuratorJobStatusUpdate(status="queued"))
+
+    # Unscheduled pending jobs — promote to queued so the window dispatcher can pick them up
+    with get_db() as db:
+        pending_eval = db.query(EvalJob).filter_by(status="pending").all()
+        for row in pending_eval:
+            log.info(f"GPU queue: eval job {row.id} pending with no schedule, promoting to queued")
+            EvalJobs.update_job_status(id=row.id, update=EvalJobStatusUpdate(status="queued"))
+
+        pending_training = db.query(TrainingJob).filter_by(status="pending").all()
+        for row in pending_training:
+            log.info(f"GPU queue: training job {row.id} pending with no schedule, promoting to queued")
+            TrainingJobs.update_job_status(id=row.id, update=TrainingJobStatusUpdate(status="queued"))
+
+        pending_curator = db.query(CuratorJob).filter(
+            CuratorJob.status == "pending", CuratorJob.scheduled_for == None  # noqa: E711
+        ).all()
+        for row in pending_curator:
+            log.info(f"GPU queue: curator job {row.id} pending with no schedule, promoting to queued")
+            CuratorJobs.update_job_status(id=row.id, update=CuratorJobStatusUpdate(status="queued"))
 
 
 ####################################
@@ -517,17 +569,38 @@ async def _dispatch_window_jobs(window: JobWindowWithSlots) -> None:
 ####################################
 
 
-async def process_gpu_queue_v2() -> None:
-    """Multi-node-safe, window-aware GPU job dispatcher. Polls every 30s."""
-    lock = RedisLock(
+def _make_lock() -> RedisLock:
+    return RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,
         lock_name="selfai:gpu_queue_lock",
         timeout_secs=LOCK_TIMEOUT,
     )
 
+
+async def process_gpu_queue_v2() -> None:
+    """Multi-node-safe, window-aware GPU job dispatcher. Polls every 30s.
+
+    The RedisLock prevents double-dispatch in multi-node deployments. If Redis
+    is unavailable the lock is skipped and dispatch runs anyway — safe for
+    single-node setups and still correct for multi-node (DB status checks
+    prevent actual duplicate work).
+    """
+    import redis.exceptions
+
+    lock = _make_lock()
+
     while True:
+        lock_acquired = False
         try:
-            if not lock.aquire_lock():
+            try:
+                lock_acquired = bool(lock.aquire_lock())
+            except redis.exceptions.ConnectionError as e:
+                log.warning(f"GPU queue: Redis unavailable, running without lock: {e}")
+                lock = _make_lock()
+                lock_acquired = True  # proceed anyway
+
+            if not lock_acquired:
+                # Another node holds the lock — skip this cycle
                 await asyncio.sleep(POLL_INTERVAL)
                 continue
 
@@ -549,7 +622,7 @@ async def process_gpu_queue_v2() -> None:
                     pass  # Lock expires naturally after LOCK_TIMEOUT seconds
 
         except Exception as e:
-            log.error(f"GPU queue lock error: {e}", exc_info=True)
+            log.error(f"GPU queue error: {e}", exc_info=True)
 
         await asyncio.sleep(POLL_INTERVAL)
 

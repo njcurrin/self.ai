@@ -161,6 +161,8 @@ export const approveCuratorJob = (token: string = '', jobId: string) =>
 export const cancelCuratorJob = (token: string = '', jobId: string) =>
 	curatorFetch<any>(token, `/api/jobs/${jobId}/cancel`, { method: 'POST', body: '{}' });
 
+// Legacy: direct-to-curator job creation (used internally by daemon proxy)
+// Frontend should use queueCuratorJob() instead.
 export const createCuratorJob = async (token: string = '', job: CurationJobCreate) => {
 	const res = await fetch(`${CURATOR_API_BASE_URL}/api/jobs`, {
 		method: 'POST',
@@ -178,3 +180,16 @@ export const createCuratorJob = async (token: string = '', job: CurationJobCreat
 
 	return res;
 };
+
+type QueueCuratorJobRequest = {
+	pipeline_id: string;
+	pipeline_config: CurationJobCreate;
+	scheduled_for?: number | null;
+	priority?: string;
+};
+
+export const queueCuratorJob = (token: string = '', req: QueueCuratorJobRequest) =>
+	curatorFetch<any>(token, '/queue', {
+		method: 'POST',
+		body: JSON.stringify(req)
+	});

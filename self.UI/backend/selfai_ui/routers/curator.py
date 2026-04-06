@@ -20,6 +20,11 @@ from selfai_ui.env import (
     AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST,
 )
 from selfai_ui.constants import ERROR_MESSAGES
+from selfai_ui.models.curator_jobs import (
+    CuratorJobs,
+    CuratorJobForm,
+    CuratorJobModel,
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS.get("CURATOR", logging.INFO))
@@ -301,6 +306,45 @@ async def get_stage_detail(
         f"{url}/api/text/{category}/stages/{stage_id}", raise_on_error=True
     )
     return result
+
+
+##########################################
+# Queue: create a CuratorJob DB record
+# for the GPU-queue daemon to dispatch
+##########################################
+
+
+class QueueCuratorJobForm(BaseModel):
+    pipeline_id: str
+    pipeline_config: dict  # full config blob sent to curator at dispatch time
+    scheduled_for: Optional[int] = None
+    priority: str = "normal"
+
+
+@router.post("/queue", response_model=Optional[CuratorJobModel])
+async def queue_curator_job(
+    form_data: QueueCuratorJobForm,
+    user=Depends(get_verified_user),
+):
+    """Create a CuratorJob record. The GPU-queue daemon dispatches it
+    to the curator container when a window is active."""
+    job = CuratorJobs.insert_new_job(
+        user_id=user.id,
+        form_data=CuratorJobForm(
+            pipeline_id=form_data.pipeline_id,
+            scheduled_for=form_data.scheduled_for,
+            priority=form_data.priority,
+        ),
+    )
+    if not job:
+        raise HTTPException(status_code=400, detail="Failed to create curator job")
+
+    # Store the full pipeline config so the daemon can POST it to curator later
+    CuratorJobs.update_job_meta(job.id, {"pipeline_config": form_data.pipeline_config})
+
+    # Re-fetch to include the meta
+    job = CuratorJobs.get_job_by_id(job.id)
+    return job
 
 
 ##########################################

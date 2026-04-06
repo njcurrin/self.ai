@@ -9,7 +9,14 @@ class RedisLock:
         self.lock_id = str(uuid.uuid4())
         self.timeout_secs = timeout_secs
         self.lock_obtained = False
-        self.redis = redis.Redis.from_url(redis_url, decode_responses=True)
+        self.redis = redis.Redis.from_url(
+            redis_url,
+            decode_responses=True,
+            socket_keepalive=True,
+            socket_connect_timeout=5,
+            health_check_interval=10,
+            retry_on_timeout=True,
+        )
 
     def aquire_lock(self):
         # nx=True will only set this key if it _hasn't_ already been set
@@ -26,7 +33,7 @@ class RedisLock:
 
     def release_lock(self):
         lock_value = self.redis.get(self.lock_name)
-        if lock_value and lock_value.decode("utf-8") == self.lock_id:
+        if lock_value and lock_value == self.lock_id:
             self.redis.delete(self.lock_name)
 
 
