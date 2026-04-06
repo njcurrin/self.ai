@@ -21,15 +21,18 @@ def db_session():
     import selfai_ui.models.job_windows as jw_module
     import selfai_ui.utils.gpu_queue as gq_module
     import selfai_ui.models.benchmark_config as bc_module
+    import selfai_ui.models.curator_jobs as cj_module
     original_db = db_module.get_db
     original_jw = jw_module.get_db
     original_gq = gq_module.get_db
     original_bc = bc_module.get_db
+    original_cj = cj_module.get_db
 
-    db_module.get_db = _mock_get_db   # ← these four are missing
+    db_module.get_db = _mock_get_db
     jw_module.get_db = _mock_get_db
     gq_module.get_db = _mock_get_db
     bc_module.get_db = _mock_get_db
+    cj_module.get_db = _mock_get_db
 
     yield session
 
@@ -37,6 +40,6 @@ def db_session():
     jw_module.get_db = original_jw
     gq_module.get_db = original_gq
     bc_module.get_db = original_bc
+    cj_module.get_db = original_cj
     session.close()
     Base.metadata.drop_all(engine)
-    

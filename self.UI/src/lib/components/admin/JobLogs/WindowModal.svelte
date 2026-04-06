@@ -47,35 +47,40 @@
 			return '';
 		}
 	}
-
+	let _lastInitKey = ''
 	$: if (show) {
-		if (window) {
-			name = window.name;
-			notes = window.notes ?? '';
-			preferredJobType = window.preferred_job_type;
-			enabled = window.enabled;
-			slots = window.slots.map((s) => ({ ...s }));
-			const s = toLocalInputs(window.start_at);
-			const e = toLocalInputs(window.end_at);
-			startDate = s.date;
-			startTime = s.time;
-			endDate = e.date;
-			endTime = e.time;
-		} else {
-			name = '';
-			notes = '';
-			preferredJobType = 'training';
-			enabled = true;
-			slots = [];
-			const now = new Date();
-			startDate = now.toLocaleDateString('sv');
-			startTime = now.toTimeString().slice(0, 5);
-			const later = new Date(now.getTime() + 2 * 3600 * 1000);
-			endDate = later.toLocaleDateString('sv');
-			endTime = later.toTimeString().slice(0, 5);
+		const key = `${show}::${window?.id ?? `new`}`
+		if (key !== _lastInitKey) {
+			_lastInitKey = key
+			if (window) {
+				name = window.name;
+				notes = window.notes ?? '';
+				preferredJobType = window.preferred_job_type;
+				enabled = window.enabled;
+				slots = window.slots.map((s) => ({ ...s }));
+				const s = toLocalInputs(window.start_at);
+				const e = toLocalInputs(window.end_at);
+				startDate = s.date;
+				startTime = s.time;
+				endDate = e.date;
+				endTime = e.time;
+			} else {
+				name = '';
+				notes = '';
+				preferredJobType = 'training';
+				enabled = true;
+				slots = [];
+				const now = new Date();
+				startDate = now.toLocaleDateString('sv');
+				startTime = now.toTimeString().slice(0, 5);
+				const later = new Date(now.getTime() + 2 * 3600 * 1000);
+				endDate = later.toLocaleDateString('sv');
+				endTime = later.toTimeString().slice(0, 5);
+			}
 		}
 		error = '';
 	}
+	$: if (!show) _lastInitKey = '';
 
 	async function save() {
 		error = '';

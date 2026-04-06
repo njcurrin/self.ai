@@ -103,8 +103,8 @@ def _window_status(w: JobWindow) -> str:
     now = int(time.time())
     if w.start_at > now:
         return "upcoming"
-    if w.enabled and w.start_at <= now <= w.end_at:
-        return "active"
+    if w.start_at <= now <= w.end_at:
+        return "active" if w.enabled else "disabled"
     return "completed"
 
 

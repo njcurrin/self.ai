@@ -141,3 +141,8 @@ def test_delete_window(db_session):
     delete = JobWindows.delete_window(result.id)
     assert delete == True
     assert JobWindows.get_window_by_id(result.id) == None
+def test_window_status_disabled():
+    # A disabled window inside its time range should return "disabled", not "completed"
+    now = int(time.time())
+    w = JobWindow(start_at=now - 60, end_at=now + 3600, enabled=False)
+    assert _window_status(w) == "disabled"

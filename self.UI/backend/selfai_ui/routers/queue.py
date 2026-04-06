@@ -68,7 +68,7 @@ def _curator_to_item(job: CuratorJobModel) -> QueueItem:
     )
 
 
-@router.get("", response_model=list[QueueItem])
+@router.get("/queue", response_model=list[QueueItem])
 async def get_queue(user=Depends(get_admin_user)):
     """Return all jobs in pending/queued/running/paused across all job types."""
     items: list[QueueItem] = []
