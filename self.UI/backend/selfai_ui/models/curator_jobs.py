@@ -39,6 +39,10 @@ class CuratorJob(Base):
     error_message = Column(Text, nullable=True)
     meta = Column(JSON, nullable=True)
 
+    # NEW — dataset linking
+    dataset_name = Column(Text, nullable=True)
+    created_knowledge_id = Column(Text, nullable=True)
+
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
 
@@ -60,6 +64,10 @@ class CuratorJobModel(BaseModel):
     error_message: Optional[str] = None
     meta: Optional[dict] = None
 
+    # NEW
+    dataset_name: Optional[str] = None
+    created_knowledge_id: Optional[str] = None
+
     created_at: int
     updated_at: int
 
@@ -68,6 +76,7 @@ class CuratorJobForm(BaseModel):
     pipeline_id: str
     scheduled_for: Optional[int] = None
     priority: str = "normal"
+    dataset_name: Optional[str] = None  # NEW
 
 
 class CuratorJobStatusUpdate(BaseModel):
@@ -96,6 +105,7 @@ class CuratorJobTable:
                     "status": initial_status,
                     "priority": form_data.priority,
                     "scheduled_for": form_data.scheduled_for,
+                    "dataset_name": form_data.dataset_name,  # NEW
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -161,6 +171,19 @@ class CuratorJobTable:
         except Exception as e:
             log.exception(e)
             return None
+
+    # NEW
+    def update_created_knowledge_id(self, id: str, knowledge_id: str) -> bool:
+        try:
+            with get_db() as db:
+                db.query(CuratorJob).filter_by(id=id).update(
+                    {"created_knowledge_id": knowledge_id, "updated_at": int(time.time())}
+                )
+                db.commit()
+                return True
+        except Exception as e:
+            log.exception(e)
+            return False
 
     def get_jobs_by_status(self, status: str) -> list[CuratorJobModel]:
         try:
