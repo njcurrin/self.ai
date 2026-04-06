@@ -97,9 +97,26 @@
 				.pipeThrough(splitStream('\n'))
 				.getReader();
 
+			// Show indeterminate progress immediately while backend prepares (model_info call etc.)
+			MODEL_DOWNLOAD_POOL.set({
+				...$MODEL_DOWNLOAD_POOL,
+				[sanitizedModelTag]: {
+					abortController: controller,
+					reader,
+					done: false,
+					pullProgress: -1,
+					digest: 'Starting...',
+					downloadedBytes: 0
+				}
+			});
+
 			// Check first message for file selection
 			const { value: firstValue, done: firstDone } = await reader.read();
-			if (firstDone) return;
+			if (firstDone) {
+				delete $MODEL_DOWNLOAD_POOL[sanitizedModelTag];
+				MODEL_DOWNLOAD_POOL.set({ ...$MODEL_DOWNLOAD_POOL });
+				return;
+			}
 
 			let lines = firstValue.split('\n');
 			for (const line of lines) {
@@ -107,35 +124,21 @@
 					let data = JSON.parse(line);
 
 					if (data.error) {
+						delete $MODEL_DOWNLOAD_POOL[sanitizedModelTag];
+						MODEL_DOWNLOAD_POOL.set({ ...$MODEL_DOWNLOAD_POOL });
 						toast.error(data.error);
 						return;
 					}
 
 					if (data.status === 'select_file') {
+						delete $MODEL_DOWNLOAD_POOL[sanitizedModelTag];
+						MODEL_DOWNLOAD_POOL.set({ ...$MODEL_DOWNLOAD_POOL });
 						availableFiles = data.files;
 						showFileSelector = true;
 						return;
 					}
-
-					// First message was a status update, continue normally
-					if (data.status) {
-						toast.success(data.status);
-					}
 				}
 			}
-
-			MODEL_DOWNLOAD_POOL.set({
-				...$MODEL_DOWNLOAD_POOL,
-				[sanitizedModelTag]: {
-					...$MODEL_DOWNLOAD_POOL[sanitizedModelTag],
-					abortController: controller,
-					reader,
-					done: false,
-					pullProgress: 0,
-					digest: '',
-					downloadedBytes: 0
-				}
-			});
 
 			while (true) {
 				try {
@@ -239,6 +242,7 @@
 	const cancelDownloadInspect = () => {
 		showDownloadConfirm = false;
 		downloadInfo = null;
+		selectedFilename = null;
 	};
 
 	const selectFileAndPull = async (filename: string) => {
@@ -454,6 +458,21 @@
 												{downloadInfo.files[0].size > 0 ? (downloadInfo.files[0].size / 1024 ** 3).toFixed(2) + ' GB' : '?'}
 											</span>
 										</div>
+									{:else if downloadInfo.type === 'gguf'}
+										<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">{$i18n.t('Select a file to download:')}</div>
+										<div class="max-h-48 overflow-y-auto space-y-0.5">
+											{#each downloadInfo.files as file}
+												<button
+													class="w-full flex justify-between items-center text-xs py-1.5 px-2 rounded transition text-left {selectedFilename === file.name ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'}"
+													on:click={() => { selectedFilename = file.name; }}
+												>
+													<span class="truncate mr-2">{file.name}</span>
+													<span class="flex-shrink-0">
+														{file.size > 0 ? (file.size / 1024 ** 3).toFixed(2) + ' GB' : '?'}
+													</span>
+												</button>
+											{/each}
+										</div>
 									{:else}
 										<details>
 											<summary class="cursor-pointer text-sm dark:text-gray-200 flex justify-between">
@@ -482,8 +501,9 @@
 											{$i18n.t('Cancel')}
 										</button>
 										<button
-											class="px-3 py-1 text-xs rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition"
+											class="px-3 py-1 text-xs rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
 											on:click={confirmAndPull}
+											disabled={!singleFile && downloadInfo.type === 'gguf' && !selectedFilename}
 										>
 											{$i18n.t('Download')}
 										</button>

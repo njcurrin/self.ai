@@ -3,10 +3,57 @@
 	import isoWeek from 'dayjs/plugin/isoWeek';
 	import { onMount } from 'svelte';
 	import type { ScheduledJob } from '$lib/apis/schedule';
+	import type { JobWindow } from '$lib/apis/windows';
+	import { listWindows } from '$lib/apis/windows';
+	import WindowModal from './WindowModal.svelte';
 
 	dayjs.extend(isoWeek);
 
 	export let jobs: ScheduledJob[] = [];
+
+	// ── Window overlay state ──────────────────────────────────────────────────
+	let windows: JobWindow[] = [];
+	let showWindowModal = false;
+	let editingWindow: JobWindow | null = null;
+
+	function openWindowEdit(w: JobWindow, e: Event) {
+		e.stopPropagation();
+		editingWindow = w;
+		showWindowModal = true;
+	}
+
+	function handleWindowSaved(event: CustomEvent<JobWindow>) {
+		const saved = event.detail;
+		windows = windows.map((w) => (w.id === saved.id ? saved : w));
+	}
+
+	// A window "covers" a day if its range overlaps any part of that day
+	function windowCoversDay(w: JobWindow, day: dayjs.Dayjs): boolean {
+		const dayStart = day.startOf('day').unix();
+		const dayEnd = day.endOf('day').unix();
+		return w.start_at < dayEnd && w.end_at > dayStart;
+	}
+
+	// A window "covers" an hour slot if its range overlaps that hour
+	function windowCoversHour(w: JobWindow, day: dayjs.Dayjs, hour: number): boolean {
+		const slotStart = day.hour(hour).startOf('hour').unix();
+		const slotEnd = slotStart + 3600;
+		return w.start_at < slotEnd && w.end_at > slotStart;
+	}
+
+	const windowBg = (w: JobWindow) =>
+		w.status === 'active'
+			? 'bg-green-400/10 dark:bg-green-400/8'
+			: w.status === 'upcoming' && w.enabled
+			? 'bg-blue-400/10 dark:bg-blue-400/8'
+			: '';
+
+	const windowBarColor = (w: JobWindow) =>
+		w.status === 'active'
+			? 'bg-green-500/70 text-green-900 dark:text-green-100'
+			: w.status === 'upcoming' && w.enabled
+			? 'bg-blue-500/60 text-blue-900 dark:text-blue-100'
+			: 'bg-gray-300/40 text-gray-600 dark:text-gray-400';
 
 	type ViewMode = 'month' | 'week' | 'day';
 	let viewMode: ViewMode = 'month';
@@ -132,11 +179,16 @@
 		selectedSlot = { date, hour };
 	};
 
-	onMount(() => {
+	onMount(async () => {
 		if (viewMode === 'week' || viewMode === 'day') {
 			setTimeout(() => {
 				if (timeGridEl) timeGridEl.scrollTop = Math.max(0, (today.hour() - 1) * 48);
 			}, 0);
+		}
+		try {
+			windows = await listWindows(localStorage.token);
+		} catch {
+			// non-fatal — overlays will be empty
 		}
 	});
 </script>
@@ -210,6 +262,7 @@
 						{@const isCurrentMonth = day.month() === current.month()}
 						{@const isToday = day.isSame(today, 'day')}
 						{@const dayJobs = jobsByDay[day.format('YYYY-MM-DD')] ?? []}
+						{@const dayWindows = windows.filter((w) => windowCoversDay(w, day) && w.status !== 'completed')}
 						<button
 							class="min-h-[80px] p-1.5 border-r border-gray-100 dark:border-gray-800/60 last:border-r-0 text-left
 								{isCurrentMonth ? 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50' : 'bg-gray-50/60 dark:bg-gray-900/40'}
@@ -228,6 +281,16 @@
 									{day.date()}
 								</span>
 							</div>
+							<!-- Window all-day bars -->
+							{#each dayWindows as w (w.id)}
+								<button
+									type="button"
+									class="w-full text-left rounded px-1 py-0.5 mb-0.5 text-[10px] truncate font-medium {windowBarColor(w)}"
+									on:click|stopPropagation={() => { editingWindow = w; showWindowModal = true; }}
+								>
+									{w.name}
+								</button>
+							{/each}
 							<div class="flex flex-col gap-0.5">
 								{#each dayJobs.slice(0, 3) as job}
 									<div class="flex items-center gap-1 rounded px-1 py-0.5 {statusPill(job.status)}">
@@ -294,9 +357,11 @@
 						{@const slotJobs = jobsByDayHour[`${day.format('YYYY-MM-DD')}-${hour}`] ?? []}
 						{@const isToday = day.isSame(today, 'day')}
 						{@const isCurrentHour = isToday && today.hour() === hour}
+						{@const slotWindow = windows.find((w) => windowCoversHour(w, day, hour) && w.status !== 'completed')}
 						<button
 							class="border-l border-gray-100 dark:border-gray-800/60 p-0.5 text-left relative
 								{isCurrentHour ? 'bg-indigo-50/40 dark:bg-indigo-900/10' : isToday ? 'bg-gray-50/40 dark:bg-gray-850/20' : ''}
+								{slotWindow ? windowBg(slotWindow) : ''}
 								hover:bg-gray-50 dark:hover:bg-gray-800/30 transition"
 							on:click={() => selectSlot(day.format('YYYY-MM-DD'), hour)}
 						>
@@ -313,3 +378,5 @@
 		</div>
 	{/if}
 </div>
+
+<WindowModal bind:show={showWindowModal} window={editingWindow} on:saved={handleWindowSaved} />

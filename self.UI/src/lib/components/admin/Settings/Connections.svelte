@@ -5,6 +5,8 @@
 	const dispatch = createEventDispatcher();
 
 	import { getCuratorConfig, updateCuratorConfig } from '$lib/apis/curator';
+	import { getLmEvalConfig, updateLmEvalConfig } from '$lib/apis/lm_eval';
+	import { getBigcodeEvalConfig, updateBigcodeEvalConfig } from '$lib/apis/bigcode_eval';
 	import { getLlamolotlConfig, updateLlamolotlConfig } from '$lib/apis/llamolotl';
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
@@ -21,6 +23,8 @@
 	import AddConnectionModal from './Connections/AddConnectionModal.svelte';
 	import OllamaConnection from './Connections/OllamaConnection.svelte';
 	import CuratorConnection from './Connections/CuratorConnection.svelte';
+	import LmEvalConnection from './Connections/LmEvalConnection.svelte';
+	import BigcodeEvalConnection from './Connections/BigcodeEvalConnection.svelte';
 	import LlamolotlConnection from './Connections/LlamolotlConnection.svelte';
 
 	const i18n = getContext('i18n');
@@ -33,6 +37,9 @@
 	// External
 	let CURATOR_BASE_URLS = [''];
 	let CURATOR_API_CONFIGS = {};
+
+	let LM_EVAL_BASE_URLS: string[] = [''];
+	let BIGCODE_EVAL_BASE_URLS: string[] = [''];
 
 	let LLAMOLOTL_BASE_URLS = [''];
 	let LLAMOLOTL_API_CONFIGS = {};
@@ -48,6 +55,8 @@
 	let ENABLE_OLLAMA_API: null | boolean = null;
 	let ENABLE_LLAMOLOTL_API: null | boolean = null;
 	let ENABLE_CURATOR_API: null | boolean = null;
+	let ENABLE_LM_EVAL_API: null | boolean = null;
+	let ENABLE_BIGCODE_EVAL_API: null | boolean = null;
 
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
@@ -204,12 +213,38 @@
 		await updateCuratorHandler();
 	};
 
+	const updateLmEvalHandler = async () => {
+		if (ENABLE_LM_EVAL_API !== null) {
+			LM_EVAL_BASE_URLS = LM_EVAL_BASE_URLS.filter((url) => url !== '').map((url) =>
+				url.replace(/\/$/, '')
+			);
+			await updateLmEvalConfig(localStorage.token, {
+				ENABLE_LM_EVAL_API: ENABLE_LM_EVAL_API,
+				LM_EVAL_BASE_URLS
+			}).catch(() => {});
+		}
+	};
+
+	const updateBigcodeEvalHandler = async () => {
+		if (ENABLE_BIGCODE_EVAL_API !== null) {
+			BIGCODE_EVAL_BASE_URLS = BIGCODE_EVAL_BASE_URLS.filter((url) => url !== '').map((url) =>
+				url.replace(/\/$/, '')
+			);
+			await updateBigcodeEvalConfig(localStorage.token, {
+				ENABLE_BIGCODE_EVAL_API: ENABLE_BIGCODE_EVAL_API,
+				BIGCODE_EVAL_BASE_URLS
+			}).catch(() => {});
+		}
+	};
+
 	onMount(async () => {
 		if ($user.role === 'admin') {
 			let ollamaConfig = {};
 			let openaiConfig = {};
 			let llamolotlConfig = {};
 			let curatorConfig = {};
+			let lmEvalConfig: any = {};
+			let bigcodeEvalConfig: any = {};
 
 			await Promise.all([
 				(async () => {
@@ -223,6 +258,12 @@
 				})(),
 				(async () => {
 					curatorConfig = await getCuratorConfig(localStorage.token);
+				})(),
+				(async () => {
+					lmEvalConfig = await getLmEvalConfig(localStorage.token).catch(() => ({}));
+				})(),
+				(async () => {
+					bigcodeEvalConfig = await getBigcodeEvalConfig(localStorage.token).catch(() => ({}));
 				})()
 			]);
 
@@ -230,6 +271,8 @@
 			ENABLE_OLLAMA_API = ollamaConfig.ENABLE_OLLAMA_API;
 			ENABLE_LLAMOLOTL_API = llamolotlConfig.ENABLE_LLAMOLOTL_API;
 			ENABLE_CURATOR_API = curatorConfig.ENABLE_CURATOR_API;
+			ENABLE_LM_EVAL_API = lmEvalConfig.ENABLE_LM_EVAL_API ?? false;
+			ENABLE_BIGCODE_EVAL_API = bigcodeEvalConfig.ENABLE_BIGCODE_EVAL_API ?? false;
 
 			OPENAI_API_BASE_URLS = openaiConfig.OPENAI_API_BASE_URLS;
 			OPENAI_API_KEYS = openaiConfig.OPENAI_API_KEYS;
@@ -243,6 +286,9 @@
 
 			CURATOR_BASE_URLS = curatorConfig.CURATOR_BASE_URLS;
 			CURATOR_API_CONFIGS = curatorConfig.CURATOR_API_CONFIGS;
+
+			LM_EVAL_BASE_URLS = lmEvalConfig.LM_EVAL_BASE_URLS ?? [''];
+			BIGCODE_EVAL_BASE_URLS = bigcodeEvalConfig.BIGCODE_EVAL_BASE_URLS ?? [''];
 
 			if (ENABLE_OPENAI_API) {
 				for (const url of OPENAI_API_BASE_URLS) {
@@ -320,12 +366,14 @@
 		updateOllamaHandler();
 		updateLlamolotlHandler();
 		updateCuratorHandler();
+		updateLmEvalHandler();
+		updateBigcodeEvalHandler();
 
 		dispatch('save');
 	}}
 >
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
-		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && ENABLE_LLAMOLOTL_API !== null && ENABLE_CURATOR_API !== null}
+		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && ENABLE_LLAMOLOTL_API !== null && ENABLE_CURATOR_API !== null && ENABLE_LM_EVAL_API !== null && ENABLE_BIGCODE_EVAL_API !== null}
 			<div class="my-2">
 				<div class="mt-2 space-y-2 pr-1.5">
 					<div class="flex justify-between items-center text-sm">
@@ -568,6 +616,107 @@
 					</div>
 				{/if}
 			</div>
+			{#if ENABLE_LM_EVAL_API || LM_EVAL_BASE_URLS.some((u) => u !== '')}
+				<hr class=" border-gray-50 dark:border-gray-850" />
+
+				<div class="pr-1.5 my-2">
+					<div class="flex justify-between items-center text-sm mb-2">
+						<div class="font-medium">{$i18n.t('self.lm-eval API')}</div>
+						<div class="mt-1">
+							<Switch
+								bind:state={ENABLE_LM_EVAL_API}
+								on:change={async () => {
+									updateLmEvalHandler();
+								}}
+							/>
+						</div>
+					</div>
+
+					{#if ENABLE_LM_EVAL_API}
+						<hr class=" border-gray-50 dark:border-gray-850 my-2" />
+						<div class="">
+							<div class="flex justify-between items-center">
+								<div class="font-medium">{$i18n.t('Manage lm-eval Connections')}</div>
+								<Tooltip content={$i18n.t('Add Connection')}>
+									<button
+										class="px-1"
+										on:click={() => {
+											LM_EVAL_BASE_URLS = [...LM_EVAL_BASE_URLS, ''];
+										}}
+										type="button"
+									>
+										<Plus />
+									</button>
+								</Tooltip>
+							</div>
+							<div class="flex flex-col gap-1.5 mt-1.5">
+								{#each LM_EVAL_BASE_URLS as url, idx}
+									<LmEvalConnection
+										bind:url
+										{idx}
+										onSubmit={() => updateLmEvalHandler()}
+										onDelete={() => {
+											LM_EVAL_BASE_URLS = LM_EVAL_BASE_URLS.filter((_, i) => i !== idx);
+											updateLmEvalHandler();
+										}}
+									/>
+								{/each}
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/if}
+
+			{#if ENABLE_BIGCODE_EVAL_API || BIGCODE_EVAL_BASE_URLS.some((u) => u !== '')}
+				<hr class=" border-gray-50 dark:border-gray-850" />
+
+				<div class="pr-1.5 my-2">
+					<div class="flex justify-between items-center text-sm mb-2">
+						<div class="font-medium">{$i18n.t('self.bigcode-eval API')}</div>
+						<div class="mt-1">
+							<Switch
+								bind:state={ENABLE_BIGCODE_EVAL_API}
+								on:change={async () => {
+									updateBigcodeEvalHandler();
+								}}
+							/>
+						</div>
+					</div>
+
+					{#if ENABLE_BIGCODE_EVAL_API}
+						<hr class=" border-gray-50 dark:border-gray-850 my-2" />
+						<div class="">
+							<div class="flex justify-between items-center">
+								<div class="font-medium">{$i18n.t('Manage bigcode-eval Connections')}</div>
+								<Tooltip content={$i18n.t('Add Connection')}>
+									<button
+										class="px-1"
+										on:click={() => {
+											BIGCODE_EVAL_BASE_URLS = [...BIGCODE_EVAL_BASE_URLS, ''];
+										}}
+										type="button"
+									>
+										<Plus />
+									</button>
+								</Tooltip>
+							</div>
+							<div class="flex flex-col gap-1.5 mt-1.5">
+								{#each BIGCODE_EVAL_BASE_URLS as url, idx}
+									<BigcodeEvalConnection
+										bind:url
+										{idx}
+										onSubmit={() => updateBigcodeEvalHandler()}
+										onDelete={() => {
+											BIGCODE_EVAL_BASE_URLS = BIGCODE_EVAL_BASE_URLS.filter((_, i) => i !== idx);
+											updateBigcodeEvalHandler();
+										}}
+									/>
+								{/each}
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/if}
 		{:else}
 			<div class="flex h-full justify-center">
 				<div class="my-auto">

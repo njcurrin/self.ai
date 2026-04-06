@@ -1,175 +1,558 @@
-"""Unified GPU job queue — dispatches training and eval jobs one at a time.
+"""GPU job queue v2 — window-aware, multi-node-safe dispatcher.
 
-Both eval and training jobs share the GPU. This module provides a single
-background loop that:
-  1. Syncs status of running eval jobs (polls bigcode-eval / lm-eval)
-  2. Checks if *any* GPU job (eval OR training) is currently running
-  3. If not, picks the next due scheduled or queued job from either table
-     (ordered by scheduled_for / created_at) and dispatches it
+Replaces the original process_gpu_queue with a RedisLock-protected loop that:
+  1. Syncs running job status from remote workers
+  2. Promotes due scheduled jobs -> queued
+  3. Dispatches run_now jobs immediately (bypasses windows)
+  4. If an active window exists, dispatches jobs in priority/preference order
 
-The loop replaces the separate `process_eval_queue` and adds training
-scheduling in a unified way.
+Priority tiers:
+  run_now  - bypass windows, admin-created, dispatched unconditionally
+  high     - respect windows, dispatched before all normal jobs across all types
+  normal   - respect windows, dispatched in preferred-type order then FIFO
+
+Only one UI instance runs dispatch per cycle (RedisLock).
 """
 
 import asyncio
 import logging
 import time
+from typing import Optional
 
-from selfai_ui.env import SRC_LOG_LEVELS
-from selfai_ui.models.eval_jobs import EvalJobs, EvalJobStatusUpdate
-from selfai_ui.models.training import TrainingJobs, TrainingJobStatusUpdate
+import httpx
+
+from selfai_ui.env import SRC_LOG_LEVELS, WEBSOCKET_REDIS_URL
+from selfai_ui.socket.utils import RedisLock
+from selfai_ui.models.eval_jobs import EvalJob, EvalJobModel, EvalJobs, EvalJobStatusUpdate
+from selfai_ui.models.training import TrainingJob, TrainingJobModel, TrainingJobs, TrainingJobStatusUpdate
+from selfai_ui.models.curator_jobs import CuratorJob, CuratorJobModel, CuratorJobs, CuratorJobStatusUpdate
+from selfai_ui.models.job_windows import JobWindowWithSlots, JobWindows
+from selfai_ui.models.benchmark_config import BenchmarkConfigs
+from selfai_ui.internal.db import get_db
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS.get("MODELS", logging.INFO))
+log.setLevel(SRC_LOG_LEVELS.get("MAIN", logging.INFO))
 
-# Set by the lifespan handler so dispatchers can access app config.
+# Set by main.py lifespan handler so the dispatcher can access app config.
 _app_state = None
 
+POLL_INTERVAL = 30  # seconds
+LOCK_TIMEOUT = 60   # seconds -- must be > POLL_INTERVAL
 
-def _any_gpu_job_running() -> bool:
-    """Return True if any eval or training job has status 'running'."""
-    if EvalJobs.has_running_job():
-        return True
-    # Check training jobs
-    from selfai_ui.models.training import TrainingJob
-    from selfai_ui.internal.db import get_db
 
-    try:
+####################################
+# Worker pool resolution
+####################################
+
+
+def _resolve_worker_url(job_type: str) -> Optional[str]:
+    """Return an idle worker URL for the given job type, or None."""
+    if _app_state is None:
+        return None
+
+    cfg = _app_state.config
+
+    if job_type == "training":
+        base_urls = list(cfg.LLAMOLOTL_BASE_URLS or [])
+        busy = set()
         with get_db() as db:
-            running = db.query(TrainingJob).filter_by(status="running").first()
-            if running is not None:
-                return True
-    except Exception:
-        pass
-    # Also count 'queued' training jobs as occupying the GPU — they are
-    # dispatched to llamolotl which runs them serially. A queued training
-    # job means llamolotl already has it and will start it soon.
-    try:
+            for row in db.query(TrainingJob).filter_by(status="running").all():
+                if row.llamolotl_url_idx is not None:
+                    busy.add(row.llamolotl_url_idx)
+        for i, url in enumerate(base_urls):
+            if i not in busy:
+                return url
+        return None
+
+    elif job_type == "lm-eval":
+        base_urls = list(cfg.LM_EVAL_BASE_URLS or [])
+        busy = set()
         with get_db() as db:
-            queued = db.query(TrainingJob).filter_by(status="queued").first()
-            if queued is not None:
-                return True
-    except Exception:
-        pass
-    return False
+            if db.query(EvalJob).filter(EvalJob.status == "running", EvalJob.eval_type == "lm-eval").count():
+                busy.add(0)
+        for i, url in enumerate(base_urls):
+            if i not in busy:
+                return url
+        return None
+
+    elif job_type == "bigcode":
+        base_urls = list(cfg.BIGCODE_EVAL_BASE_URLS or [])
+        busy = set()
+        with get_db() as db:
+            if db.query(EvalJob).filter(EvalJob.status == "running", EvalJob.eval_type == "bigcode").count():
+                busy.add(0)
+        for i, url in enumerate(base_urls):
+            if i not in busy:
+                return url
+        return None
+
+    elif job_type == "curator":
+        base_urls = list(cfg.CURATOR_BASE_URLS or [])
+        busy = set()
+        with get_db() as db:
+            for row in db.query(CuratorJob).filter_by(status="running").all():
+                if row.curator_url_idx is not None:
+                    busy.add(row.curator_url_idx)
+        for i, url in enumerate(base_urls):
+            if i not in busy:
+                return url
+        return None
+
+    return None
+
+
+####################################
+# Sync running jobs
+####################################
+
+
+async def _sync_running_jobs() -> None:
+    """Poll remote workers for status of all running jobs."""
+    from selfai_ui.routers.evaluations import _sync_running_jobs as _sync_eval
+    await _sync_eval()
+    await _sync_running_curator_jobs()
+
+
+async def _sync_running_curator_jobs() -> None:
+    running = CuratorJobs.get_jobs_by_status("running")
+    if not running:
+        return
+
+    for job in running:
+        if not job.curator_job_id:
+            continue
+        if _app_state is None:
+            continue
+
+        cfg = _app_state.config
+        base_urls = list(cfg.CURATOR_BASE_URLS or [])
+        idx = job.curator_url_idx or 0
+        if idx >= len(base_urls):
+            continue
+        curator_url = base_urls[idx].rstrip("/")
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(f"{curator_url}/api/jobs/{job.curator_job_id}")
+                if resp.status_code == 404:
+                    log.warning(f"Curator job {job.curator_job_id} not found -- marking failed")
+                    CuratorJobs.update_job_status(
+                        id=job.id,
+                        update=CuratorJobStatusUpdate(
+                            status="failed",
+                            error_message="Job not found in curator (may have been lost on restart)",
+                        ),
+                    )
+                    continue
+                resp.raise_for_status()
+                remote = resp.json()
+        except Exception as e:
+            log.error(f"Failed to check curator job {job.curator_job_id}: {e}")
+            continue
+
+        remote_status = remote.get("status", "")
+        if remote_status in ("completed", "failed", "cancelled"):
+            CuratorJobs.update_job_status(
+                id=job.id,
+                update=CuratorJobStatusUpdate(
+                    status=remote_status,
+                    error_message=remote.get("error_message"),
+                ),
+            )
+            log.info(f"Curator job {job.id} synced to '{remote_status}'")
+
+
+####################################
+# Promote scheduled jobs
+####################################
 
 
 async def _promote_scheduled_jobs() -> None:
-    """Move due scheduled jobs → queued so they enter the dispatch pipeline."""
-    # Eval jobs
+    """Move due scheduled -> queued for all job types. Runs every cycle."""
     for job in EvalJobs.get_due_scheduled_jobs():
-        log.info(f"GPU queue: eval job {job.id} is due (scheduled_for={job.scheduled_for}), promoting to queued")
-        EvalJobs.update_job_status(
-            id=job.id,
-            update=EvalJobStatusUpdate(status="queued"),
-        )
+        log.info(f"GPU queue: eval job {job.id} due, promoting to queued")
+        EvalJobs.update_job_status(id=job.id, update=EvalJobStatusUpdate(status="queued"))
 
-    # Training jobs
     for job in TrainingJobs.get_due_scheduled_jobs():
-        log.info(f"GPU queue: training job {job.id} is due (scheduled_for={job.scheduled_for}), promoting to pending-dispatch")
-        await _dispatch_training_job(job)
+        log.info(f"GPU queue: training job {job.id} due, promoting to queued")
+        TrainingJobs.update_job_status(id=job.id, update=TrainingJobStatusUpdate(status="queued"))
+
+    for job in CuratorJobs.get_due_scheduled_jobs():
+        log.info(f"GPU queue: curator job {job.id} due, promoting to queued")
+        CuratorJobs.update_job_status(id=job.id, update=CuratorJobStatusUpdate(status="queued"))
 
 
-async def _dispatch_training_job(job) -> None:
-    """Dispatch a scheduled training job to llamolotl (same logic as approve)."""
-    global _app_state
-    if _app_state is None:
-        log.warning("GPU queue: app state not set, cannot dispatch training job")
-        TrainingJobs.update_job_status(
-            id=job.id,
-            update=TrainingJobStatusUpdate(
-                status="failed",
-                error_message="Internal error: app state not available",
-            ),
-        )
-        return
+####################################
+# Dispatch helpers
+####################################
 
-    # Import here to avoid circular imports
+
+async def _dispatch_training_job(job: TrainingJobModel) -> None:
     from selfai_ui.routers.training import _dispatch_scheduled_job
     await _dispatch_scheduled_job(job)
 
 
-async def _dispatch_next_queued() -> None:
-    """Find the next queued job (eval or training) and dispatch it.
+async def _dispatch_eval_job_by_type(job: EvalJobModel) -> None:
+    from selfai_ui.routers.evaluations import (
+        _dispatch_eval_job as _bigcode_dispatch,
+        _dispatch_lm_eval_job as _lm_eval_dispatch,
+    )
+    eval_type = getattr(job, "eval_type", "bigcode") or "bigcode"
+    if eval_type == "lm-eval":
+        await _lm_eval_dispatch(job)
+    else:
+        await _bigcode_dispatch(job)
 
-    Picks the oldest queued job across both tables.
-    """
-    next_eval = EvalJobs.get_next_queued_job()
-    next_training = _get_next_queued_training_job()
 
-    if not next_eval and not next_training:
+async def _dispatch_curator_job(job: CuratorJobModel) -> None:
+    """Dispatch a curator job to the curator container."""
+    if _app_state is None:
+        log.warning("GPU queue: app state not set, cannot dispatch curator job")
+        CuratorJobs.update_job_status(
+            id=job.id,
+            update=CuratorJobStatusUpdate(status="failed", error_message="App state not available"),
+        )
         return
 
-    # Pick whichever was created first
-    pick_eval = False
-    if next_eval and next_training:
-        pick_eval = next_eval.created_at <= next_training.created_at
-    elif next_eval:
-        pick_eval = True
-
-    if pick_eval:
-        from selfai_ui.routers.evaluations import (
-            _dispatch_eval_job,
-            _dispatch_lm_eval_job,
+    cfg = _app_state.config
+    base_urls = list(cfg.CURATOR_BASE_URLS or [])
+    if not base_urls:
+        CuratorJobs.update_job_status(
+            id=job.id,
+            update=CuratorJobStatusUpdate(status="failed", error_message="No Curator URLs configured"),
         )
+        return
 
-        eval_type = getattr(next_eval, "eval_type", "bigcode") or "bigcode"
-        log.info(f"GPU queue: dispatching {eval_type} eval job {next_eval.id}")
-        if eval_type == "lm-eval":
-            await _dispatch_lm_eval_job(next_eval)
-        else:
-            await _dispatch_eval_job(next_eval)
-    else:
-        log.info(f"GPU queue: dispatching training job {next_training.id}")
-        await _dispatch_training_job(next_training)
+    busy = set()
+    with get_db() as db:
+        for row in db.query(CuratorJob).filter_by(status="running").all():
+            if row.curator_url_idx is not None:
+                busy.add(row.curator_url_idx)
 
+    url_idx = next((i for i in range(len(base_urls)) if i not in busy), None)
+    if url_idx is None:
+        log.debug(f"GPU queue: no idle curator worker for job {job.id}")
+        return
 
-def _get_next_queued_training_job():
-    """Return the oldest training job with status 'queued', or None.
-
-    Note: training jobs go pending → queued via approve, which already
-    dispatches to llamolotl. For scheduled jobs, they go scheduled →
-    dispatched (which sets queued). So normally there won't be orphan
-    queued training jobs, but this handles edge cases.
-    """
-    from selfai_ui.models.training import TrainingJob
-    from selfai_ui.internal.db import get_db
+    curator_url = base_urls[url_idx].rstrip("/")
+    pipeline_config = (job.meta or {}).get("pipeline_config")
+    if not pipeline_config:
+        CuratorJobs.update_job_status(
+            id=job.id,
+            update=CuratorJobStatusUpdate(
+                status="failed",
+                error_message=f"No pipeline_config in job meta (pipeline_id={job.pipeline_id})",
+            ),
+        )
+        return
 
     try:
-        with get_db() as db:
-            job = (
-                db.query(TrainingJob)
-                .filter_by(status="queued")
-                .order_by(TrainingJob.created_at.asc())
-                .first()
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(f"{curator_url}/api/jobs", json=pipeline_config)
+            resp.raise_for_status()
+            remote_job = resp.json()
+            # Curator jobs start PENDING — approve starts execution immediately.
+            # Curator is a pure executor; the daemon owns all dispatch decisions.
+            await client.post(f"{curator_url}/api/jobs/{remote_job['job_id']}/approve")
+    except Exception as e:
+        log.error(f"Curator dispatch failed for job {job.id}: {e}")
+        CuratorJobs.update_job_status(
+            id=job.id,
+            update=CuratorJobStatusUpdate(
+                status="failed",
+                error_message=f"Failed to dispatch to curator: {e}",
+            ),
+        )
+        return
+
+    CuratorJobs.update_job_status(
+        id=job.id,
+        update=CuratorJobStatusUpdate(
+            status="running",
+            curator_job_id=remote_job.get("job_id"),
+            curator_url_idx=url_idx,
+        ),
+    )
+    log.info(f"Curator job {job.id} dispatched (remote_id={remote_job.get('job_id')})")
+
+
+async def _dispatch_job(job_type: str, job) -> None:
+    if job_type == "training":
+        await _dispatch_training_job(job)
+    elif job_type in ("lm-eval", "bigcode"):
+        await _dispatch_eval_job_by_type(job)
+    elif job_type == "curator":
+        await _dispatch_curator_job(job)
+
+
+####################################
+# Dispatch: run_now
+####################################
+
+
+async def _dispatch_run_now_jobs() -> None:
+    """Dispatch all run_now+queued jobs immediately, bypassing windows."""
+    with get_db() as db:
+        training_rows = (
+            db.query(TrainingJob)
+            .filter(TrainingJob.priority == "run_now", TrainingJob.status == "queued")
+            .order_by(TrainingJob.created_at.asc())
+            .all()
+        )
+        eval_rows = (
+            db.query(EvalJob)
+            .filter(EvalJob.priority == "run_now", EvalJob.status == "queued")
+            .order_by(EvalJob.created_at.asc())
+            .all()
+        )
+        curator_rows = (
+            db.query(CuratorJob)
+            .filter(CuratorJob.priority == "run_now", CuratorJob.status == "queued")
+            .order_by(CuratorJob.created_at.asc())
+            .all()
+        )
+        training_jobs = [TrainingJobModel.model_validate(r) for r in training_rows]
+        eval_jobs = [EvalJobModel.model_validate(r) for r in eval_rows]
+        curator_jobs = [CuratorJobModel.model_validate(r) for r in curator_rows]
+
+    for job in training_jobs:
+        log.info(f"GPU queue: dispatching run_now training job {job.id}")
+        await _dispatch_training_job(job)
+
+    for job in eval_jobs:
+        log.info(f"GPU queue: dispatching run_now eval job {job.id}")
+        await _dispatch_eval_job_by_type(job)
+
+    for job in curator_jobs:
+        log.info(f"GPU queue: dispatching run_now curator job {job.id}")
+        await _dispatch_curator_job(job)
+
+
+####################################
+# Active window query
+####################################
+
+
+def _get_active_window() -> Optional[JobWindowWithSlots]:
+    return JobWindows.get_active_window()
+
+
+####################################
+# Fit check
+####################################
+
+
+def _fits_in_window(
+    benchmark: str,
+    eval_type: str,
+    remaining_minutes: float,
+    min_remaining_minutes: int,
+) -> bool:
+    cfg = BenchmarkConfigs.get_by_benchmark(benchmark, eval_type)
+    if not cfg:
+        return True  # unknown benchmark -- allow it
+    return cfg.max_duration_minutes <= (remaining_minutes - min_remaining_minutes)
+
+
+####################################
+# Running count helpers
+####################################
+
+
+def _running_count(job_type: str) -> int:
+    with get_db() as db:
+        if job_type == "training":
+            return db.query(TrainingJob).filter_by(status="running").count()
+        elif job_type in ("lm-eval", "bigcode"):
+            return (
+                db.query(EvalJob)
+                .filter(EvalJob.status == "running", EvalJob.eval_type == job_type)
+                .count()
             )
-            if job:
-                from selfai_ui.models.training import TrainingJobModel
-                return TrainingJobModel.model_validate(job)
-    except Exception:
-        pass
-    return None
+        elif job_type == "curator":
+            return db.query(CuratorJob).filter_by(status="running").count()
+    return 0
 
 
-async def process_gpu_queue() -> None:
-    """Main background loop — replaces process_eval_queue.
+####################################
+# Window dispatch
+####################################
 
-    Polls every 10 seconds.
-    """
+
+async def _dispatch_window_jobs(window: JobWindowWithSlots) -> None:
+    """Three-pass priority dispatch within an active window."""
+    now = int(time.time())
+    remaining_minutes = max(0.0, (window.end_at - now) / 60)
+    slots = {s.job_type: s for s in window.slots}
+
+    if not slots:
+        return
+
+    # Track how many we've dispatched this cycle (to avoid exceeding max_concurrent
+    # before the DB write is visible)
+    dispatched: dict[str, int] = {jt: 0 for jt in slots}
+
+    # ----------------------------------------------------------------
+    # Pass 1 -- high priority, FIFO across all slot types
+    # ----------------------------------------------------------------
+    high_candidates: list[tuple] = []
+
+    with get_db() as db:
+        for jtype in slots:
+            if jtype == "training":
+                for r in (
+                    db.query(TrainingJob)
+                    .filter(TrainingJob.priority == "high", TrainingJob.status == "queued")
+                    .all()
+                ):
+                    high_candidates.append((r.created_at, jtype, TrainingJobModel.model_validate(r)))
+            elif jtype in ("lm-eval", "bigcode"):
+                for r in (
+                    db.query(EvalJob)
+                    .filter(
+                        EvalJob.priority == "high",
+                        EvalJob.status == "queued",
+                        EvalJob.eval_type == jtype,
+                    )
+                    .all()
+                ):
+                    high_candidates.append((r.created_at, jtype, EvalJobModel.model_validate(r)))
+            elif jtype == "curator":
+                for r in (
+                    db.query(CuratorJob)
+                    .filter(CuratorJob.priority == "high", CuratorJob.status == "queued")
+                    .all()
+                ):
+                    high_candidates.append((r.created_at, jtype, CuratorJobModel.model_validate(r)))
+
+    high_candidates.sort(key=lambda x: x[0])
+
+    for _, jtype, job in high_candidates:
+        slot = slots[jtype]
+        if _running_count(jtype) + dispatched.get(jtype, 0) >= slot.max_concurrent:
+            continue
+        if jtype in ("lm-eval", "bigcode"):
+            if not _fits_in_window(job.benchmark, jtype, remaining_minutes, slot.min_remaining_minutes):
+                continue
+        log.info(f"GPU queue: Pass 1 -- high {jtype} job {job.id}")
+        await _dispatch_job(jtype, job)
+        dispatched[jtype] = dispatched.get(jtype, 0) + 1
+
+    # ----------------------------------------------------------------
+    # Pass 2 -- normal priority: preferred type first, then others
+    # Training is deferred to Pass 3.
+    # ----------------------------------------------------------------
+    preferred = window.preferred_job_type
+    pass2_types = [preferred] + [jt for jt in slots if jt != preferred and jt != "training"]
+
+    for jtype in pass2_types:
+        slot = slots.get(jtype)
+        if not slot:
+            continue
+        with get_db() as db:
+            if jtype in ("lm-eval", "bigcode"):
+                rows = (
+                    db.query(EvalJob)
+                    .filter(
+                        EvalJob.priority == "normal",
+                        EvalJob.status == "queued",
+                        EvalJob.eval_type == jtype,
+                    )
+                    .order_by(EvalJob.created_at.asc())
+                    .all()
+                )
+                candidates = [EvalJobModel.model_validate(r) for r in rows]
+            elif jtype == "curator":
+                rows = (
+                    db.query(CuratorJob)
+                    .filter(CuratorJob.priority == "normal", CuratorJob.status == "queued")
+                    .order_by(CuratorJob.created_at.asc())
+                    .all()
+                )
+                candidates = [CuratorJobModel.model_validate(r) for r in rows]
+            else:
+                candidates = []
+
+        for job in candidates:
+            if _running_count(jtype) + dispatched.get(jtype, 0) >= slot.max_concurrent:
+                break
+            if jtype in ("lm-eval", "bigcode"):
+                if not _fits_in_window(job.benchmark, jtype, remaining_minutes, slot.min_remaining_minutes):
+                    continue
+            log.info(f"GPU queue: Pass 2 -- normal {jtype} job {job.id}")
+            await _dispatch_job(jtype, job)
+            dispatched[jtype] = dispatched.get(jtype, 0) + 1
+
+    # ----------------------------------------------------------------
+    # Pass 3 -- training normal fallback
+    # ----------------------------------------------------------------
+    if "training" not in slots:
+        return
+
+    slot = slots["training"]
+    capacity = slot.max_concurrent - _running_count("training") - dispatched.get("training", 0)
+    if capacity <= 0:
+        return
+
+    with get_db() as db:
+        rows = (
+            db.query(TrainingJob)
+            .filter(TrainingJob.priority == "normal", TrainingJob.status == "queued")
+            .order_by(TrainingJob.created_at.asc())
+            .limit(capacity)
+            .all()
+        )
+        training_candidates = [TrainingJobModel.model_validate(r) for r in rows]
+
+    for job in training_candidates:
+        if _running_count("training") + dispatched.get("training", 0) >= slot.max_concurrent:
+            break
+        log.info(f"GPU queue: Pass 3 -- training fallback job {job.id}")
+        await _dispatch_job("training", job)
+        dispatched["training"] = dispatched.get("training", 0) + 1
+
+
+####################################
+# Main loop
+####################################
+
+
+async def process_gpu_queue_v2() -> None:
+    """Multi-node-safe, window-aware GPU job dispatcher. Polls every 30s."""
+    lock = RedisLock(
+        redis_url=WEBSOCKET_REDIS_URL,
+        lock_name="selfai:gpu_queue_lock",
+        timeout_secs=LOCK_TIMEOUT,
+    )
+
     while True:
         try:
-            # 1. Sync running eval jobs with their remote services
-            from selfai_ui.routers.evaluations import _sync_running_jobs
-            await _sync_running_jobs()
+            if not lock.aquire_lock():
+                await asyncio.sleep(POLL_INTERVAL)
+                continue
 
-            # 2. Promote any due scheduled jobs
-            await _promote_scheduled_jobs()
+            try:
+                await _sync_running_jobs()
+                await _promote_scheduled_jobs()
+                await _dispatch_run_now_jobs()
 
-            # 3. If nothing is running, dispatch the next queued job
-            if not _any_gpu_job_running():
-                await _dispatch_next_queued()
+                window = _get_active_window()
+                if window:
+                    await _dispatch_window_jobs(window)
+
+            except Exception as e:
+                log.error(f"GPU queue dispatch error: {e}", exc_info=True)
+            finally:
+                try:
+                    lock.release_lock()
+                except Exception:
+                    pass  # Lock expires naturally after LOCK_TIMEOUT seconds
 
         except Exception as e:
-            log.error(f"GPU queue processor error: {e}")
+            log.error(f"GPU queue lock error: {e}", exc_info=True)
 
-        await asyncio.sleep(10)
+        await asyncio.sleep(POLL_INTERVAL)
+
+
+# Backward-compatible alias
+process_gpu_queue = process_gpu_queue_v2

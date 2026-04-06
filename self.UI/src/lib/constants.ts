@@ -8,6 +8,8 @@ export const WEBUI_BASE_URL = browser ? (dev ? `http://${WEBUI_HOSTNAME}` : ``) 
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
 
 export const CURATOR_API_BASE_URL = `${WEBUI_BASE_URL}/curator`;
+export const LM_EVAL_API_BASE_URL = `${WEBUI_BASE_URL}/lm-eval`;
+export const BIGCODE_EVAL_API_BASE_URL = `${WEBUI_BASE_URL}/bigcode-eval`;
 export const LLAMOLOTL_API_BASE_URL = `${WEBUI_BASE_URL}/llamolotl`;
 export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama`;
 export const OPENAI_API_BASE_URL = `${WEBUI_BASE_URL}/openai`;

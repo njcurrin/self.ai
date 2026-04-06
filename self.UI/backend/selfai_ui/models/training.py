@@ -87,6 +87,7 @@ class TrainingJob(Base):
 
     # States: pending -> scheduled -> queued -> running -> completed | failed | cancelled
     status = Column(Text)
+    priority = Column(Text, default="normal")  # "run_now" | "high" | "normal"
 
     # Unix timestamp — when set, the job is auto-approved at this time
     scheduled_for = Column(BigInteger, nullable=True)
@@ -110,6 +111,7 @@ class TrainingJobModel(BaseModel):
     user_id: str
     model_id: str
     status: str
+    priority: str = "normal"
 
     scheduled_for: Optional[int] = None
 

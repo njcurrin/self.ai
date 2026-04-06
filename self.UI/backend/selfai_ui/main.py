@@ -52,8 +52,13 @@ from selfai_ui.socket.main import (
 )
 from selfai_ui.routers import (
     audio,
+    benchmarks,
+    bigcode_eval,
     curator,
     images,
+    lm_eval,
+    queue,
+    windows,
     llamolotl,
     ollama,
     openai,
@@ -93,10 +98,16 @@ from selfai_ui.models.models import Models
 from selfai_ui.models.users import UserModel, Users
 
 from selfai_ui.config import (
+    # Bigcode-eval
+    ENABLE_BIGCODE_EVAL_API,
+    BIGCODE_EVAL_BASE_URLS,
     # Curator
     ENABLE_CURATOR_API,
     CURATOR_BASE_URLS,
     CURATOR_API_CONFIGS,
+    # Lm-eval
+    ENABLE_LM_EVAL_API,
+    LM_EVAL_BASE_URLS,
     # Iceberg
     ICEBERG_BASE_URL,
     # Llamolotl
@@ -380,13 +391,13 @@ async def _resume_crawl_jobs(app_state) -> None:
 
 
 async def _run_gpu_queue(app_state) -> None:
-    """Start the unified GPU job queue (training + eval)."""
+    """Start the unified GPU job queue (training + eval + curator)."""
     import selfai_ui.utils.gpu_queue as gpu_queue
     import selfai_ui.routers.training as training_mod
 
     gpu_queue._app_state = app_state
     training_mod._app_state = app_state
-    await gpu_queue.process_gpu_queue()
+    await gpu_queue.process_gpu_queue_v2()
 
 
 async def _ensure_curator_classifier_models(app_state) -> None:
@@ -482,6 +493,26 @@ app.state.config = AppConfig()
 app.state.config.ENABLE_CURATOR_API = ENABLE_CURATOR_API
 app.state.config.CURATOR_BASE_URLS = CURATOR_BASE_URLS
 app.state.config.CURATOR_API_CONFIGS = CURATOR_API_CONFIGS
+
+########################################
+#
+# LM-EVAL
+#
+########################################
+
+
+app.state.config.ENABLE_LM_EVAL_API = ENABLE_LM_EVAL_API
+app.state.config.LM_EVAL_BASE_URLS = LM_EVAL_BASE_URLS
+
+########################################
+#
+# BIGCODE-EVAL
+#
+########################################
+
+
+app.state.config.ENABLE_BIGCODE_EVAL_API = ENABLE_BIGCODE_EVAL_API
+app.state.config.BIGCODE_EVAL_BASE_URLS = BIGCODE_EVAL_BASE_URLS
 
 ########################################
 #
@@ -887,6 +918,11 @@ app.mount("/ws", socket_app)
 
 
 app.include_router(curator.router, prefix="/curator", tags=["curator"])
+app.include_router(lm_eval.router, prefix="/lm-eval", tags=["lm-eval"])
+app.include_router(bigcode_eval.router, prefix="/bigcode-eval", tags=["bigcode-eval"])
+app.include_router(windows.router, prefix="/api/windows", tags=["windows"])
+app.include_router(benchmarks.router, prefix="/api/benchmarks", tags=["benchmarks"])
+app.include_router(queue.router, prefix="/api", tags=["queue"])
 app.include_router(llamolotl.router, prefix="/llamolotl", tags=["llamolotl"])
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])
