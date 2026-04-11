@@ -5,6 +5,7 @@ Runs on port 8093, manages job lifecycle and progress monitoring.
 
 import asyncio
 import json
+import logging
 import os
 import re
 import shutil
@@ -15,6 +16,8 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+log = logging.getLogger(__name__)
 
 import aiofiles
 import yaml
@@ -313,7 +316,7 @@ def _load_pipeline_tasks():
                     task.finished_at = datetime.now()
                 _pipeline_tasks[task_id] = task
             except Exception as e:
-                print(f"Failed to load pipeline task {task_id}: {e}")
+                log.warning("Failed to load pipeline task %s: %s", task_id, e)
 
 
 def _load_jobs():
@@ -342,7 +345,7 @@ def _load_jobs():
                     job.finished_at = datetime.now()
                 _jobs[job_id] = job
             except Exception as e:
-                print(f"Failed to load job {job_id}: {e}")
+                log.warning("Failed to load job %s: %s", job_id, e)
 
 
 def _save_jobs():
@@ -409,7 +412,7 @@ def _auto_convert_lora(job: Job):
     try:
         rel_path = output_dir.relative_to(OUTPUTS_DIR)
     except ValueError:
-        print(f"Output dir {output_dir} is not under {OUTPUTS_DIR}, skipping auto-convert")
+        log.warning("Output dir %s is not under %s, skipping auto-convert", output_dir, OUTPUTS_DIR)
         return
 
     # Read base model from adapter_config.json
@@ -427,7 +430,7 @@ def _auto_convert_lora(job: Job):
     outfile = MODELS_DIR / out_name
 
     if outfile.exists():
-        print(f"LoRA GGUF already exists: {out_name}, skipping auto-convert")
+        log.debug("LoRA GGUF already exists: %s, skipping auto-convert", out_name)
         return
 
     cmd = [
@@ -444,7 +447,7 @@ def _auto_convert_lora(job: Job):
     # Record metadata now so the LoRA is discoverable even while converting
     _record_lora_meta(out_name, base_model, str(rel_path))
 
-    print(f"Auto-converting LoRA to GGUF: {out_name}")
+    log.info("Auto-converting LoRA to GGUF: %s", out_name)
     _start_pipeline_task(
         task_type=PipelineTaskType.CONVERT_LORA_TO_GGUF,
         cmd=cmd,
@@ -2254,7 +2257,7 @@ def list_available_loras():
                 if base_model:
                     cmd.extend(["--base-model-id", base_model])
                 _record_lora_meta(out_name, base_model, rel)
-                print(f"Auto-converting unconverted LoRA: {out_name}")
+                log.info("Auto-converting unconverted LoRA: %s", out_name)
                 _start_pipeline_task(
                     task_type=PipelineTaskType.CONVERT_LORA_TO_GGUF,
                     cmd=cmd,

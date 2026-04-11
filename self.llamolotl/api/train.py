@@ -26,7 +26,7 @@ from trl import SFTConfig, SFTTrainer
 # ─── Logging ────────────────────────────────────────────────────────────
 
 DEBUG = os.environ.get("DEBUG", "0") == "1"
-log = logging.getLogger("train")
+log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG if DEBUG else logging.INFO)
 # Only configure root logger at INFO to avoid flooding from httpcore/httpx/filelock
 logging.basicConfig(
