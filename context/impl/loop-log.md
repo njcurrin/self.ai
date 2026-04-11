@@ -93,3 +93,25 @@
 - **Files:** self.llamolotl/api/main.py
 - **Validation:** Acceptance 2/2 (QUEUED status while training runs, auto-start on training complete)
 - **Next:** Verify remaining brownfield tasks
+
+### Iteration 13 — 2026-04-11
+- **Task:** T-037/T-042 — Fix dataset error handling + DeepSpeed optimizer parse logging
+- **Tier:** 1
+- **Status:** DONE
+- **Files:** self.llamolotl/api/train.py
+- **Validation:** Dataset load wrapped in try/except with clear error. _deepspeed_has_optimizer logs warning.
+- **Next:** T-051/T-052
+
+### Iteration 14 — 2026-04-11
+- **Task:** T-051/T-052 — Custom template upload/clear + built-in template list
+- **Tier:** 1
+- **Status:** DONE
+- **Files:** self.llamolotl/api/main.py
+- **Validation:** POST/DELETE/GET /api/system/chat-template. Built-in template list endpoint.
+- **Next:** Brownfield verification
+
+### Iteration 15 — 2026-04-11
+- **Task:** Bulk brownfield verification (T-009–T-049 remaining)
+- **Status:** DONE
+- **Notes:** Verified 35 brownfield tasks against acceptance criteria with code evidence. All criteria met in existing code. Two gaps fixed (T-037 dataset errors, T-042 DS optimizer logging).
+- **Next:** Tier 2 (T-055–T-058 decomposition)

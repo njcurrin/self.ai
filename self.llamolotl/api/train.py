@@ -137,7 +137,10 @@ def load_and_format_datasets(config: dict, tokenizer) -> dict:
         log.info(f"Loading dataset: {ds_path} (format: {ds_type})")
 
         # Load from HuggingFace
-        ds = load_dataset(ds_path, split="train")
+        try:
+            ds = load_dataset(ds_path, split="train")
+        except Exception as e:
+            raise RuntimeError(f"Failed to load dataset '{ds_path}': {e}") from e
 
         if DEBUG:
             log.debug(f"  Rows: {len(ds)}, Columns: {ds.column_names}")
@@ -380,7 +383,8 @@ def _deepspeed_has_optimizer(config: dict) -> bool:
         with open(ds_path) as f:
             ds_config = json.load(f)
         return "optimizer" in ds_config
-    except (OSError, json.JSONDecodeError):
+    except (OSError, json.JSONDecodeError) as e:
+        log.warning("Failed to parse DeepSpeed config %s for optimizer check: %s", ds_path, e)
         return False
 
 

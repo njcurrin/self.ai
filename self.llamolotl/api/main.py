@@ -1674,6 +1674,67 @@ def list_outputs():
     return sorted(outputs, key=lambda o: o["modified"], reverse=True)
 
 
+# ─── Chat Template Endpoints ─────────────────────────────────────────
+
+CHAT_TEMPLATE_OVERRIDE = Path("/app/chat-template-override.jinja")
+CHAT_TEMPLATES_DIR = Path("/app/chat-templates")
+
+
+@app.post("/api/system/chat-template")
+async def upload_chat_template(req: dict):
+    """Upload a custom Jinja2 chat template file.
+
+    The template is stored and used via --chat-template-file on next server start.
+    """
+    content = req.get("content")
+    if not content:
+        raise HTTPException(status_code=400, detail="'content' field required with template text")
+
+    CHAT_TEMPLATE_OVERRIDE.write_text(content)
+    log.info("Custom chat template uploaded (%d bytes)", len(content))
+
+    # Restart to apply
+    restart_result = _restart_llama_server()
+    return {"status": "applied", "restart": restart_result}
+
+
+@app.delete("/api/system/chat-template")
+def clear_chat_template():
+    """Clear the custom chat template override, reverting to GGUF auto-detection."""
+    if CHAT_TEMPLATE_OVERRIDE.exists():
+        CHAT_TEMPLATE_OVERRIDE.unlink()
+        log.info("Custom chat template cleared, reverting to GGUF auto-detection")
+        restart_result = _restart_llama_server()
+        return {"status": "cleared", "restart": restart_result}
+    return {"status": "no_override", "message": "No custom template was set"}
+
+
+@app.get("/api/system/chat-template")
+def get_chat_template():
+    """Return the current chat template override status."""
+    if CHAT_TEMPLATE_OVERRIDE.exists():
+        content = CHAT_TEMPLATE_OVERRIDE.read_text()
+        return {"override": True, "content": content}
+    return {"override": False, "message": "Using GGUF-embedded template (auto-detected)"}
+
+
+@app.get("/api/system/chat-templates/builtin")
+def list_builtin_templates():
+    """List available built-in chat template names."""
+    # llama.cpp built-in templates (52 named templates)
+    builtin = [
+        "chatml", "llama2", "llama3", "llama4", "mistral-v1", "mistral-v3",
+        "mistral-v3-tekken", "mistral-v7", "phi3", "phi4", "falcon3",
+        "zephyr", "monarch", "gemma", "gemma2", "orion", "openchat",
+        "vicuna", "vicuna-orca", "deepseek", "deepseek2", "deepseek3",
+        "command-r", "yarnchat", "solar", "surfer", "granite",
+        "gigachat", "megrez", "exaone3", "bailing", "glm3", "glm4",
+        "minicpm", "rwkv-world", "rwkv", "chatglm3", "chatglm4",
+        "qwen", "qwen3", "smolvlm", "kimi-k2", "grok-2",
+    ]
+    return {"templates": builtin}
+
+
 # ─── Pipeline Endpoints ───────────────────────────────────────────────
 
 
