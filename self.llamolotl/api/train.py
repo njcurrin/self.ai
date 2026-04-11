@@ -457,7 +457,7 @@ def build_training_args(config: dict, train_size: int) -> SFTConfig:
 
 def main():
     if len(sys.argv) < 2:
-        print(f"Usage: {sys.argv[0]} <config.yaml>", file=sys.stderr)
+        log.error("Usage: %s <config.yaml>", sys.argv[0])
         sys.exit(1)
 
     config_path = sys.argv[1]

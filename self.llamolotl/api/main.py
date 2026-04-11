@@ -4,6 +4,7 @@ Runs on port 8093, manages job lifecycle and progress monitoring.
 """
 
 import asyncio
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
@@ -17,23 +18,25 @@ from .state import (
 )
 from .routers import jobs, models, pipeline, system
 
-app = FastAPI(title="Training API", version=API_VERSION)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize on startup, cleanup on shutdown."""
+    _ensure_dirs()
+    _load_jobs()
+    _load_pipeline_tasks()
+    _try_start_next_pending()
+    poll_task = asyncio.create_task(_poll_jobs())
+    yield
+    poll_task.cancel()
+
+
+app = FastAPI(title="Training API", version=API_VERSION, lifespan=lifespan)
 
 app.include_router(jobs.router)
 app.include_router(models.router)
 app.include_router(pipeline.router)
 app.include_router(system.router)
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize on startup."""
-    _ensure_dirs()
-    _load_jobs()
-    _load_pipeline_tasks()
-    # Start any pending jobs that were queued before restart
-    _try_start_next_pending()
-    asyncio.create_task(_poll_jobs())
 
 
 if __name__ == "__main__":

@@ -754,11 +754,20 @@ async def get_pipeline_task_logs(
     async def generate():
         async with aiofiles.open(log_path, "r") as f:
             await f.seek(0, 2)
+            idle_count = 0
             while True:
                 line = await f.readline()
                 if line:
+                    idle_count = 0
                     yield line
                 else:
+                    current_task = _pipeline_tasks.get(task_id)
+                    if current_task and current_task.status in (
+                        PipelineTaskStatus.COMPLETED, PipelineTaskStatus.FAILED
+                    ):
+                        idle_count += 1
+                        if idle_count > 5:
+                            return
                     await asyncio.sleep(0.3)
 
     return StreamingResponse(generate(), media_type="text/plain")

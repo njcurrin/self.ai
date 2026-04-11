@@ -16,6 +16,7 @@ from ..state import (
     MODELS_DIR,
     WORKSPACE,
     ApplyLorasRequest,
+    ChatTemplateUploadRequest,
     HealthResponse,
     JobStatus,
     _check_disk,
@@ -42,16 +43,12 @@ def restart_llama_server():
 # ─── Chat Template Endpoints ─────────────────────────────────────────
 
 @router.post("/api/system/chat-template")
-async def upload_chat_template(req: dict):
+async def upload_chat_template(req: ChatTemplateUploadRequest):
     """Upload a custom Jinja2 chat template file.
 
     The template is stored and used via --chat-template-file on next server start.
     """
-    content = req.get("content")
-    if not content:
-        raise HTTPException(status_code=400, detail="'content' field required with template text")
-
-    CHAT_TEMPLATE_OVERRIDE.write_text(content)
+    CHAT_TEMPLATE_OVERRIDE.write_text(req.content)
     log.info("Custom chat template uploaded (%d bytes)", len(content))
 
     # Restart to apply

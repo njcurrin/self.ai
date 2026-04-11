@@ -253,12 +253,17 @@ class ModelRegisterRequest(BaseModel):
     name: str  # Relative path to first shard or file within MODELS_DIR
 
 
+class ChatTemplateUploadRequest(BaseModel):
+    content: str  # Jinja2 template text
+
+
 class HfCacheEnsureRequest(BaseModel):
     repos: List[str] = CURATOR_CLASSIFIER_REPOS
 
 
 # ─── State ──────────────────────────────────────────────────────────────
 
+_state_lock = threading.Lock()  # Guards _jobs, _pipeline_tasks, and their process dicts
 _jobs: Dict[str, Job] = {}
 _processes: Dict[str, subprocess.Popen] = {}
 _active_downloads: Dict[str, threading.Event] = {}  # name -> cancel event
@@ -395,11 +400,12 @@ def _record_lora_meta(
 
 
 def _save_pipeline_tasks():
-    """Persist pipeline task state to JSON file."""
-    tmp = PIPELINE_STATE_FILE.with_suffix(".tmp")
-    data = {tid: t.model_dump(mode="json") for tid, t in _pipeline_tasks.items()}
-    tmp.write_text(json.dumps(data, indent=2, default=str))
-    tmp.replace(PIPELINE_STATE_FILE)
+    """Persist pipeline task state to JSON file. Thread-safe."""
+    with _state_lock:
+        tmp = PIPELINE_STATE_FILE.with_suffix(".tmp")
+        data = {tid: t.model_dump(mode="json") for tid, t in _pipeline_tasks.items()}
+        tmp.write_text(json.dumps(data, indent=2, default=str))
+        tmp.replace(PIPELINE_STATE_FILE)
 
 
 def _load_pipeline_tasks():
@@ -452,11 +458,12 @@ def _load_jobs():
 
 
 def _save_jobs():
-    """Persist job state to JSON file (atomic write)."""
-    tmp = JOBS_STATE_FILE.with_suffix(".tmp")
-    data = {jid: j.model_dump(mode="json") for jid, j in _jobs.items()}
-    tmp.write_text(json.dumps(data, indent=2, default=str))
-    tmp.replace(JOBS_STATE_FILE)
+    """Persist job state to JSON file (atomic write). Thread-safe."""
+    with _state_lock:
+        tmp = JOBS_STATE_FILE.with_suffix(".tmp")
+        data = {jid: j.model_dump(mode="json") for jid, j in _jobs.items()}
+        tmp.write_text(json.dumps(data, indent=2, default=str))
+        tmp.replace(JOBS_STATE_FILE)
 
 
 def _refresh_metrics(job: Job):
@@ -779,13 +786,27 @@ def _check_inference_health() -> tuple:
 
 
 def _check_gpu() -> tuple:
-    """Check GPU availability and memory. Returns (available, used_gb, total_gb)."""
+    """Check system-wide GPU availability and memory via nvidia-smi.
+
+    Returns (available, used_gb, total_gb).
+    """
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=memory.used,memory.total", "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            line = result.stdout.strip().split("\n")[0]
+            used_mb, total_mb = [float(x.strip()) for x in line.split(",")]
+            return True, round(used_mb / 1024, 2), round(total_mb / 1024, 2)
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        pass
+    # Fallback to torch if nvidia-smi not available
     try:
         import torch
         if torch.cuda.is_available():
-            used = torch.cuda.memory_allocated() / (1024**3)
             total = torch.cuda.get_device_properties(0).total_mem / (1024**3)
-            return True, round(used, 2), round(total, 2)
+            return True, None, round(total, 2)
     except ImportError:
         pass
     return False, None, None

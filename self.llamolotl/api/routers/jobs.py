@@ -73,11 +73,13 @@ def create_job(req: JobCreate) -> Job:
 
     # Resolve source config path
     if req.config_inline:
-        config_path = CONFIGS_DIR / f"job-{job_id}.yaml"
+        # Validate YAML before writing to disk
         try:
-            config_path.write_text(req.config_inline)
-        except Exception as e:
+            yaml.safe_load(req.config_inline)
+        except yaml.YAMLError as e:
             raise HTTPException(status_code=400, detail=f"Invalid YAML: {e}")
+        config_path = CONFIGS_DIR / f"job-{job_id}.yaml"
+        config_path.write_text(req.config_inline)
     else:
         config_path = _validate_path(req.config_path, CONFIGS_DIR, suffix=".yaml")
         if not config_path.exists():
@@ -167,16 +169,25 @@ async def get_job_logs(
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
-    # Stream response
+    # Stream response — terminates when job reaches terminal state and no new lines
     async def generate():
         async with aiofiles.open(log_path, "r") as f:
-            # Seek to end for live tailing
             await f.seek(0, 2)
+            idle_count = 0
             while True:
                 line = await f.readline()
                 if line:
+                    idle_count = 0
                     yield line
                 else:
+                    # Check if job is done and we've drained the log
+                    current_job = _jobs.get(job_id)
+                    if current_job and current_job.status in (
+                        JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED
+                    ):
+                        idle_count += 1
+                        if idle_count > 5:  # ~1.5s of no new lines after completion
+                            return
                     await asyncio.sleep(0.3)
 
     return StreamingResponse(generate(), media_type="text/plain")
@@ -238,14 +249,17 @@ def create_config(req: ConfigCreate):
     if not req.name or "/" in req.name or "\\" in req.name:
         raise HTTPException(status_code=400, detail="Invalid config name")
 
+    # Validate YAML before writing
+    try:
+        yaml.safe_load(req.content)
+    except yaml.YAMLError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid YAML: {e}")
+
     config_path = CONFIGS_DIR / f"{req.name}.yaml"
     if config_path.exists():
         raise HTTPException(status_code=409, detail="Config already exists")
 
-    try:
-        config_path.write_text(req.content)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid YAML: {e}")
+    config_path.write_text(req.content)
 
     return {"name": req.name, "created": True}
 
@@ -313,7 +327,8 @@ def list_outputs():
             output_dir / "adapter_model.safetensors"
         ).exists()
         has_config = (output_dir / "config.json").exists()
-        size = sum(f.stat().st_size for f in output_dir.rglob("*") if f.is_file())
+        # Only count top-level files to avoid expensive recursive walk on large checkpoints
+        size = sum(f.stat().st_size for f in output_dir.iterdir() if f.is_file())
 
         outputs.append(
             {
