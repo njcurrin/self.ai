@@ -18,3 +18,7 @@ Build site: context/plans/build-site.md
 | T-006 | DONE | Composite health endpoint probes llama-server at localhost:8080/health, reports api_healthy + inference_healthy, status "ok"/"degraded" |
 | T-007 | DONE | Health includes gpu_available, gpu_memory_used/total_gb (torch.cuda), disk_models_free_gb, disk_workspace_free_gb (os.statvfs) |
 | T-008 | DONE | Added /health/live (liveness) and /health/ready (readiness). Readiness checks inference server. Degraded state on inference failure |
+| T-055 | DONE | Extracted jobs router: routers/jobs.py (328 lines, 11 endpoints — jobs CRUD, configs CRUD, outputs) |
+| T-056 | DONE | Extracted models router: routers/models.py (914 lines, 11 endpoints — GGUF, HF cache, FastText) and pipeline router: routers/pipeline.py (788 lines, 11 endpoints) |
+| T-057 | DONE | Extracted system router: routers/system.py (276 lines, 10 endpoints — server mgmt, LoRAs, health, templates). Created state.py (829 lines — constants, models, shared state, helpers) |
+| T-058 | DONE | main.py reduced to 42 lines: app creation + 4 router mounts + startup event. All 43 endpoints preserve exact paths. Pure structural refactor. |

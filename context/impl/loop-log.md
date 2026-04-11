@@ -115,3 +115,11 @@
 - **Status:** DONE
 - **Notes:** Verified 35 brownfield tasks against acceptance criteria with code evidence. All criteria met in existing code. Two gaps fixed (T-037 dataset errors, T-042 DS optimizer logging).
 - **Next:** Tier 2 (T-055–T-058 decomposition)
+
+### Iteration 16 — 2026-04-11
+- **Task:** T-055/T-056/T-057/T-058 — Decompose main.py into routers
+- **Tier:** 2
+- **Status:** DONE
+- **Files:** self.llamolotl/api/main.py (42 lines), state.py (829), routers/jobs.py (328), routers/models.py (914), routers/pipeline.py (788), routers/system.py (276)
+- **Validation:** 43 endpoints preserved, all syntax valid, pure structural refactor
+- **Next:** Tier 3 (T-059–T-062 test infrastructure)
