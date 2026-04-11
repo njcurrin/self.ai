@@ -123,3 +123,11 @@
 - **Files:** self.llamolotl/api/main.py (42 lines), state.py (829), routers/jobs.py (328), routers/models.py (914), routers/pipeline.py (788), routers/system.py (276)
 - **Validation:** 43 endpoints preserved, all syntax valid, pure structural refactor
 - **Next:** Tier 3 (T-059–T-062 test infrastructure)
+
+### Iteration 17 — 2026-04-11
+- **Task:** T-059/T-060/T-061/T-062 — Test infrastructure + test suites
+- **Tier:** 3
+- **Status:** DONE
+- **Files:** self.llamolotl/api/tests/conftest.py, test_jobs.py, test_config.py, test_pipeline.py, pytest.ini
+- **Validation:** 30/30 tests passing in Docker container. Job state machine, config parsing, dataset formats, pipeline lifecycle all covered.
+- **Next:** ALL TASKS COMPLETE

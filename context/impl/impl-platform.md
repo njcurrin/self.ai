@@ -22,3 +22,7 @@ Build site: context/plans/build-site.md
 | T-056 | DONE | Extracted models router: routers/models.py (914 lines, 11 endpoints — GGUF, HF cache, FastText) and pipeline router: routers/pipeline.py (788 lines, 11 endpoints) |
 | T-057 | DONE | Extracted system router: routers/system.py (276 lines, 10 endpoints — server mgmt, LoRAs, health, templates). Created state.py (829 lines — constants, models, shared state, helpers) |
 | T-058 | DONE | main.py reduced to 42 lines: app creation + 4 router mounts + startup event. All 43 endpoints preserve exact paths. Pure structural refactor. |
+| T-059 | DONE | pytest + pytest-asyncio installed. conftest.py with temp_workspace, patched_state (patches state.py + all router modules), TestClient fixture. pytest.ini configured. |
+| T-060 | DONE | 10 tests: job creation (PENDING state, config required), approval (approve, double-approve, nonexistent), one-at-a-time, cancellation (DELETE), persistence, error messages |
+| T-061 | DONE | 11 tests: field aliasing (micro_batch_size, num_epochs, lr_scheduler, no-overwrite), config CRUD (create, list, get, delete, 404), dataset format detection (chat_template, alpaca) |
+| T-062 | DONE | 10 tests: pipeline task creation + persistence, task queries (list, get, 404), GPU mutual exclusion (queued when training, runs when idle, pull not blocked), cancellation (running ok, completed 400) |
