@@ -10,6 +10,13 @@ from pathlib import Path
 import pytest
 
 
+def _mock_popen():
+    """Return context manager that mocks Popen for pipeline tasks."""
+    mock_proc = MagicMock()
+    mock_proc.pid = 12345
+    return patch("api.state.subprocess.Popen", return_value=mock_proc)
+
+
 class TestPipelineTaskCreation:
     """Test pipeline task creation and tracking."""
 
@@ -17,11 +24,8 @@ class TestPipelineTaskCreation:
         """Pipeline tasks are tracked in _pipeline_tasks dict."""
         from api.state import PipelineTaskType, PipelineTaskStatus
 
-        with patch("subprocess.Popen") as mock_popen:
-            mock_proc = MagicMock()
-            mock_proc.pid = 12345
-            mock_popen.return_value = mock_proc
-
+        popen_patch = _mock_popen()
+        with popen_patch:
             task = patched_state._start_pipeline_task(
                 task_type=PipelineTaskType.QUANTIZE,
                 cmd=["echo", "test"],
@@ -37,11 +41,8 @@ class TestPipelineTaskCreation:
         """Pipeline tasks are saved to pipeline_tasks.json."""
         from api.state import PipelineTaskType
 
-        with patch("subprocess.Popen") as mock_popen:
-            mock_proc = MagicMock()
-            mock_proc.pid = 12345
-            mock_popen.return_value = mock_proc
-
+        popen_patch = _mock_popen()
+        with popen_patch:
             patched_state._start_pipeline_task(
                 task_type=PipelineTaskType.QUANTIZE,
                 cmd=["echo", "test"],
@@ -114,7 +115,6 @@ class TestGPUMutualExclusion:
             Job, JobStatus,
         )
 
-        # Simulate a running training job
         running_job = Job(
             job_id="train-1",
             config_path="test.yaml",
@@ -126,7 +126,6 @@ class TestGPUMutualExclusion:
         )
         patched_state._jobs["train-1"] = running_job
 
-        # Start a GPU pipeline task — should be queued
         task = patched_state._start_pipeline_task(
             task_type=PipelineTaskType.QUANTIZE,
             cmd=["echo", "test"],
@@ -140,11 +139,8 @@ class TestGPUMutualExclusion:
         """GPU pipeline tasks run immediately when no training is active."""
         from api.state import PipelineTaskType, PipelineTaskStatus
 
-        with patch("subprocess.Popen") as mock_popen:
-            mock_proc = MagicMock()
-            mock_proc.pid = 12345
-            mock_popen.return_value = mock_proc
-
+        popen_patch = _mock_popen()
+        with popen_patch:
             task = patched_state._start_pipeline_task(
                 task_type=PipelineTaskType.QUANTIZE,
                 cmd=["echo", "test"],
@@ -161,7 +157,6 @@ class TestGPUMutualExclusion:
             Job, JobStatus,
         )
 
-        # Simulate running training
         running_job = Job(
             job_id="train-1",
             config_path="test.yaml",
@@ -173,11 +168,8 @@ class TestGPUMutualExclusion:
         )
         patched_state._jobs["train-1"] = running_job
 
-        with patch("subprocess.Popen") as mock_popen:
-            mock_proc = MagicMock()
-            mock_proc.pid = 12345
-            mock_popen.return_value = mock_proc
-
+        popen_patch = _mock_popen()
+        with popen_patch:
             task = patched_state._start_pipeline_task(
                 task_type=PipelineTaskType.PULL_HF_MODEL,
                 cmd=["echo", "test"],
@@ -185,7 +177,6 @@ class TestGPUMutualExclusion:
                 output_path="/models/test",
             )
 
-        # PULL_HF_MODEL is not in _GPU_PIPELINE_TYPES, so it runs immediately
         assert task.status == PipelineTaskStatus.RUNNING
 
 
@@ -208,7 +199,6 @@ class TestPipelineTaskCancellation:
         )
         patched_state._pipeline_tasks["cancel-test"] = task
 
-        # Mock the process so terminate doesn't fail
         mock_proc = MagicMock()
         patched_state._pipeline_processes["cancel-test"] = mock_proc
 
@@ -232,3 +222,41 @@ class TestPipelineTaskCancellation:
 
         resp = client.delete("/api/pipeline/tasks/done-task")
         assert resp.status_code == 400
+
+
+class TestQueuedTaskPersistence:
+    """Test that queued task commands survive serialization."""
+
+    def test_queued_cmd_serialized(self, patched_state):
+        """Queued task command is stored in the model and persists to JSON."""
+        from api.state import (
+            PipelineTaskType, PipelineTaskStatus,
+            Job, JobStatus,
+        )
+
+        # Running training so task gets queued
+        running_job = Job(
+            job_id="train-1",
+            config_path="test.yaml",
+            output_dir="/workspace/training/outputs/test",
+            status=JobStatus.RUNNING,
+            approved=True,
+            created_at=datetime.now(),
+            log_file="/workspace/training/logs/test.log",
+        )
+        patched_state._jobs["train-1"] = running_job
+
+        task = patched_state._start_pipeline_task(
+            task_type=PipelineTaskType.QUANTIZE,
+            cmd=["echo", "test-command"],
+            input_path="/models/test.gguf",
+            output_path="/models/test-q4.gguf",
+        )
+
+        assert task.status == PipelineTaskStatus.QUEUED
+        assert task.queued_cmd == ["echo", "test-command"]
+
+        # Verify it survives JSON roundtrip
+        data = json.loads(patched_state.PIPELINE_STATE_FILE.read_text())
+        task_data = list(data.values())[0]
+        assert task_data["queued_cmd"] == ["echo", "test-command"]

@@ -24,5 +24,5 @@ Build site: context/plans/build-site.md
 | F-013: Remaining print() in train.py | P3 | train.py:460 | FIXED | — |
 | F-015: Recursive size calc in list endpoints | P2 | routers/jobs.py:315 | FIXED | — |
 | F-016: Deprecated on_event startup | P3 | main.py:28 | FIXED | — |
-| F-017: No test coverage for health/system/model endpoints | P2 | tests/ | NEW | — |
+| F-017: No test coverage for health/system/model endpoints | P2 | tests/ | FIXED | — |
 | F-018: convert-to-gguf allows absolute path without validation | P2 | routers/pipeline.py:301 | FIXED | T-066 |

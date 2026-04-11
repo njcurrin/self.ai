@@ -701,8 +701,8 @@ def _start_pipeline_task(
         input_path=input_path,
         output_path=output_path,
     )
-    task._queued_cmd = cmd
-    task._queued_env = env
+    task.queued_cmd = cmd
+    task.queued_env = env
 
     _pipeline_tasks[task_id] = task
     _launch_pipeline_process(task)

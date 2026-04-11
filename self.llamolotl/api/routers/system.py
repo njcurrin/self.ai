@@ -49,7 +49,7 @@ async def upload_chat_template(req: ChatTemplateUploadRequest):
     The template is stored and used via --chat-template-file on next server start.
     """
     CHAT_TEMPLATE_OVERRIDE.write_text(req.content)
-    log.info("Custom chat template uploaded (%d bytes)", len(content))
+    log.info("Custom chat template uploaded (%d bytes)", len(req.content))
 
     # Restart to apply
     restart_result = _restart_llama_server()
