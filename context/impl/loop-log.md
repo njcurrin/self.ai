@@ -53,3 +53,19 @@
 - **Files:** self.llamolotl/api/train.py
 - **Validation:** Acceptance 3/3 (auto-detect latest checkpoint, explicit path, resume_from_checkpoint passed to trainer.train())
 - **Next:** T-033
+
+### Iteration 8 — 2026-04-11
+- **Task:** T-033 — Fix exception handling: DeepSpeed config + metrics refresh
+- **Tier:** 1
+- **Status:** DONE
+- **Files:** self.llamolotl/api/main.py, self.llamolotl/api/train.py
+- **Validation:** Acceptance 2/2 (specific exceptions, logged warnings, preserves last-known metrics)
+- **Next:** T-034
+
+### Iteration 9 — 2026-04-11
+- **Task:** T-034 — Fix remaining bare except:pass sites
+- **Tier:** 1
+- **Status:** DONE
+- **Files:** self.llamolotl/api/main.py
+- **Validation:** Acceptance 3/3 (all 13 sites addressed, specific types, no bare except:pass in critical paths)
+- **Next:** Continue Tier 0 tasks

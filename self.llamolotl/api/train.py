@@ -248,8 +248,8 @@ def load_model_and_tokenizer(config: dict):
             with open(ds_path) as f:
                 ds_cfg = json.load(f)
             is_zero3 = ds_cfg.get("zero_optimization", {}).get("stage", 0) == 3
-        except (OSError, json.JSONDecodeError):
-            pass
+        except (OSError, json.JSONDecodeError) as e:
+            log.warning("Failed to parse DeepSpeed config %s: %s. Assuming not ZeRO-3.", ds_path, e)
 
     # Quantization config for QLoRA
     # bnb model quantization works with ZeRO-2 (model stays on GPU) but not

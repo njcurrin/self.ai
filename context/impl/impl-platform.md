@@ -13,3 +13,5 @@ Build site: context/plans/build-site.md
 | T-003 | DONE | Replaced 6 print() calls in main.py with log.warning/info/debug. Added logging import and module-level logger |
 | T-004 | DONE | Replaced custom log() wrapper in bake_model.py with logging.getLogger(__name__). All log() calls now log.info() |
 | T-005 | DONE | All modules use getLogger(__name__). Format consistent: %(asctime)s %(levelname)s %(name)s. Added basicConfig to bake_model.py |
+| T-033 | DONE | Fixed DeepSpeed config parse (train.py), metrics refresh (main.py), output dir extraction. Catches specific exceptions (JSONDecodeError, OSError, YAMLError), logs warnings, preserves last-known metrics |
+| T-034 | DONE | Fixed all remaining bare except:pass — adapter_config reads (3 sites), log tail read, HF cache scan, size calculations, symlink cleanup. All now use specific exception types + logging. Remaining OSError:pass in download monitoring are correct (transient file stat) |

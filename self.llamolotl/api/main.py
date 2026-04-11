@@ -242,7 +242,8 @@ def _load_models_meta() -> Dict[str, Any]:
     if MODELS_META_FILE.exists():
         try:
             return json.loads(MODELS_META_FILE.read_text())
-        except Exception:
+        except (json.JSONDecodeError, OSError) as e:
+            log.warning("Failed to load models metadata: %s", e)
             return {}
     return {}
 
@@ -364,8 +365,8 @@ def _refresh_metrics(job: Job):
         if checkpoints:
             data = json.loads(checkpoints[-1].read_text())
             job.metrics = data.get("log_history", [])
-    except Exception:
-        pass
+    except (json.JSONDecodeError, OSError) as e:
+        log.warning("Failed to refresh metrics for job %s: %s", job.job_id, e)
 
 
 def _extract_output_dir(config_path: Path, overrides: Optional[Dict]) -> str:
@@ -376,7 +377,8 @@ def _extract_output_dir(config_path: Path, overrides: Optional[Dict]) -> str:
         # Override takes precedence
         if overrides and "output_dir" in overrides:
             output_dir = overrides["output_dir"]
-    except Exception:
+    except (yaml.YAMLError, OSError) as e:
+        log.warning("Failed to read output_dir from config %s: %s", config_path, e)
         output_dir = None
 
     if not output_dir:
@@ -422,8 +424,8 @@ def _auto_convert_lora(job: Job):
         try:
             cfg = json.loads(adapter_cfg_path.read_text())
             base_model = cfg.get("base_model_name_or_path")
-        except Exception:
-            pass
+        except (json.JSONDecodeError, OSError) as e:
+            log.warning("Failed to read adapter_config.json at %s: %s", adapter_cfg_path, e)
 
     # Build a safe output filename from the relative path
     out_name = str(rel_path).replace("/", "-").replace("\\", "-") + "-lora-f16.gguf"
@@ -515,7 +517,8 @@ async def _poll_jobs():
                         log_lines = Path(task.log_file).read_text().splitlines()
                         tail = "\n".join(log_lines[-10:])
                         task.error_message = f"Process exited with code {rc}. Tail:\n{tail}"
-                    except Exception:
+                    except OSError as e:
+                        log.warning("Failed to read log tail for task %s: %s", task_id, e)
                         task.error_message = f"Process exited with code {rc}"
                 del _pipeline_processes[task_id]
                 _save_pipeline_tasks()
@@ -1139,7 +1142,8 @@ async def pull_model(req: ModelPullRequest):
                         if size == 0 and hasattr(s, 'lfs') and s.lfs:
                             size = s.lfs.get('size', 0) if isinstance(s.lfs, dict) else getattr(s.lfs, 'size', 0)
                         total_size += size
-                except Exception:
+                except (AttributeError, TypeError) as e:
+                    log.debug("Could not compute total size for HF download: %s", e)
                     total_size = 0
 
                 if dest_dir.exists() and any(dest_dir.glob("*.safetensors")):
@@ -1315,7 +1319,8 @@ async def pull_model(req: ModelPullRequest):
                     sibling_sizes[s.rfilename] = size
                 for dl_file in files_to_download:
                     total_size += sibling_sizes.get(dl_file, 0)
-            except Exception:
+            except (AttributeError, TypeError) as e:
+                log.debug("Could not compute total size for GGUF download: %s", e)
                 total_size = 0
 
             # Set up cancel event
@@ -1575,8 +1580,8 @@ def delete_gguf_model(req: ModelDeleteRequest):
                     if not link_target.exists():
                         link.unlink()
                         deleted.append(f"symlink:{link.name}")
-                except Exception:
-                    pass
+                except OSError as e:
+                    log.debug("Failed to clean up symlink %s: %s", link.name, e)
     else:
         model_path.unlink()
         deleted.append(req.name)
@@ -2133,8 +2138,8 @@ def convert_lora_to_gguf(req: ConvertLoraToGgufRequest) -> PipelineTask:
             try:
                 adapter_cfg = json.loads(adapter_cfg_path.read_text())
                 base_model_id = adapter_cfg.get("base_model_name_or_path")
-            except Exception:
-                pass
+            except (json.JSONDecodeError, OSError) as e:
+                log.warning("Failed to read adapter_config.json for LoRA meta: %s", e)
 
     # Record in models_meta.json so the LoRA is discoverable
     _record_lora_meta(out_name, base_model_id, req.model_output)
@@ -2211,8 +2216,8 @@ def list_available_loras():
                 try:
                     cfg = json.loads(adapter_cfg.read_text())
                     base_model = cfg.get("base_model_name_or_path")
-                except Exception:
-                    pass
+                except (json.JSONDecodeError, OSError) as e:
+                    log.debug("Failed to read adapter_config for %s: %s", f.name, e)
             # Record it for future lookups
             _record_lora_meta(f.name, base_model, training_output_name)
 
@@ -2242,8 +2247,8 @@ def list_available_loras():
                 try:
                     cfg = json.loads(adapter_cfg.read_text())
                     base_model = cfg.get("base_model_name_or_path")
-                except Exception:
-                    pass
+                except (json.JSONDecodeError, OSError) as e:
+                    log.debug("Failed to read adapter_config for %s: %s", rel, e)
             out_name = rel.replace("/", "-").replace("\\", "-") + "-lora-f16.gguf"
             outfile = MODELS_DIR / out_name
             if not outfile.exists():
@@ -2559,8 +2564,8 @@ def _is_repo_cached(repo_id: str, cache_dir: Path) -> bool:
         for repo in cache_info.repos:
             if repo.repo_id == repo_id and repo.nb_snapshots > 0:
                 return True
-    except Exception:
-        pass
+    except (OSError, ValueError) as e:
+        log.debug("Failed to scan HF cache for %s: %s", repo_id, e)
     return False
 
 
