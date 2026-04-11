@@ -199,6 +199,8 @@ class PipelineTask(BaseModel):
     error_message: Optional[str] = None
     input_path: str
     output_path: str
+    queued_cmd: Optional[List[str]] = None
+    queued_env: Optional[Dict[str, str]] = None
 
 
 class MergeLoraRequest(BaseModel):
@@ -262,6 +264,29 @@ _processes: Dict[str, subprocess.Popen] = {}
 _active_downloads: Dict[str, threading.Event] = {}  # name -> cancel event
 _pipeline_tasks: Dict[str, PipelineTask] = {}
 _pipeline_processes: Dict[str, subprocess.Popen] = {}
+
+
+# ─── Path Safety ────────────────────────────────────────────────────────
+
+def _validate_path(user_input: str, root: Path, suffix: str = "") -> Path:
+    """Validate user-supplied path is under root dir. Raises HTTPException on traversal.
+
+    Args:
+        user_input: User-supplied filename or relative path
+        root: Expected parent directory
+        suffix: Optional suffix to append (e.g. ".yaml")
+    Returns:
+        Resolved safe Path
+    """
+    from fastapi import HTTPException
+
+    candidate = (root / f"{user_input}{suffix}").resolve()
+    if not str(candidate).startswith(str(root.resolve())):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid path: must be under {root}",
+        )
+    return candidate
 
 
 # ─── Initialization ─────────────────────────────────────────────────────
@@ -575,11 +600,15 @@ def _start_job(job: Job) -> None:
             cwd=str(WORKSPACE),
         )
     except Exception as e:
+        log_fh.close()
         job.status = JobStatus.FAILED
         job.error_message = f"Failed to start training: {e}"
         job.finished_at = datetime.now()
         _save_jobs()
         return
+
+    # Popen duplicates the fd internally, safe to close our handle
+    log_fh.close()
 
     job.status = JobStatus.RUNNING
     job.pid = proc.pid
@@ -602,14 +631,28 @@ def _try_start_next_pending() -> None:
     _start_job(pending[0])
 
 
+def _is_gpu_pipeline_running() -> bool:
+    """Check if any GPU pipeline task is currently RUNNING."""
+    for task in _pipeline_tasks.values():
+        if task.status == PipelineTaskStatus.RUNNING and task.task_type in _GPU_PIPELINE_TYPES:
+            return True
+    return False
+
+
 def _try_start_queued_pipeline_tasks() -> None:
-    """Start queued pipeline tasks if no training job is running."""
+    """Start next queued GPU pipeline task if no training or GPU pipeline task is running.
+
+    Only starts ONE task at a time to prevent GPU memory contention.
+    """
     if _is_training_running():
+        return
+    if _is_gpu_pipeline_running():
         return
     for task_id, task in _pipeline_tasks.items():
         if task.status == PipelineTaskStatus.QUEUED:
-            log.info("Auto-starting queued pipeline task %s (training complete)", task_id)
+            log.info("Auto-starting queued pipeline task %s", task_id)
             _launch_pipeline_process(task)
+            return  # One at a time
 
 
 def _start_pipeline_task(
@@ -635,8 +678,8 @@ def _start_pipeline_task(
             input_path=input_path,
             output_path=output_path,
         )
-        task._queued_cmd = cmd
-        task._queued_env = env
+        task.queued_cmd = cmd
+        task.queued_env = env
         _pipeline_tasks[task_id] = task
         _save_pipeline_tasks()
         log.info("Pipeline task %s queued (training is running)", task_id)
@@ -661,8 +704,8 @@ def _start_pipeline_task(
 
 def _launch_pipeline_process(task: PipelineTask) -> None:
     """Actually launch the subprocess for a pipeline task."""
-    cmd = getattr(task, '_queued_cmd', None)
-    env = getattr(task, '_queued_env', None)
+    cmd = task.queued_cmd
+    env = task.queued_env
     if not cmd:
         task.status = PipelineTaskStatus.FAILED
         task.error_message = "No command stored for queued task"
@@ -686,11 +729,16 @@ def _launch_pipeline_process(task: PipelineTask) -> None:
             cwd=str(WORKSPACE),
         )
     except Exception as e:
+        if 'log_fh' in locals():
+            log_fh.close()
         task.status = PipelineTaskStatus.FAILED
         task.error_message = f"Failed to start: {e}"
         task.finished_at = datetime.now()
         _save_pipeline_tasks()
         return
+
+    # Popen duplicates the fd internally, safe to close our handle
+    log_fh.close()
 
     task.status = PipelineTaskStatus.RUNNING
     task.pid = proc.pid
@@ -827,3 +875,5 @@ async def _poll_jobs():
                         task.error_message = f"Process exited with code {rc}"
                 del _pipeline_processes[task_id]
                 _save_pipeline_tasks()
+                # Start next queued GPU task now that this one finished
+                _try_start_queued_pipeline_tasks()

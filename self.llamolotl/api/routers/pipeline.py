@@ -45,6 +45,7 @@ from ..state import (
     _record_model_meta,
     _save_pipeline_tasks,
     _start_pipeline_task,
+    _validate_path,
 )
 
 log = logging.getLogger(__name__)
@@ -245,7 +246,7 @@ def merge_lora(req: MergeLoraRequest) -> PipelineTask:
     Output is saved to <output_dir>/merged/ as a full HF-format model.
     Base model is read from adapter_config.json in the output directory.
     """
-    output_dir = OUTPUTS_DIR / req.model_output
+    output_dir = _validate_path(req.model_output, OUTPUTS_DIR)
     if not output_dir.exists():
         raise HTTPException(
             status_code=404,
@@ -298,10 +299,16 @@ def convert_to_gguf(req: ConvertToGgufRequest) -> PipelineTask:
 
     The resulting GGUF file is placed in MODELS_DIR ready for llama-server.
     """
-    # Resolve model path
+    # Resolve model path — validate under OUTPUTS_DIR or WORKSPACE
     model_path = Path(req.model_path)
-    if not model_path.is_absolute():
-        model_path = OUTPUTS_DIR / req.model_path
+    if model_path.is_absolute():
+        # Absolute paths must be under OUTPUTS_DIR or WORKSPACE parent
+        resolved = model_path.resolve()
+        if not (str(resolved).startswith(str(OUTPUTS_DIR.resolve())) or
+                str(resolved).startswith(str(OUTPUTS_DIR.parent.resolve()))):
+            raise HTTPException(status_code=400, detail="Absolute path must be under workspace")
+    else:
+        model_path = _validate_path(req.model_path, OUTPUTS_DIR)
 
     if not model_path.exists():
         raise HTTPException(
@@ -369,7 +376,7 @@ def quantize_model(req: QuantizeRequest) -> PipelineTask:
 
     Takes an existing GGUF file in MODELS_DIR and produces a quantized version.
     """
-    model_path = MODELS_DIR / req.model_file
+    model_path = _validate_path(req.model_file, MODELS_DIR)
     if not model_path.exists():
         raise HTTPException(
             status_code=404,
@@ -430,7 +437,7 @@ def convert_lora_to_gguf(req: ConvertLoraToGgufRequest) -> PipelineTask:
     The resulting LoRA GGUF can be applied at inference time via /api/system/apply-loras
     without merging into the base model.
     """
-    output_dir = OUTPUTS_DIR / req.model_output
+    output_dir = _validate_path(req.model_output, OUTPUTS_DIR)
     if not output_dir.exists():
         raise HTTPException(
             status_code=404,

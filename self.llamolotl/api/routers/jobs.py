@@ -30,6 +30,7 @@ from ..state import (
     _refresh_metrics,
     _save_jobs,
     _try_start_next_pending,
+    _validate_path,
 )
 
 router = APIRouter()
@@ -78,7 +79,7 @@ def create_job(req: JobCreate) -> Job:
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Invalid YAML: {e}")
     else:
-        config_path = CONFIGS_DIR / f"{req.config_path}.yaml"
+        config_path = _validate_path(req.config_path, CONFIGS_DIR, suffix=".yaml")
         if not config_path.exists():
             raise HTTPException(status_code=404, detail="Config file not found")
 
@@ -268,7 +269,7 @@ def list_configs():
 @router.get("/api/configs/{config_name}")
 def get_config(config_name: str):
     """Get config content."""
-    config_path = CONFIGS_DIR / f"{config_name}.yaml"
+    config_path = _validate_path(config_name, CONFIGS_DIR, suffix=".yaml")
     if not config_path.exists():
         raise HTTPException(status_code=404, detail="Config not found")
     return {"name": config_name, "content": config_path.read_text()}
@@ -277,7 +278,7 @@ def get_config(config_name: str):
 @router.delete("/api/configs/{config_name}")
 def delete_config(config_name: str):
     """Delete a config."""
-    config_path = CONFIGS_DIR / f"{config_name}.yaml"
+    config_path = _validate_path(config_name, CONFIGS_DIR, suffix=".yaml")
     if not config_path.exists():
         raise HTTPException(status_code=404, detail="Config not found")
 
