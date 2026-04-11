@@ -1,7 +1,7 @@
 #!/bin/bash
 # Wrapper for llama-server that reads extra arguments from a config file.
-# This allows the API to dynamically configure LoRA adapters (and other
-# flags) without modifying supervisord config.
+# This allows the API to dynamically configure LoRA adapters, chat templates,
+# and other flags without modifying supervisord config.
 
 EXTRA_ARGS_FILE="/app/llama-server.args"
 
@@ -10,11 +10,13 @@ if [ -f "$EXTRA_ARGS_FILE" ]; then
     EXTRA_ARGS=$(cat "$EXTRA_ARGS_FILE")
 fi
 
-# Use fixed chat template if available (works around llama.cpp |items bug on string arguments)
-CHAT_TEMPLATE_FILE="/app/chat-templates/qwen3.jinja"
+# Chat template: rely on GGUF-embedded tokenizer.chat_template by default.
+# A custom template override can be written to /app/chat-template-override.jinja
+# by the API (via UI upload), in which case we pass --chat-template-file.
 TEMPLATE_ARGS=""
-if [ -f "$CHAT_TEMPLATE_FILE" ]; then
-    TEMPLATE_ARGS="--chat-template-file $CHAT_TEMPLATE_FILE"
+OVERRIDE_FILE="/app/chat-template-override.jinja"
+if [ -f "$OVERRIDE_FILE" ]; then
+    TEMPLATE_ARGS="--chat-template-file $OVERRIDE_FILE"
 fi
 
 # shellcheck disable=SC2086

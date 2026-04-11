@@ -36,4 +36,20 @@
 - **Status:** DONE
 - **Files:** self.llamolotl/api/train.py, self.llamolotl/api/merge_lora.py, self.llamolotl/api/bake_model.py
 - **Validation:** Acceptance 3/3 (all use __name__, format consistent, basicConfig added to bake)
-- **Next:** T-033 (exception handling, now unblocked)
+- **Next:** T-050, T-044
+
+### Iteration 6 — 2026-04-11
+- **Task:** T-050 — Remove hardcoded chat template, rely on GGUF auto-detection
+- **Tier:** 1
+- **Status:** DONE
+- **Files:** self.llamolotl/llama-server-wrapper.sh
+- **Validation:** Acceptance 2/2 (no hardcoded qwen3.jinja, override file path supported)
+- **Next:** T-044
+
+### Iteration 7 — 2026-04-11
+- **Task:** T-044 — Implement checkpoint resume
+- **Tier:** 1
+- **Status:** DONE
+- **Files:** self.llamolotl/api/train.py
+- **Validation:** Acceptance 3/3 (auto-detect latest checkpoint, explicit path, resume_from_checkpoint passed to trainer.train())
+- **Next:** T-033

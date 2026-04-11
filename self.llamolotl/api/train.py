@@ -499,8 +499,25 @@ def main():
                 buf.data = buf.data.to(trainer.args.device)
                 log.debug(f"  Moved buffer {name} to {trainer.args.device}")
 
+    # Checkpoint resume: auto-detect latest checkpoint or use explicit path
+    resume_from = config.get("resume_from_checkpoint")
+    if resume_from is True or resume_from == "auto":
+        # Auto-detect: find latest checkpoint-* dir in output_dir
+        output_dir = Path(training_args.output_dir)
+        checkpoints = sorted(output_dir.glob("checkpoint-*"), key=lambda p: p.stat().st_mtime)
+        if checkpoints:
+            resume_from = str(checkpoints[-1])
+            log.info(f"Auto-detected checkpoint to resume from: {resume_from}")
+        else:
+            log.info("No checkpoints found in output_dir, starting from scratch")
+            resume_from = None
+    elif resume_from and isinstance(resume_from, str) and resume_from not in ("false", "False"):
+        log.info(f"Resuming from explicit checkpoint: {resume_from}")
+    else:
+        resume_from = None
+
     log.info("Starting training...")
-    train_result = trainer.train()
+    train_result = trainer.train(resume_from_checkpoint=resume_from)
 
     # 7. Save
     log.info(f"Saving model to {training_args.output_dir}")
