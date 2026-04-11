@@ -95,10 +95,19 @@ class ConfigCreate(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    status: str
+    status: str  # "ok", "degraded", "unhealthy"
+    api_healthy: bool
+    inference_healthy: bool
     running_jobs: int
     jobs_total: int
     api_version: str
+    loaded_model: Optional[str] = None
+    active_loras: Optional[List[Dict[str, Any]]] = None
+    gpu_available: Optional[bool] = None
+    gpu_memory_used_gb: Optional[float] = None
+    gpu_memory_total_gb: Optional[float] = None
+    disk_models_free_gb: Optional[float] = None
+    disk_workspace_free_gb: Optional[float] = None
 
 
 class ModelPullRequest(BaseModel):
@@ -128,9 +137,19 @@ class PipelineTaskType(str, Enum):
 
 
 class PipelineTaskStatus(str, Enum):
+    QUEUED = "queued"
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+
+# Pipeline task types that require GPU and should be blocked during training
+_GPU_PIPELINE_TYPES = {
+    PipelineTaskType.MERGE_LORA,
+    PipelineTaskType.CONVERT_TO_GGUF,
+    PipelineTaskType.CONVERT_LORA_TO_GGUF,
+    PipelineTaskType.QUANTIZE,
+    PipelineTaskType.BAKE,
+}
 
 
 class PipelineTask(BaseModel):
@@ -493,8 +512,10 @@ async def _poll_jobs():
             _save_jobs()
 
         # If a job just finished, try to start the next pending one
+        # and auto-start any queued pipeline tasks
         if any_finished:
             _try_start_next_pending()
+            _try_start_queued_pipeline_tasks()
 
         # Poll pipeline tasks
         for task_id, task in list(_pipeline_tasks.items()):
@@ -1656,6 +1677,21 @@ def list_outputs():
 # ─── Pipeline Endpoints ───────────────────────────────────────────────
 
 
+def _is_training_running() -> bool:
+    """Check if any training job is currently RUNNING."""
+    return any(j.status == JobStatus.RUNNING for j in _jobs.values())
+
+
+def _try_start_queued_pipeline_tasks() -> None:
+    """Start queued pipeline tasks if no training job is running."""
+    if _is_training_running():
+        return
+    for task_id, task in _pipeline_tasks.items():
+        if task.status == PipelineTaskStatus.QUEUED:
+            log.info("Auto-starting queued pipeline task %s (training complete)", task_id)
+            _launch_pipeline_process(task)
+
+
 def _start_pipeline_task(
     task_type: PipelineTaskType,
     cmd: List[str],
@@ -1663,9 +1699,28 @@ def _start_pipeline_task(
     output_path: str,
     env: Optional[Dict[str, str]] = None,
 ) -> PipelineTask:
-    """Launch a pipeline task as a background process."""
+    """Launch a pipeline task, or queue it if training is running."""
     task_id = str(uuid.uuid4())[:8]
     log_file = LOGS_DIR / f"pipeline-{task_id}.log"
+
+    # Queue GPU-intensive tasks while training is running
+    gpu_task = task_type in _GPU_PIPELINE_TYPES
+    if gpu_task and _is_training_running():
+        task = PipelineTask(
+            task_id=task_id,
+            task_type=task_type,
+            status=PipelineTaskStatus.QUEUED,
+            created_at=datetime.now(),
+            log_file=str(log_file),
+            input_path=input_path,
+            output_path=output_path,
+        )
+        task._queued_cmd = cmd
+        task._queued_env = env
+        _pipeline_tasks[task_id] = task
+        _save_pipeline_tasks()
+        log.info("Pipeline task %s queued (training is running)", task_id)
+        return task
 
     task = PipelineTask(
         task_id=task_id,
@@ -1676,6 +1731,24 @@ def _start_pipeline_task(
         input_path=input_path,
         output_path=output_path,
     )
+    task._queued_cmd = cmd
+    task._queued_env = env
+
+    _pipeline_tasks[task_id] = task
+    _launch_pipeline_process(task)
+    return task
+
+
+def _launch_pipeline_process(task: PipelineTask) -> None:
+    """Actually launch the subprocess for a pipeline task."""
+    cmd = getattr(task, '_queued_cmd', None)
+    env = getattr(task, '_queued_env', None)
+    if not cmd:
+        task.status = PipelineTaskStatus.FAILED
+        task.error_message = "No command stored for queued task"
+        task.finished_at = datetime.now()
+        _save_pipeline_tasks()
+        return
 
     run_env = os.environ.copy()
     run_env["PATH"] = f"{VENV_BIN}:/app:{run_env.get('PATH', '')}"
@@ -1684,7 +1757,7 @@ def _start_pipeline_task(
         run_env.update(env)
 
     try:
-        log_fh = open(log_file, "w")
+        log_fh = open(task.log_file, "w")
         proc = subprocess.Popen(
             cmd,
             stdout=log_fh,
@@ -1696,15 +1769,13 @@ def _start_pipeline_task(
         task.status = PipelineTaskStatus.FAILED
         task.error_message = f"Failed to start: {e}"
         task.finished_at = datetime.now()
-        _pipeline_tasks[task_id] = task
         _save_pipeline_tasks()
-        return task
+        return
 
+    task.status = PipelineTaskStatus.RUNNING
     task.pid = proc.pid
-    _pipeline_tasks[task_id] = task
-    _pipeline_processes[task_id] = proc
+    _pipeline_processes[task.task_id] = proc
     _save_pipeline_tasks()
-    return task
 
 
 @app.post("/api/pipeline/pull-hf-model")
@@ -2285,40 +2356,79 @@ def list_available_loras():
 
 @app.post("/api/system/apply-loras")
 def apply_loras(req: ApplyLorasRequest):
-    """Configure llama-server to load LoRA GGUF adapters at inference time.
+    """Set LoRA adapter scales at runtime via llama-server's native API.
 
-    Writes the --lora / --lora-scaled flags to an args file and restarts
-    llama-server. Pass an empty loras list to remove all LoRAs.
+    If all requested adapters are already preloaded, adjusts scales without restart.
+    If new adapters need loading, updates the preload args and restarts.
+    Pass an empty loras list to set all scales to 0.
     """
-    args_parts = []
+    import urllib.request
 
+    # Validate all requested LoRA files exist
     for lora in req.loras:
         lora_file = lora.get("file", "")
         if not lora_file:
             raise HTTPException(status_code=400, detail="Each lora must have a 'file' field")
-
         lora_path = MODELS_DIR / lora_file
         if not lora_path.exists():
-            raise HTTPException(
-                status_code=404,
-                detail=f"LoRA file not found: {lora_file}",
-            )
+            raise HTTPException(status_code=404, detail=f"LoRA file not found: {lora_file}")
 
+    # Check which adapters are currently loaded in llama-server
+    loaded_adapters = _get_active_loras_from_server()
+    loaded_paths = {a.get("path", ""): a.get("id") for a in loaded_adapters}
+
+    # Check if all requested adapters are already loaded
+    all_loaded = True
+    for lora in req.loras:
+        lora_path = str(MODELS_DIR / lora["file"])
+        if lora_path not in loaded_paths:
+            all_loaded = False
+            break
+
+    if all_loaded and loaded_adapters:
+        # Hot-swap: set scales via native API (no restart needed)
+        scale_updates = []
+        for lora in req.loras:
+            lora_path = str(MODELS_DIR / lora["file"])
+            adapter_id = loaded_paths.get(lora_path)
+            if adapter_id is not None:
+                scale_updates.append({"id": adapter_id, "scale": lora.get("scale", 1.0)})
+
+        try:
+            payload = json.dumps(scale_updates).encode()
+            api_req = urllib.request.Request(
+                "http://localhost:8080/lora-adapters",
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(api_req, timeout=5) as resp:
+                resp.read()
+            return {
+                "status": "applied",
+                "method": "hot-swap",
+                "loras": req.loras,
+                "restart": False,
+            }
+        except Exception as e:
+            log.warning("Hot-swap failed, falling back to restart: %s", e)
+
+    # Cold path: update args file with --lora-init-without-apply and restart
+    args_parts = []
+    for lora in req.loras:
+        lora_path = MODELS_DIR / lora["file"]
         scale = lora.get("scale")
         if scale is not None:
-            # llama.cpp now uses colon-separated format: FNAME:SCALE
             args_parts.extend(["--lora-scaled", f"{lora_path}:{float(scale)}"])
         else:
             args_parts.extend(["--lora", str(lora_path)])
 
-    # Write args file (empty file = no LoRAs)
     LLAMA_SERVER_ARGS_FILE.write_text(" ".join(args_parts))
-
-    # Restart llama-server to pick up new config
     restart_result = _restart_llama_server()
 
     return {
         "status": "applied",
+        "method": "restart",
         "loras": req.loras,
         "args": " ".join(args_parts) or "(none)",
         "restart": restart_result,
@@ -2327,22 +2437,32 @@ def apply_loras(req: ApplyLorasRequest):
 
 @app.get("/api/system/active-loras")
 def get_active_loras():
-    """Return the currently configured LoRA adapters for llama-server."""
+    """Return currently active LoRA adapters from llama-server's native API."""
+    # Try native API first (live state)
+    adapters = _get_active_loras_from_server()
+    if adapters:
+        loras = []
+        for a in adapters:
+            loras.append({
+                "id": a.get("id"),
+                "file": Path(a.get("path", "")).name,
+                "scale": a.get("scale", 0.0),
+            })
+        return {"loras": loras, "source": "llama-server"}
+
+    # Fallback to args file if server is not responding
     if not LLAMA_SERVER_ARGS_FILE.exists():
-        return {"loras": [], "raw_args": ""}
+        return {"loras": [], "source": "args-file"}
 
     raw = LLAMA_SERVER_ARGS_FILE.read_text().strip()
     if not raw:
-        return {"loras": [], "raw_args": ""}
+        return {"loras": [], "source": "args-file"}
 
-    # Parse the args back into structured form
-    # New format: --lora-scaled FNAME:SCALE  (colon-separated)
     loras = []
     parts = raw.split()
     i = 0
     while i < len(parts):
         if parts[i] == "--lora-scaled" and i + 1 < len(parts):
-            # Parse FNAME:SCALE format
             val = parts[i + 1]
             if ":" in val:
                 fname, scale_str = val.rsplit(":", 1)
@@ -2356,7 +2476,7 @@ def get_active_loras():
         else:
             i += 1
 
-    return {"loras": loras, "raw_args": raw}
+    return {"loras": loras, "source": "args-file"}
 
 
 @app.post("/api/pipeline/bake", status_code=201)
@@ -2719,20 +2839,102 @@ async def ensure_fasttext_models():
     return StreamingResponse(generate(), media_type="application/x-ndjson")
 
 
-# ─── Health Endpoint ───────────────────────────────────────────────────
+# ─── Health Endpoints ─────────────────────────────────────────────────
+
+def _check_inference_health() -> tuple:
+    """Probe llama-server health. Returns (healthy: bool, model: str|None, loras: list|None)."""
+    import urllib.request
+    try:
+        with urllib.request.urlopen("http://localhost:8080/health", timeout=3) as resp:
+            data = json.loads(resp.read())
+            healthy = data.get("status") == "ok"
+            model = data.get("model_path") or data.get("model")
+            return healthy, model
+    except Exception:
+        return False, None
+
+
+def _check_gpu() -> tuple:
+    """Check GPU availability and memory. Returns (available, used_gb, total_gb)."""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            used = torch.cuda.memory_allocated() / (1024**3)
+            total = torch.cuda.get_device_properties(0).total_mem / (1024**3)
+            return True, round(used, 2), round(total, 2)
+    except ImportError:
+        pass
+    return False, None, None
+
+
+def _check_disk(path: str) -> float:
+    """Return free disk space in GB for given path."""
+    try:
+        stat = os.statvfs(path)
+        return round((stat.f_bavail * stat.f_frsize) / (1024**3), 2)
+    except OSError:
+        return -1.0
+
+
+def _get_active_loras_from_server() -> list:
+    """Query llama-server for active LoRA adapters."""
+    import urllib.request
+    try:
+        with urllib.request.urlopen("http://localhost:8080/lora-adapters", timeout=2) as resp:
+            return json.loads(resp.read())
+    except Exception:
+        return []
+
 
 @app.get("/health")
 def health() -> HealthResponse:
-    """API health check."""
+    """Composite health check: API + inference server + GPU + disk."""
     running_count = sum(
         1 for j in _jobs.values() if j.status == JobStatus.RUNNING
     )
+
+    inference_healthy, loaded_model = _check_inference_health()
+    gpu_available, gpu_used, gpu_total = _check_gpu()
+    active_loras = _get_active_loras_from_server() if inference_healthy else None
+
+    models_free = _check_disk(str(MODELS_DIR))
+    workspace_free = _check_disk(str(WORKSPACE))
+
+    if inference_healthy:
+        status = "ok"
+    else:
+        status = "degraded"
+
     return HealthResponse(
-        status="ok",
+        status=status,
+        api_healthy=True,
+        inference_healthy=inference_healthy,
         running_jobs=running_count,
         jobs_total=len(_jobs),
         api_version=API_VERSION,
+        loaded_model=loaded_model,
+        active_loras=active_loras,
+        gpu_available=gpu_available,
+        gpu_memory_used_gb=gpu_used,
+        gpu_memory_total_gb=gpu_total,
+        disk_models_free_gb=models_free,
+        disk_workspace_free_gb=workspace_free,
     )
+
+
+@app.get("/health/live")
+def health_liveness():
+    """Liveness probe — is the API process alive?"""
+    return {"status": "alive"}
+
+
+@app.get("/health/ready")
+def health_readiness():
+    """Readiness probe — can the system serve inference?"""
+    inference_healthy, _ = _check_inference_health()
+    if inference_healthy:
+        return {"status": "ready"}
+    return {"status": "not_ready", "reason": "inference server not responding"}
 
 
 if __name__ == "__main__":

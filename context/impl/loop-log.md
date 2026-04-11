@@ -69,3 +69,27 @@
 - **Files:** self.llamolotl/api/main.py
 - **Validation:** Acceptance 3/3 (all 13 sites addressed, specific types, no bare except:pass in critical paths)
 - **Next:** Continue Tier 0 tasks
+
+### Iteration 10 — 2026-04-11
+- **Task:** T-006/T-007/T-008 — Composite health, GPU/disk, liveness/readiness
+- **Tier:** 0
+- **Status:** DONE
+- **Files:** self.llamolotl/api/main.py
+- **Validation:** Acceptance 6/6 (composite status, llama-server probe, GPU/disk, liveness/readiness, degraded handling)
+- **Next:** T-029/T-030
+
+### Iteration 11 — 2026-04-11
+- **Task:** T-029/T-030 — LoRA hot-swap via native llama-server API
+- **Tier:** 0
+- **Status:** DONE
+- **Files:** self.llamolotl/api/main.py
+- **Validation:** Acceptance 4/4 (hot-swap via POST /lora-adapters, active-loras from native API, fallback to restart for new adapters)
+- **Next:** T-022
+
+### Iteration 12 — 2026-04-11
+- **Task:** T-022 — Pipeline/training mutual exclusion + auto-start
+- **Tier:** 0
+- **Status:** DONE
+- **Files:** self.llamolotl/api/main.py
+- **Validation:** Acceptance 2/2 (QUEUED status while training runs, auto-start on training complete)
+- **Next:** Verify remaining brownfield tasks

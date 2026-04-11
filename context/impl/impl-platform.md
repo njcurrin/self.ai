@@ -15,3 +15,6 @@ Build site: context/plans/build-site.md
 | T-005 | DONE | All modules use getLogger(__name__). Format consistent: %(asctime)s %(levelname)s %(name)s. Added basicConfig to bake_model.py |
 | T-033 | DONE | Fixed DeepSpeed config parse (train.py), metrics refresh (main.py), output dir extraction. Catches specific exceptions (JSONDecodeError, OSError, YAMLError), logs warnings, preserves last-known metrics |
 | T-034 | DONE | Fixed all remaining bare except:pass — adapter_config reads (3 sites), log tail read, HF cache scan, size calculations, symlink cleanup. All now use specific exception types + logging. Remaining OSError:pass in download monitoring are correct (transient file stat) |
+| T-006 | DONE | Composite health endpoint probes llama-server at localhost:8080/health, reports api_healthy + inference_healthy, status "ok"/"degraded" |
+| T-007 | DONE | Health includes gpu_available, gpu_memory_used/total_gb (torch.cuda), disk_models_free_gb, disk_workspace_free_gb (os.statvfs) |
+| T-008 | DONE | Added /health/live (liveness) and /health/ready (readiness). Readiness checks inference server. Degraded state on inference failure |
