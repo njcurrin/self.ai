@@ -41,9 +41,6 @@ LLAMA_QUANTIZE = Path("/app/llama-quantize")
 CONVERT_HF_TO_GGUF = Path("/app/convert/convert_hf_to_gguf.py")
 CONVERT_LORA_TO_GGUF = Path("/app/convert/convert_lora_to_gguf.py")
 BAKE_SCRIPT = Path("/workspace/training/api/bake_model.py")
-HERETIC_SCRIPT = Path("/workspace/training/api/heretic_run.py")
-HERETIC_DIR = WORKSPACE / "heretic"
-HERETIC_DEFAULT_CONFIG = HERETIC_DIR / "config.default.toml"
 LLAMA_SERVER_ARGS_FILE = Path("/app/llama-server.args")
 MODELS_META_FILE = MODELS_DIR / "models_meta.json"
 
@@ -125,7 +122,6 @@ class PipelineTaskType(str, Enum):
     CONVERT_LORA_TO_GGUF = "convert_lora_to_gguf"
     QUANTIZE = "quantize"
     BAKE = "bake"
-    HERETIC = "heretic"
 
 
 class PipelineTaskStatus(str, Enum):
@@ -193,13 +189,6 @@ class BakeRequest(BaseModel):
     outtype: str = "f16"  # f32, f16, bf16, q8_0
     quant_type: Optional[str] = None  # Q4_K_M, Q8_0, etc. If None, skip quantization
 
-
-class HereticJobCreate(BaseModel):
-    """Run heretic abliteration on a model."""
-    model_name: str  # HuggingFace repo ID, e.g. "meta-llama/Llama-3.1-8B-Instruct"
-    quantization: str = "none"  # "none" or "bnb_4bit"
-    n_trials: Optional[int] = None  # Override default trial count
-    save_strategy: str = "merge"  # "merge" (full model) or "adapter" (LoRA only)
 
 
 # ─── State ──────────────────────────────────────────────────────────────
@@ -2535,70 +2524,6 @@ def cancel_pipeline_task(task_id: str):
 
     return {"status": "cancelled", "task_id": task_id}
 
-
-# ─── Heretic Endpoints ─────────────────────────────────────────────────
-
-@app.post("/api/heretic/run", status_code=201)
-def run_heretic(req: HereticJobCreate) -> PipelineTask:
-    """Run heretic abliteration on a model.
-
-    Launches the non-interactive heretic wrapper as a background process.
-    The output model is saved to OUTPUTS_DIR/heretic-<model_name>/.
-    """
-    # Sanitize model name for directory
-    safe_name = req.model_name.replace("/", "--")
-    output_name = f"heretic-{safe_name}"
-    output_dir = OUTPUTS_DIR / output_name
-
-    # Build command
-    cmd = [
-        str(PYTHON), str(HERETIC_SCRIPT),
-        "--model", req.model_name,
-        "--output-dir", str(output_dir),
-        "--quantization", req.quantization,
-        "--save-strategy", req.save_strategy,
-    ]
-
-    if req.n_trials is not None:
-        cmd.extend(["--n-trials", str(req.n_trials)])
-
-    # Copy default config to output dir so heretic can find it
-    output_dir.mkdir(parents=True, exist_ok=True)
-    if HERETIC_DEFAULT_CONFIG.exists():
-        config_dest = output_dir / "config.toml"
-        if not config_dest.exists():
-            import shutil
-            shutil.copy2(HERETIC_DEFAULT_CONFIG, config_dest)
-        cmd.extend(["--config", str(config_dest)])
-
-    return _start_pipeline_task(
-        task_type=PipelineTaskType.HERETIC,
-        cmd=cmd,
-        input_path=req.model_name,
-        output_path=str(output_dir),
-        env={"HERETIC_MODEL": req.model_name},
-    )
-
-
-@app.get("/api/heretic/status/{task_id}")
-def get_heretic_status(task_id: str) -> PipelineTask:
-    """Get heretic task status (delegates to pipeline task infrastructure)."""
-    task = _pipeline_tasks.get(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Heretic task not found")
-    if task.task_type != PipelineTaskType.HERETIC:
-        raise HTTPException(status_code=400, detail="Task is not a heretic task")
-    return task
-
-
-@app.get("/api/heretic/config")
-async def get_heretic_config():
-    """Return the default heretic configuration."""
-    if not HERETIC_DEFAULT_CONFIG.exists():
-        raise HTTPException(status_code=404, detail="Default heretic config not found")
-    async with aiofiles.open(HERETIC_DEFAULT_CONFIG, "r") as f:
-        content = await f.read()
-    return {"config": content}
 
 
 # ─── HF Cache Endpoint ────────────────────────────────────────────────
