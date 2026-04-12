@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from contextlib import contextmanager
 from typing import Any, Optional
 
@@ -71,7 +72,8 @@ def handle_peewee_migration(DATABASE_URL):
         assert db.is_closed(), "Database connection is still open."
 
 
-handle_peewee_migration(DATABASE_URL)
+if os.environ.get("SKIP_PEEWEE_MIGRATION", "").lower() != "true":
+    handle_peewee_migration(DATABASE_URL)
 
 
 SQLALCHEMY_DATABASE_URL = DATABASE_URL

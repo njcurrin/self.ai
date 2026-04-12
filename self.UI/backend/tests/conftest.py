@@ -23,10 +23,11 @@ from sqlalchemy.orm import sessionmaker
 # Use direct assignment (not setdefault) because container env may have
 # empty values that would block setdefault but still fail validation.
 # ---------------------------------------------------------------------------
-os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", "sqlite:///file::memory:?uri=true&cache=shared")
+os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", "sqlite:///:memory:")
 os.environ["WEBUI_SECRET_KEY"] = "test-secret-key-not-for-production"
 os.environ["ENV"] = "test"
 os.environ["WEBUI_AUTH"] = "True"
+os.environ["SKIP_PEEWEE_MIGRATION"] = "true"
 
 from selfai_ui.internal.db import Base, get_db, get_session  # noqa: E402
 from selfai_ui.utils.auth import create_token  # noqa: E402
@@ -72,7 +73,7 @@ TRUNCATION_ORDER = [
 def test_engine():
     """Create a test database engine (session-scoped, shared across all tests)."""
     engine = create_engine(
-        "sqlite:///file::memory:?uri=true&cache=shared",
+        "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
     )
     Base.metadata.create_all(engine)
@@ -95,9 +96,52 @@ def test_session_factory(test_engine):
 
 @pytest.fixture
 def db_session(test_session_factory, test_engine):
-    """Provide a fresh DB session with truncation-based cleanup."""
+    """Provide a fresh DB session with truncation-based cleanup.
+
+    Also patches get_db in model modules that import it at module level
+    (needed because model classes use `with get_db() as db:` pattern and
+    don't go through FastAPI's dependency injection).
+    """
     session = test_session_factory()
+
+    @contextmanager
+    def _mock_get_db():
+        yield session
+
+    # Patch get_db in modules that import it directly (bypass DI)
+    import selfai_ui.internal.db as db_module
+    patched_modules = [db_module]
+    for mod_name in [
+        "selfai_ui.models.job_windows",
+        "selfai_ui.utils.gpu_queue",
+        "selfai_ui.models.benchmark_config",
+        "selfai_ui.models.curator_jobs",
+        "selfai_ui.models.training",
+        "selfai_ui.models.eval_jobs",
+        "selfai_ui.models.users",
+        "selfai_ui.models.auths",
+        "selfai_ui.models.chats",
+        "selfai_ui.models.files",
+        "selfai_ui.models.knowledge",
+        "selfai_ui.models.tools",
+        "selfai_ui.models.functions",
+    ]:
+        try:
+            mod = __import__(mod_name, fromlist=["get_db"])
+            if hasattr(mod, "get_db"):
+                patched_modules.append(mod)
+        except ImportError:
+            pass
+
+    originals = {id(m): m.get_db for m in patched_modules}
+    for m in patched_modules:
+        m.get_db = _mock_get_db
+
     yield session
+
+    # Restore
+    for m in patched_modules:
+        m.get_db = originals[id(m)]
     session.close()
     # Truncate all tables in FK-safe order
     with test_engine.connect() as conn:
@@ -143,9 +187,13 @@ def _override_db(test_session_factory):
 # Startup task isolation (T-219)
 # ---------------------------------------------------------------------------
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def _isolate_startup_tasks():
-    """Prevent fire-and-forget startup tasks from running during tests."""
+    """Prevent fire-and-forget startup tasks from running during tests.
+
+    NOT autouse — only applies when test_app fixture is requested.
+    Existing model-only tests don't import main.py and don't need this.
+    """
     with patch("selfai_ui.main.periodic_usage_pool_cleanup", new_callable=AsyncMock), \
          patch("selfai_ui.main._resume_crawl_jobs", new_callable=AsyncMock), \
          patch("selfai_ui.main._run_gpu_queue", new_callable=AsyncMock), \
