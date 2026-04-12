@@ -25,11 +25,20 @@ def test_task_endpoint_rejects_unknown_model(authenticated_user, path):
     """Referring to a model that isn't in app.state.MODELS returns 404."""
     resp = authenticated_user.post(
         path,
-        json={"model": "definitely-does-not-exist", "messages": []},
+        json={
+            "model": "definitely-does-not-exist",
+            "messages": [{"role": "user", "content": "hi"}],
+            "prompt": "hi",
+            "responses": ["a", "b"],
+            "chat_id": "test",
+        },
     )
-    # Router returns 404 for missing model per code
-    # Some endpoints may return 400 due to additional required fields
-    assert resp.status_code in (200, 400, 404, 422)
+    # Router raises HTTPException(status_code=404, detail="Model not found")
+    # at tasks.py line 156 when model_id not in models. Pin 404.
+    assert resp.status_code == 404, (
+        f"{path} should 404 for unknown model, got {resp.status_code}: "
+        f"{resp.text[:200]}"
+    )
 
 
 @pytest.mark.tier0

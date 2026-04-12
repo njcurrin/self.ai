@@ -88,11 +88,10 @@ def test_get_nonexistent_prompt(authenticated_admin):
 
 
 @pytest.mark.tier0
-def test_user_without_permission_cannot_create(authenticated_user):
-    """User without workspace.prompts permission is denied."""
-    resp = authenticated_user.post(
+def test_user_without_permission_cannot_create(user_without_workspace_permissions):
+    """User explicitly without workspace.prompts permission is denied."""
+    resp = user_without_workspace_permissions.post(
         "/api/v1/prompts/create",
         json={"command": "/denied", "title": "t", "content": "c"},
     )
-    # Depends on default USER_PERMISSIONS config
-    assert resp.status_code in (200, 401, 403)
+    assert resp.status_code == 401

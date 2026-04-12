@@ -92,13 +92,11 @@ def test_knowledge_get_not_found(authenticated_admin):
 
 @pytest.mark.tier0
 def test_knowledge_creation_denied_for_user_without_permission(
-    authenticated_user,
+    user_without_workspace_permissions,
 ):
     """Regular user without workspace.knowledge permission is denied."""
-    resp = authenticated_user.post(
+    resp = user_without_workspace_permissions.post(
         "/api/v1/knowledge/create",
         json={"name": "Denied KB", "description": ""},
     )
-    # User role without permission → 401
-    # User role WITH permission → 200 (depends on default USER_PERMISSIONS)
-    assert resp.status_code in (200, 401, 403)
+    assert resp.status_code == 401

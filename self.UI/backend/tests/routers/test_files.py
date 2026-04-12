@@ -17,9 +17,9 @@ def test_list_files_empty(authenticated_user):
 
 
 @pytest.mark.tier0
-def test_upload_list_delete_round_trip(authenticated_user, test_app):
+def test_upload_list_delete_round_trip(authenticated_user, test_app, monkeypatch):
     """Upload a file, find it in the list, delete it, verify it's gone."""
-    test_app.state.config.FILE_MAX_SIZE = None  # no size cap for this test
+    monkeypatch.setattr(test_app.state.config, "FILE_MAX_SIZE", None)
     content = b"hello world"
     resp = authenticated_user.post(
         "/api/v1/files/",

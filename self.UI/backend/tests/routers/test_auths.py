@@ -50,8 +50,12 @@ def test_signin_unknown_user_rejected(client):
         "/api/v1/auths/signin",
         json={"email": "noexist@test.local", "password": "wrong"},
     )
-    # Rejected; shape varies
-    assert resp.status_code in (400, 401, 500)
+    # Unknown user → 400 (with INVALID_CRED detail) per auths.py.
+    # A 500 here would indicate a router crash leaking stack traces.
+    assert resp.status_code == 400, (
+        f"Expected 400 for unknown-user signin, got {resp.status_code}: "
+        f"{resp.text[:200]}"
+    )
 
 
 @pytest.mark.tier0

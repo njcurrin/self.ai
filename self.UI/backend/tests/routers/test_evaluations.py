@@ -49,8 +49,11 @@ def test_create_eval_job_lm_eval(authenticated_admin):
 
 
 @pytest.mark.tier0
-def test_user_without_permission_cannot_create_eval_job(authenticated_user):
-    resp = authenticated_user.post(
+def test_user_without_permission_cannot_create_eval_job(
+    user_without_workspace_permissions,
+):
+    """User explicitly without workspace.evaluations permission is denied."""
+    resp = user_without_workspace_permissions.post(
         "/api/v1/evaluations/jobs/create",
         json={
             "eval_type": "bigcode",
@@ -58,7 +61,7 @@ def test_user_without_permission_cannot_create_eval_job(authenticated_user):
             "model_id": "test-model",
         },
     )
-    assert resp.status_code in (200, 401, 403)
+    assert resp.status_code == 401
 
 
 @pytest.mark.tier0

@@ -380,5 +380,33 @@ def authenticated_user(client, test_user):
 def authenticated_admin(client, test_admin):
     """Test client pre-configured with a valid admin-role Bearer token."""
     client.headers["Authorization"] = f"Bearer {test_admin['token']}"
-    client.headers["Content-Type"] = "application/json"
     return client
+
+
+@pytest.fixture
+def user_without_workspace_permissions(test_app, authenticated_user):
+    """User-role client with ALL workspace permissions explicitly denied.
+
+    Use for `cannot_X` tests that must verify a permission rejection,
+    not an ambient `accepted-because-user-has-permission` response.
+    """
+    original = test_app.state.config.USER_PERMISSIONS
+    denied = {
+        "workspace": {
+            "models": False,
+            "knowledge": False,
+            "prompts": False,
+            "training": False,
+            "tools": False,
+            "evaluations": False,
+        },
+        "chat": {
+            "file_upload": False,
+            "delete": False,
+            "edit": False,
+            "temporary": False,
+        },
+    }
+    test_app.state.config.USER_PERMISSIONS = denied
+    yield authenticated_user
+    test_app.state.config.USER_PERMISSIONS = original

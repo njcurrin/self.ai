@@ -26,12 +26,15 @@ def test_create_course(authenticated_admin):
 
 
 @pytest.mark.tier0
-def test_user_cannot_create_course_without_permission(authenticated_user):
-    resp = authenticated_user.post(
+def test_user_cannot_create_course_without_permission(
+    user_without_workspace_permissions,
+):
+    """User explicitly without workspace.training permission is denied."""
+    resp = user_without_workspace_permissions.post(
         "/api/v1/training/courses/create",
         json={"name": "User Course", "description": "test"},
     )
-    assert resp.status_code in (200, 401, 403)
+    assert resp.status_code == 401
 
 
 @pytest.mark.tier0

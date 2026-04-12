@@ -85,9 +85,10 @@ def test_delete_model(authenticated_admin):
 
 
 @pytest.mark.tier0
-def test_user_cannot_create_model(authenticated_user):
-    resp = authenticated_user.post(
+def test_user_cannot_create_model(user_without_workspace_permissions):
+    """User explicitly without workspace.models permission is denied."""
+    resp = user_without_workspace_permissions.post(
         "/api/v1/models/create",
         json=_model_payload("user-attempt"),
     )
-    assert resp.status_code in (200, 401, 403)
+    assert resp.status_code == 401

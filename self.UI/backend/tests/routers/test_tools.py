@@ -77,9 +77,9 @@ def test_get_tool_not_found(authenticated_admin):
 
 
 @pytest.mark.tier0
-def test_user_without_permission_cannot_create(authenticated_user):
-    """User without workspace permission cannot create tools."""
-    resp = authenticated_user.post(
+def test_user_without_permission_cannot_create(user_without_workspace_permissions):
+    """User explicitly without workspace permission cannot create tools."""
+    resp = user_without_workspace_permissions.post(
         "/api/v1/tools/create",
         json={
             "id": "user_tool",
@@ -89,4 +89,5 @@ def test_user_without_permission_cannot_create(authenticated_user):
             "access_control": None,
         },
     )
-    assert resp.status_code in (200, 400, 401, 403)
+    # Router raises 401 UNAUTHORIZED when has_permission returns False
+    assert resp.status_code == 401
