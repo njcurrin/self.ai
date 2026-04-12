@@ -41,42 +41,56 @@ def test_llamolotl_verify_upstream_error_becomes_500(authenticated_admin):
 
 @pytest.mark.tier1
 def test_llamolotl_verify_with_bearer_key(authenticated_admin):
-    """When a key is provided, the Authorization header is forwarded."""
+    """When a key is provided, the Authorization: Bearer header is forwarded
+    to the upstream /health endpoint.
+
+    Uses aioresponses `callback=` to capture the request and assert on
+    the exact forwarded Authorization header.
+    """
     target = "http://self-llamolotl-auth:8080"
+    captured_headers = {}
+
+    def capture_callback(url, **kwargs):
+        from aioresponses import CallbackResult
+        captured_headers.update(kwargs.get("headers") or {})
+        return CallbackResult(status=200, payload={"status": "ok"})
+
     with aioresponses() as m:
-        m.get(f"{target}/health", status=200, payload={"status": "ok"})
+        m.get(f"{target}/health", callback=capture_callback)
         resp = authenticated_admin.post(
             "/llamolotl/verify",
             json={"url": target, "key": "secret-key-123"},
         )
+
     assert resp.status_code == 200
-    # aioresponses records the request; the Authorization header should
-    # contain the bearer key. We verify by asserting the mock was hit.
-    # (aioresponses doesn't let us inspect sent headers easily, but a
-    # successful 200 with a registered mock proves the call reached
-    # upstream correctly.)
+    # Assert the Authorization header was forwarded with the bearer key
+    auth_header = captured_headers.get("Authorization", "")
+    assert auth_header == "Bearer secret-key-123", (
+        f"Expected 'Bearer secret-key-123' forwarded, got: {auth_header!r}. "
+        f"All captured headers: {captured_headers}"
+    )
 
 
 @pytest.mark.tier1
 def test_llamolotl_verify_unmocked_url_fails(authenticated_admin):
-    """Without a mock, the request fails — no real network call."""
+    """Without a mock, connection error returns 500 with specific detail."""
     resp = authenticated_admin.post(
         "/llamolotl/verify",
         json={"url": "http://nonexistent.invalid.test:9999", "key": ""},
     )
-    # Router converts connection errors to 500
-    assert resp.status_code != 200
+    # Router converts aiohttp.ClientError → 500 with detail containing
+    # "Self.AI UI:" prefix per llamolotl.py:273-277
+    assert resp.status_code == 500, (
+        f"Expected 500 connection error, got {resp.status_code}: "
+        f"{resp.text[:200]}"
+    )
 
 
 @pytest.mark.tier1
 def test_llamolotl_config_update_persists(authenticated_admin):
-    """Config update persists the new base URL."""
-    resp = authenticated_admin.post(
-        "/llamolotl/config/update",
-        json={
-            "LLAMOLOTL_BASE_URLS": ["http://self-llamolotl:8080"],
-            "LLAMOLOTL_API_CONFIGS": {},
-        },
+    """Config update round-trip with current config succeeds."""
+    current = authenticated_admin.get("/llamolotl/config").json()
+    resp = authenticated_admin.post("/llamolotl/config/update", json=current)
+    assert resp.status_code == 200, (
+        f"Config round-trip returned {resp.status_code}: {resp.text[:200]}"
     )
-    # May return 200 or validation error; check accordingly
-    assert resp.status_code in (200, 400, 422)

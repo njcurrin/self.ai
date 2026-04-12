@@ -85,21 +85,41 @@ def test_admin_config_admin_access(authenticated_admin):
 
 
 @pytest.mark.tier0
-def test_api_key_create(authenticated_user):
-    """Create an API key for the authenticated user."""
-    resp = authenticated_user.post("/api/v1/auths/api_key")
-    # Should return an api_key string or allow-disabled error
-    assert resp.status_code in (200, 400, 401)
+def test_api_key_create_when_enabled(authenticated_user, test_app):
+    """When ENABLE_API_KEY is True, user can create a new API key."""
+    original = test_app.state.config.ENABLE_API_KEY
+    test_app.state.config.ENABLE_API_KEY = True
+    try:
+        resp = authenticated_user.post("/api/v1/auths/api_key")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "api_key" in body
+        assert body["api_key"].startswith("sk-")
+    finally:
+        test_app.state.config.ENABLE_API_KEY = original
 
 
 @pytest.mark.tier0
-def test_api_key_get(authenticated_user):
-    """Get the current user's API key (may be None)."""
+def test_api_key_create_when_disabled(authenticated_user, test_app):
+    """When ENABLE_API_KEY is False, creation returns 403."""
+    original = test_app.state.config.ENABLE_API_KEY
+    test_app.state.config.ENABLE_API_KEY = False
+    try:
+        resp = authenticated_user.post("/api/v1/auths/api_key")
+        assert resp.status_code in (400, 401, 403)
+    finally:
+        test_app.state.config.ENABLE_API_KEY = original
+
+
+@pytest.mark.tier0
+def test_api_key_get_without_key_returns_404(authenticated_user):
+    """GET /api_key returns 404 when the user has no API key set."""
     resp = authenticated_user.get("/api/v1/auths/api_key")
-    assert resp.status_code in (200, 404)
+    assert resp.status_code == 404
 
 
 @pytest.mark.tier0
-def test_api_key_delete(authenticated_user):
+def test_api_key_delete_returns_200(authenticated_user):
+    """DELETE /api_key returns 200 (bool result)."""
     resp = authenticated_user.delete("/api/v1/auths/api_key")
-    assert resp.status_code in (200, 400)
+    assert resp.status_code == 200

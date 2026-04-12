@@ -54,13 +54,9 @@ def test_curator_verify_strips_trailing_slash(authenticated_admin):
 
 @pytest.mark.tier1
 def test_curator_config_update_persists(authenticated_admin):
-    """Config update persists CURATOR_BASE_URLS."""
-    resp = authenticated_admin.post(
-        "/curator/config/update",
-        json={
-            "ENABLE_CURATOR_API": True,
-            "CURATOR_BASE_URLS": ["http://self-curator:8000"],
-        },
+    """Config update round-trip using current config shape succeeds."""
+    current = authenticated_admin.get("/curator/config").json()
+    resp = authenticated_admin.post("/curator/config/update", json=current)
+    assert resp.status_code == 200, (
+        f"Config round-trip returned {resp.status_code}: {resp.text[:200]}"
     )
-    # May return 200 or 422 depending on config form schema
-    assert resp.status_code in (200, 400, 422)

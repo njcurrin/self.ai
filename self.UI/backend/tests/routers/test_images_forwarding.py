@@ -11,13 +11,12 @@ import pytest
 
 @pytest.mark.tier1
 def test_images_config_update_persists(authenticated_admin):
-    """Updating the image config persists the change."""
+    """Config round-trip with current config succeeds."""
     current = authenticated_admin.get("/api/v1/images/config").json()
-    resp = authenticated_admin.post(
-        "/api/v1/images/config/update",
-        json=current,
+    resp = authenticated_admin.post("/api/v1/images/config/update", json=current)
+    assert resp.status_code == 200, (
+        f"Config round-trip returned {resp.status_code}: {resp.text[:200]}"
     )
-    assert resp.status_code in (200, 400, 422)
 
 
 @pytest.mark.tier1

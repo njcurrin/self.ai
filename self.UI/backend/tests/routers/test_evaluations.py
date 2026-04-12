@@ -15,7 +15,7 @@ def test_list_eval_jobs_empty(authenticated_admin):
 
 
 @pytest.mark.tier0
-def test_create_eval_job_bigcode(authenticated_admin):
+def test_create_eval_job_bigcode(authenticated_admin, seeded_benchmarks):
     resp = authenticated_admin.post(
         "/api/v1/evaluations/jobs/create",
         json={
@@ -24,17 +24,16 @@ def test_create_eval_job_bigcode(authenticated_admin):
             "model_id": "test-model",
         },
     )
-    # Creation should succeed even without the benchmark being known at
-    # config level, since we're just creating the DB row
-    assert resp.status_code in (200, 400)
-    if resp.status_code == 200:
-        body = resp.json()
-        assert body["eval_type"] == "bigcode"
-        assert body["benchmark"] == "humaneval"
+    assert resp.status_code == 200, (
+        f"Eval create returned {resp.status_code}: {resp.text[:200]}"
+    )
+    body = resp.json()
+    assert body["eval_type"] == "bigcode"
+    assert body["benchmark"] == "humaneval"
 
 
 @pytest.mark.tier0
-def test_create_eval_job_lm_eval(authenticated_admin):
+def test_create_eval_job_lm_eval(authenticated_admin, seeded_benchmarks):
     resp = authenticated_admin.post(
         "/api/v1/evaluations/jobs/create",
         json={
@@ -43,9 +42,10 @@ def test_create_eval_job_lm_eval(authenticated_admin):
             "model_id": "test-model",
         },
     )
-    assert resp.status_code in (200, 400)
-    if resp.status_code == 200:
-        assert resp.json()["eval_type"] == "lm-eval"
+    assert resp.status_code == 200, (
+        f"Eval create returned {resp.status_code}: {resp.text[:200]}"
+    )
+    assert resp.json()["eval_type"] == "lm-eval"
 
 
 @pytest.mark.tier0
@@ -114,5 +114,6 @@ def test_create_feedback(authenticated_user):
             "meta": {},
         },
     )
-    # Feedback creation may vary in schema; accept 200 or 422
-    assert resp.status_code in (200, 422)
+    assert resp.status_code == 200, (
+        f"Feedback create returned {resp.status_code}: {resp.text[:200]}"
+    )

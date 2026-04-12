@@ -16,11 +16,9 @@ import pytest
 def test_audio_models_returns_models_dict(authenticated_user, test_app):
     """GET /audio/models returns {models: [...]} shape."""
     resp = authenticated_user.get("/api/v1/audio/models")
-    # When TTS engine is the default openai, get_available_models
-    # may return an empty list or the configured set. The key thing:
-    # the response is a dict with a 'models' key.
-    if resp.status_code != 200:
-        pytest.skip(f"Audio models endpoint returned {resp.status_code}")
+    assert resp.status_code == 200, (
+        f"Audio models returned {resp.status_code}: {resp.text[:200]}"
+    )
     body = resp.json()
     assert isinstance(body, dict)
     assert "models" in body
@@ -30,24 +28,24 @@ def test_audio_models_returns_models_dict(authenticated_user, test_app):
 def test_audio_voices_returns_voices_dict(authenticated_user):
     """GET /audio/voices returns a dict of available voices."""
     resp = authenticated_user.get("/api/v1/audio/voices")
-    if resp.status_code != 200:
-        pytest.skip(f"Audio voices endpoint returned {resp.status_code}")
-    body = resp.json()
-    assert isinstance(body, dict)
+    assert resp.status_code == 200, (
+        f"Audio voices returned {resp.status_code}: {resp.text[:200]}"
+    )
+    assert isinstance(resp.json(), dict)
 
 
 @pytest.mark.tier1
 def test_audio_config_update_persists(authenticated_admin):
-    """Config update persists the configured STT/TTS engine."""
-    # Get current config
+    """Config update round-trip with the currently-returned config succeeds."""
     current = authenticated_admin.get("/api/v1/audio/config").json()
-    # POST a minimal update; shape must match existing AudioConfigForm
     resp = authenticated_admin.post(
         "/api/v1/audio/config/update",
         json=current,
     )
-    # Round-trip should succeed (or fail with validation error)
-    assert resp.status_code in (200, 400, 422)
+    assert resp.status_code == 200, (
+        f"Config round-trip unexpectedly returned {resp.status_code}: "
+        f"{resp.text[:200]}"
+    )
 
 
 @pytest.mark.tier1

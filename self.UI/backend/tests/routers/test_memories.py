@@ -129,12 +129,12 @@ def test_delete_other_user_memory_fails(
     mem_b_id = mem_b.id
 
     resp = authenticated_user.delete(f"/api/v1/memories/{mem_b_id}")
-    # The real contract: user B's memory must survive. The delete is
-    # user-scoped (filters by user_id) so the SQL DELETE affects 0 rows.
-    # Known minor bug: delete_memory_by_id_and_user_id returns True
-    # even when rowcount=0, so the response body may be misleading.
-    # Data protection is what matters.
-    assert resp.status_code in (200, 401, 403, 404)
+    # The real contract: user B's memory must survive. Delete is
+    # user-scoped (filters by user_id) so the SQL DELETE affects 0 rows,
+    # but Memories.delete_memory_by_id_and_user_id always returns True
+    # (known minor bug), so HTTP status is 200. Data protection is what
+    # matters — the row must still exist.
+    assert resp.status_code == 200
     row = db_session.execute(
         text("SELECT id FROM memory WHERE id = :id"), {"id": mem_b_id}
     ).fetchone()
@@ -158,7 +158,7 @@ def test_delete_all_user_memories(authenticated_user, db_session, test_user):
     db_session.commit()
 
     resp = authenticated_user.delete("/api/v1/memories/delete/user")
-    assert resp.status_code in (200, 204)
+    assert resp.status_code == 200
 
     listing = authenticated_user.get("/api/v1/memories/").json()
     assert listing == []

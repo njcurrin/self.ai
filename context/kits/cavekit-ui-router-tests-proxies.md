@@ -148,17 +148,18 @@ Source analysis: `context/refs/research-brief-ui-test-suite.md` Sections 3 (URL 
 
 ### R9: Transport mock enforcement
 
-**Description:** Every test file in this kit must configure its respx mock with `assert_all_called=True` and `assert_all_mocked=True`. An unmatched request must abort the test — a proxy test that silently succeeds against a real upstream (or against nothing) is worse than no test.
+**Description:** Every test file in this kit must use a transport-level HTTP mock appropriate to the router's HTTP client library: `respx` for httpx, `aioresponses` for aiohttp, `responses` for the `requests` library. The mock must fail the test on (a) any unmocked request, and (b) a registered mock that was never called. An unmatched request must never make a real network call.
 
 **Acceptance Criteria:**
-- [ ] Every proxy test file uses a respx fixture (from `cavekit-ui-test-infrastructure.md` R4) configured with strict assertion mode
+- [ ] Every proxy test file uses a transport-level mock appropriate to the router's HTTP client (respx for httpx, aioresponses for aiohttp, responses for requests)
 - [ ] A test that hits an unmocked URL fails the test, does not make a real network call
-- [ ] A test that registers a mock but never triggers it fails rather than silently passing
-- [ ] No test in this kit asserts `status_code in (200, 5xx)` — a 5xx from an unreachable upstream is never a pass condition
-- [ ] A documentation string in each test file confirms the zero-real-network contract is enforced
+- [ ] A test that registers a mock but never triggers it fails rather than silently passing (for respx: `assert_all_called=True`; for aioresponses/responses: explicit `assert len(m.requests) > 0` or equivalent)
+- [ ] No test in this kit asserts `status_code in (success, failure)` — the router's behavior under the mocked condition must be deterministic, and the test pins one status
+- [ ] For at least one test per router, the mock captures the outbound request and asserts caller-supplied headers (Authorization, Content-Type) and body fields are forwarded unchanged
+- [ ] A documentation string in each test file states which HTTP library the router uses and names the corresponding mocking tool
 
 **Dependencies:** `cavekit-ui-test-infrastructure.md` R4
-**Source:** Findings F-001, F-009, F-012, F-014 from `/ck:check` on 2026-04-12.
+**Source:** Findings F-001, F-009, F-012, F-014 from `/ck:check` on 2026-04-12; NF-001, NF-002, NF-006 from round 2 inspection.
 
 ## Changelog
 - 2026-04-12: Added R9 (Transport mock enforcement) — discovered during `/ck:check`. The original R1-R8 all include "zero real network requests" AC but no enforcement mechanism was specified; the resulting tests used status-tuple passes (`200, 500, 502, 503`) that hide unreachable-upstream failures.

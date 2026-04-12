@@ -18,16 +18,26 @@ def test_list_files_empty(authenticated_user):
 
 @pytest.mark.tier0
 def test_upload_list_delete_round_trip(authenticated_user, test_app, monkeypatch):
-    """Upload a file, find it in the list, delete it, verify it's gone."""
+    """Upload a file, find it in the list, delete it, verify it's gone.
+
+    Note: upload triggers process_file which hits retrieval backends.
+    We xfail on retrieval-backend failures rather than skipping — this
+    way a regression in upload itself (pre-processing) still surfaces.
+    """
     monkeypatch.setattr(test_app.state.config, "FILE_MAX_SIZE", None)
     content = b"hello world"
     resp = authenticated_user.post(
         "/api/v1/files/",
         files={"file": ("greeting.txt", io.BytesIO(content), "text/plain")},
     )
-    if resp.status_code != 200:
-        pytest.skip(f"Upload failed with {resp.status_code} — file processing "
-                    f"may need retrieval backend: {resp.text[:200]}")
+    if resp.status_code == 400 and "retrieval" in resp.text.lower():
+        pytest.xfail(
+            "Upload succeeded through to retrieval backend processing "
+            "which is not mocked. Upstream retrieval backend failure."
+        )
+    assert resp.status_code == 200, (
+        f"Upload failed with {resp.status_code}: {resp.text[:200]}"
+    )
 
     file_id = resp.json()["id"]
 

@@ -62,10 +62,15 @@ def test_update_user_info(authenticated_user):
 
 @pytest.mark.tier0
 def test_get_user_by_id(authenticated_user, test_user):
-    """A user can fetch basic info about themselves via /{user_id}."""
+    """A user can fetch basic info about themselves via /{user_id}.
+    Endpoint returns only public-profile fields (name, profile_image_url),
+    not id/email/role."""
     resp = authenticated_user.get(f"/api/v1/users/{test_user['id']}")
-    # 200 with user response, or 401 depending on endpoint auth rules
-    assert resp.status_code in (200, 401, 403)
+    assert resp.status_code == 200
+    body = resp.json()
+    # Router populates name + profile_image_url per users.py:224-230
+    assert "name" in body
+    assert "profile_image_url" in body
 
 
 @pytest.mark.tier0

@@ -17,15 +17,16 @@ def test_list_pipelines_admin_only(authenticated_user):
 
 @pytest.mark.tier0
 def test_list_pipelines_admin_access(authenticated_admin):
-    """Admin can reach the endpoint; may return empty data if no pipeline
-    upstream is configured."""
+    """Admin reaches /list — returns {data: [...]}; may be empty if no
+    pipeline-capable OpenAI backend is configured, but endpoint must
+    return 200 regardless (unreachable upstreams are filtered to empty)."""
     resp = authenticated_admin.get("/api/v1/pipelines/list")
-    # Either 200 with data or 502/503 if upstream unreachable
-    assert resp.status_code in (200, 500, 502, 503)
-    if resp.status_code == 200:
-        body = resp.json()
-        assert "data" in body
-        assert isinstance(body["data"], list)
+    assert resp.status_code == 200, (
+        f"Pipelines list returned {resp.status_code}: {resp.text[:200]}"
+    )
+    body = resp.json()
+    assert "data" in body
+    assert isinstance(body["data"], list)
 
 
 @pytest.mark.tier0

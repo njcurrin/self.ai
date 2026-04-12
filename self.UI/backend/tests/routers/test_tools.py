@@ -34,6 +34,7 @@ def test_list_tools_empty(authenticated_admin):
 
 @pytest.mark.tier0
 def test_create_tool_minimal(authenticated_admin):
+    """Create a tool with valid Python content — must succeed."""
     resp = authenticated_admin.post(
         "/api/v1/tools/create",
         json={
@@ -44,10 +45,10 @@ def test_create_tool_minimal(authenticated_admin):
             "access_control": None,
         },
     )
-    # Tool create may succeed or fail depending on execution environment
-    assert resp.status_code in (200, 400)
-    if resp.status_code == 200:
-        assert resp.json()["id"] == "test_tool"
+    assert resp.status_code == 200, (
+        f"Tool create returned {resp.status_code}: {resp.text[:200]}"
+    )
+    assert resp.json()["id"] == "test_tool"
 
 
 @pytest.mark.tier0

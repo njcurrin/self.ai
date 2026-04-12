@@ -32,6 +32,13 @@ def test_get_group_by_id(authenticated_admin):
 
 
 @pytest.mark.tier0
+@pytest.mark.xfail(
+    reason="Real finding: Groups.update_group_by_id uses "
+    "filter_by(id).update(dict) with JSON columns (user_ids, admin_ids, "
+    "permissions) which fails on SQLite. The endpoint returns 400 with "
+    "a caught exception. Needs router fix — not a test issue.",
+    strict=False,
+)
 def test_update_group(authenticated_admin):
     created = authenticated_admin.post(
         "/api/v1/groups/create",
@@ -42,17 +49,16 @@ def test_update_group(authenticated_admin):
         json={
             "name": "g-upd-new",
             "description": "new",
+            "permissions": None,
+            "user_ids": [],
+            "admin_ids": [],
         },
     )
-    # Accept 200 (success) or 400 (update rejects thin payload).
-    # The key thing is update is admin-scoped — the 400 means the router
-    # reached the update logic. We don't want 401/403.
-    assert resp.status_code in (200, 400)
-    if resp.status_code == 200:
-        refetch = authenticated_admin.get(
-            f"/api/v1/groups/id/{created['id']}"
-        ).json()
-        assert refetch["description"] == "new"
+    assert resp.status_code == 200
+    refetch = authenticated_admin.get(
+        f"/api/v1/groups/id/{created['id']}"
+    ).json()
+    assert refetch["description"] == "new"
 
 
 @pytest.mark.tier0

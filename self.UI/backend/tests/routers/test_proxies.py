@@ -23,10 +23,10 @@ import pytest
 
 @pytest.mark.tier0
 def test_ollama_status_unauthenticated(client):
-    """GET /ollama/ is an unauthenticated health check."""
+    """GET /ollama/ is a health check that returns 200 without auth.
+    The handler returns a fixed string regardless of upstream state."""
     resp = client.get("/ollama/")
-    # 200 if Ollama configured, 500/502 if not reachable — both acceptable
-    assert resp.status_code in (200, 500, 502)
+    assert resp.status_code == 200
 
 
 @pytest.mark.tier0
@@ -63,10 +63,9 @@ def test_openai_config_admin_access(authenticated_admin):
 
 @pytest.mark.tier0
 def test_llamolotl_status_unauthenticated(client):
-    """GET /llamolotl/ is an unauthenticated health check."""
+    """GET /llamolotl/ is a health check returning 200 without auth."""
     resp = client.get("/llamolotl/")
-    # Upstream may or may not be reachable in test env
-    assert resp.status_code in (200, 500, 502, 503)
+    assert resp.status_code == 200
 
 
 @pytest.mark.tier0
@@ -93,8 +92,9 @@ def test_curator_config_admin_only(authenticated_user):
 
 @pytest.mark.tier0
 def test_curator_config_admin_access(authenticated_admin):
+    """Curator config read only hits app state — no upstream call."""
     resp = authenticated_admin.get("/curator/config")
-    assert resp.status_code in (200, 502, 503)
+    assert resp.status_code == 200
 
 
 # ---------------------------------------------------------------------------

@@ -19,8 +19,7 @@ def test_audio_config_admin_access(authenticated_admin):
 def test_audio_models_user_access(authenticated_user):
     """TTS models listing requires auth but not admin."""
     resp = authenticated_user.get("/api/v1/audio/models")
-    # May succeed or return upstream error
-    assert resp.status_code in (200, 500, 502, 503)
+    assert resp.status_code == 200
 
 
 @pytest.mark.tier0
@@ -32,4 +31,4 @@ def test_audio_models_unauthenticated_rejected(client):
 @pytest.mark.tier0
 def test_audio_voices_user_access(authenticated_user):
     resp = authenticated_user.get("/api/v1/audio/voices")
-    assert resp.status_code in (200, 500, 502, 503)
+    assert resp.status_code == 200

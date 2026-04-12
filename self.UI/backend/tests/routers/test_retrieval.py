@@ -61,8 +61,7 @@ def test_config_admin_access(authenticated_admin):
 def test_template_any_user(authenticated_user):
     """Template endpoint is accessible to any verified user."""
     resp = authenticated_user.get("/api/v1/retrieval/template")
-    # May be 401 or 200 depending on auth setup
-    assert resp.status_code in (200, 401, 403)
+    assert resp.status_code == 200
 
 
 @pytest.mark.tier0

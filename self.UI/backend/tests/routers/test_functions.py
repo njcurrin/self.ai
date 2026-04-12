@@ -57,6 +57,7 @@ def test_user_cannot_create_function(authenticated_user):
 
 @pytest.mark.tier0
 def test_admin_create_function(authenticated_admin):
+    """Admin creates a filter function with valid Python content."""
     resp = authenticated_admin.post(
         "/api/v1/functions/create",
         json={
@@ -67,8 +68,9 @@ def test_admin_create_function(authenticated_admin):
             "meta": {"description": "Test"},
         },
     )
-    # May succeed or fail depending on execution
-    assert resp.status_code in (200, 400)
+    assert resp.status_code == 200, (
+        f"Function create returned {resp.status_code}: {resp.text[:200]}"
+    )
 
 
 @pytest.mark.tier0
