@@ -104,6 +104,8 @@ pytest-timeout~=2.3
 pytest-mock~=3.14
 factory-boy~=3.3
 respx~=0.21
+aioresponses~=0.7
+responses~=0.25
 
 googleapis-common-protos==1.63.2
 
