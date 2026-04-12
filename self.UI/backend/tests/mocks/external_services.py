@@ -101,48 +101,105 @@ class ServiceMock:
 # Fixtures
 # ---------------------------------------------------------------------------
 
+def _ollama_base_urls(test_app):
+    """Read current Ollama base URLs from app config (list)."""
+    try:
+        urls = list(test_app.state.config.OLLAMA_BASE_URLS)
+    except AttributeError:
+        urls = [OLLAMA_BASE_URL]
+    return urls or [OLLAMA_BASE_URL]
+
+
+def _openai_base_urls(test_app):
+    try:
+        urls = list(test_app.state.config.OPENAI_API_BASE_URLS)
+    except AttributeError:
+        urls = [OPENAI_BASE_URL]
+    return urls or [OPENAI_BASE_URL]
+
+
+def _llamolotl_base_urls(test_app):
+    try:
+        urls = list(test_app.state.config.LLAMOLOTL_BASE_URLS)
+    except AttributeError:
+        urls = [LLAMOLOTL_BASE_URL]
+    return urls or [LLAMOLOTL_BASE_URL]
+
+
 @pytest.fixture
-def mock_ollama():
-    """Mock all outbound HTTP to Ollama."""
-    with respx.mock(assert_all_mocked=False) as router:
-        mock = ServiceMock(router, OLLAMA_BASE_URL)
-        # Default: health check returns OK
-        router.get(f"{OLLAMA_BASE_URL}/").mock(
-            return_value=httpx.Response(200, text="Ollama is running")
-        )
-        router.head(f"{OLLAMA_BASE_URL}/").mock(
-            return_value=httpx.Response(200)
-        )
+def mock_ollama(test_app):
+    """Mock all outbound HTTP to Ollama with strict assertion mode.
+
+    An unmatched request fails the test. A registered mock that is
+    never called also fails the test. This enforces the zero-real-network
+    contract from cavekit-ui-router-tests-proxies.md R9.
+    """
+    urls = _ollama_base_urls(test_app)
+    with respx.mock(assert_all_called=True, assert_all_mocked=True) as router:
+        mock = ServiceMock(router, urls[0])
         yield mock
 
 
 @pytest.fixture
-def mock_openai():
-    """Mock all outbound HTTP to OpenAI-compatible endpoints."""
-    with respx.mock(assert_all_mocked=False) as router:
-        mock = ServiceMock(router, OPENAI_BASE_URL)
+def mock_openai(test_app):
+    """Mock OpenAI endpoints with strict assertion mode."""
+    urls = _openai_base_urls(test_app)
+    with respx.mock(assert_all_called=True, assert_all_mocked=True) as router:
+        mock = ServiceMock(router, urls[0])
         yield mock
 
 
 @pytest.fixture
-def mock_llamolotl():
-    """Mock all outbound HTTP to Llamolotl training server."""
-    with respx.mock(assert_all_mocked=False) as router:
-        mock = ServiceMock(router, LLAMOLOTL_BASE_URL)
-        # Default: health check
-        router.get(f"{LLAMOLOTL_BASE_URL}/").mock(
-            return_value=httpx.Response(200, json={"status": "ok"})
-        )
-        router.head(f"{LLAMOLOTL_BASE_URL}/").mock(
-            return_value=httpx.Response(200)
-        )
+def mock_llamolotl(test_app):
+    """Mock Llamolotl endpoints with strict assertion mode."""
+    urls = _llamolotl_base_urls(test_app)
+    with respx.mock(assert_all_called=True, assert_all_mocked=True) as router:
+        mock = ServiceMock(router, urls[0])
         yield mock
 
 
 @pytest.fixture
 def mock_curator():
-    """Mock all outbound HTTP to Curator data pipeline service."""
-    with respx.mock(assert_all_mocked=False) as router:
+    """Mock Curator endpoints with strict assertion mode."""
+    with respx.mock(assert_all_called=True, assert_all_mocked=True) as router:
+        mock = ServiceMock(router, CURATOR_BASE_URL)
+        yield mock
+
+
+# ---------------------------------------------------------------------------
+# Lenient variants — for tests that only want to block real-network calls
+# without enforcing that all registered mocks were called. Use sparingly.
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def mock_ollama_lenient(test_app):
+    """Ollama mock that blocks unmocked requests but does not require all mocks to be called."""
+    urls = _ollama_base_urls(test_app)
+    with respx.mock(assert_all_called=False, assert_all_mocked=True) as router:
+        mock = ServiceMock(router, urls[0])
+        # Health check pre-registered to avoid surprise hits during startup
+        router.get(f"{urls[0]}/").mock(
+            return_value=httpx.Response(200, text="Ollama is running")
+        )
+        router.head(f"{urls[0]}/").mock(return_value=httpx.Response(200))
+        yield mock
+
+
+@pytest.fixture
+def mock_llamolotl_lenient(test_app):
+    urls = _llamolotl_base_urls(test_app)
+    with respx.mock(assert_all_called=False, assert_all_mocked=True) as router:
+        mock = ServiceMock(router, urls[0])
+        router.get(f"{urls[0]}/").mock(
+            return_value=httpx.Response(200, json={"status": "ok"})
+        )
+        router.head(f"{urls[0]}/").mock(return_value=httpx.Response(200))
+        yield mock
+
+
+@pytest.fixture
+def mock_curator_lenient():
+    with respx.mock(assert_all_called=False, assert_all_mocked=True) as router:
         mock = ServiceMock(router, CURATOR_BASE_URL)
         router.get(f"{CURATOR_BASE_URL}/health").mock(
             return_value=httpx.Response(200, json={"status": "healthy"})
@@ -152,8 +209,17 @@ def mock_curator():
 
 @pytest.fixture
 def mock_eval_harness():
-    """Mock all outbound HTTP to lm-eval and bigcode-eval harnesses."""
-    with respx.mock(assert_all_mocked=False) as router:
+    """Mock all outbound HTTP to lm-eval and bigcode-eval harnesses with strict assertion mode."""
+    with respx.mock(assert_all_called=True, assert_all_mocked=True) as router:
+        lm_mock = ServiceMock(router, LM_EVAL_BASE_URL)
+        bigcode_mock = ServiceMock(router, BIGCODE_EVAL_BASE_URL)
+        yield {"lm_eval": lm_mock, "bigcode_eval": bigcode_mock}
+
+
+@pytest.fixture
+def mock_eval_harness_lenient():
+    """Eval harness mocks that block unmocked URLs but don't require all-called."""
+    with respx.mock(assert_all_called=False, assert_all_mocked=True) as router:
         lm_mock = ServiceMock(router, LM_EVAL_BASE_URL)
         bigcode_mock = ServiceMock(router, BIGCODE_EVAL_BASE_URL)
         yield {"lm_eval": lm_mock, "bigcode_eval": bigcode_mock}
