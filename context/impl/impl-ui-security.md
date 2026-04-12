@@ -43,3 +43,6 @@ Build site: context/plans/build-site-ui-security.md
 | T-233 | DONE | Config security runtime — headers present, CORS not wildcard, cookie Secure in non-dev |
 | T-234 | DONE | Data exposure /api/config — no google_drive creds, no sensitive keys for unauthenticated |
 | T-235 | DONE | Data exposure errors — no stack traces, no auth mechanism hints in 401/403 |
+| T-236 | DONE | Test isolation validation — truncation teardown verified (2 sequential tests, 2nd sees no 1st data) |
+| T-237 | DONE | Full suite dry-run — 122 tests collected and run, markers functional, no collection errors |
+| T-238 | DONE | CI end-to-end — fixtures work, app state has required config, external service mocks importable |

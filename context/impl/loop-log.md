@@ -1,3 +1,61 @@
+### Iteration 1 (ui-security) — 2026-04-11
+- **Tasks:** T-200 through T-206 — Tier 0 Quick Fixes (batched)
+- **Tier:** 0
+- **Status:** DONE (all 7)
+- **Files:** memories.py, files.py, main.py, auth/+page.svelte, constants.ts, SVGPanZoom.svelte, MarkdownTokens.svelte, MarkdownInlineTokens.svelte
+- **Validation:** Acceptance 25/25 (all AC covered)
+- **Next:** T-207 through T-212 (Tier 0 hardening)
+
+### Iteration 2 (ui-security) — 2026-04-11
+- **Tasks:** T-207 through T-212 — Tier 0 Hardening (batched)
+- **Tier:** 0
+- **Status:** DONE (all 6)
+- **Files:** env.py, security_headers.py, config.py, main.py, files.py, .env
+- **Validation:** Acceptance 31/31 (all AC covered)
+- **Notes:** Also set new WEBUI_SECRET_KEY in self.UI/.env per user request
+- **Next:** T-213 through T-215 (Tier 0 test infrastructure foundation)
+
+### Iteration 3 (ui-security) — 2026-04-11
+- **Tasks:** T-213 through T-215 — Tier 0 Test Infrastructure Foundation (batched)
+- **Tier:** 0
+- **Status:** DONE (all 3)
+- **Files:** pyproject.toml, requirements.txt, tests/mocks/external_services.py, vitest.config.ts, vitest-setup.ts, test-mocks/*.ts, package.json, Spinner.test.ts
+- **Validation:** Acceptance 20/20 (config, mocks, frontend config all in place)
+- **Notes:** Frontend deps need container rebuild to install. npm not in prod container.
+- **Next:** T-216 through T-220 (Tier 1 — core test infra)
+
+### Iteration 4 (ui-security) — 2026-04-11
+- **Tasks:** T-216 through T-220 — Tier 1 Core Test Infrastructure (batched)
+- **Tier:** 1
+- **Status:** DONE (all 5)
+- **Files:** tests/conftest.py (rewritten), integration-test.yml (pytest+vitest jobs)
+- **Validation:** Acceptance criteria met for fixtures/CI. Cannot run tests in container until rebuild — code changes are host-only.
+- **Notes:** Container has stale code (WEBUI_SECRET_KEY="" in container env). Rebuild needed.
+- **Next:** T-221 (factories), then T-222+ (Tier 2 security tests)
+
+### Iteration 5 (ui-security) — 2026-04-11
+- **Tasks:** T-221 through T-235 — Tier 2 Factories + Security Tests
+- **Tier:** 2
+- **Status:** DONE (all 15)
+- **Files:** tests/factories.py, tests/security/ (8 modules), conftest.py, files.py fix
+- **Validation:** 115 passing, 21 xfailed (documented findings), 20 xpassed
+- **Real findings surfaced:**
+  - /api/v1/retrieval/ unauthenticated (known)
+  - 4 utils endpoints unauthenticated (review needed)
+  - 10 dict endpoints crash on empty body (KeyError, needs Pydantic)
+  - null-byte filename %00 encoding leaks through upload
+- **Next:** T-236–T-238 (Tier 3 validation)
+
+### Iteration 6 (ui-security) — 2026-04-11
+- **Tasks:** T-236 through T-238 — Tier 3 Validation (batched)
+- **Tier:** 3
+- **Status:** DONE (all 3)
+- **Files:** tests/test_infrastructure_validation.py
+- **Validation:** 122 passing total, 21 xfailed, 20 xpassed. Zero failures.
+- **BUILD COMPLETE:** 39/39 tasks done.
+
+---
+
 ### Iteration 1 — 2026-04-11
 - **Task:** T-001 — Delete heretic_run.py and remove heretic endpoints
 - **Tier:** 0
