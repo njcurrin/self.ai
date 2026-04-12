@@ -56,6 +56,35 @@
 
 ---
 
+## UI Router Tests cycle (build-site-ui-router-tests)
+
+### Iteration 1 (ui-router-tests) — 2026-04-12
+- **Tasks:** T-300, T-301, T-304, T-309 — Core data (chats, folders, memories)
+- **Tier:** 0
+- **Status:** DONE (4 tasks, 28 tests)
+- **Files:** tests/routers/{test_chats,test_folders,test_memories}.py
+
+### Iteration 2 (ui-router-tests) — 2026-04-12
+- **Tasks:** T-302, T-303, T-305, T-306, T-307, T-308, T-310–T-319 — Channels/files/knowledge + workspace + admin
+- **Tier:** 0
+- **Status:** DONE (16 tasks, ~72 tests)
+- **Files:** tests/routers/{test_channels,test_files,test_knowledge,test_prompts,test_tools,test_functions,test_models,test_groups,test_configs,test_benchmarks,test_windows,test_queue}.py
+
+### Iteration 3 (ui-router-tests) — 2026-04-12
+- **Tasks:** T-320–T-334 — Jobs + Proxies (COMPLETE)
+- **Tier:** 0
+- **Status:** DONE (15 tasks, ~52 tests). Build site complete: 35/35.
+- **Files:** tests/routers/{test_training,test_evaluations,test_tasks,test_proxies}.py
+
+### Iteration 4 (ui-router-tests) — 2026-04-12 (beyond build site)
+- **Scope:** Extra router coverage + migration integrity + bug fix
+- **Status:** DONE
+- **Files:** tests/routers/{test_users,test_auths,test_pipelines,test_system}.py, tests/test_migration_integrity.py, routers/users.py (bug fix)
+- **Bug found & fixed:** Users.get_user_groups → Groups.get_groups_by_member_id (missing method)
+- **Final:** 360 tests passing, 0 failing, 0 xfailed.
+
+---
+
 ### Iteration 1 — 2026-04-11
 - **Task:** T-001 — Delete heretic_run.py and remove heretic endpoints
 - **Tier:** 0
