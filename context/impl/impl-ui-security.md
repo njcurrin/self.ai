@@ -24,3 +24,8 @@ Build site: context/plans/build-site-ui-security.md
 | T-213 | DONE | Added [tool.pytest.ini_options] to pyproject.toml with markers, strict mode, timeout; added test deps to requirements.txt |
 | T-214 | DONE | Created vitest.config.ts with jsdom, svelte plugin, $app/* mocks; added testing-library/svelte, jest-dom, jsdom, msw to package.json; smoke test for Spinner |
 | T-215 | DONE | Created tests/mocks/external_services.py with respx-based ServiceMock fixtures for Ollama, OpenAI, Llamolotl, Curator, eval harness |
+| T-216 | DONE | Root conftest.py with test_app, client, db_session fixtures; app.dependency_overrides for DI |
+| T-217 | DONE | DB setup with create_all + truncation-based teardown (DELETE in FK-safe order); env overrides for test isolation |
+| T-218 | DONE | authenticated_user and authenticated_admin fixtures with JWT token creation; test_user and test_admin helpers |
+| T-219 | DONE | Startup task isolation via autouse fixture patching all 4 fire-and-forget tasks |
+| T-220 | DONE | Uncommented pytest CI job with tier0+tier1 markers, JUnit XML; added vitest CI job |
