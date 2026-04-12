@@ -172,6 +172,8 @@ def db_session(test_session_factory, test_engine):
         "selfai_ui.models.knowledge",
         "selfai_ui.models.tools",
         "selfai_ui.models.functions",
+        "selfai_ui.routers.queue",
+        "selfai_ui.routers.retrieval",
     ]:
         try:
             mod = __import__(mod_name, fromlist=["get_db"])
