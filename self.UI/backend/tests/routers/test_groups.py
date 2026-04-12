@@ -32,13 +32,6 @@ def test_get_group_by_id(authenticated_admin):
 
 
 @pytest.mark.tier0
-@pytest.mark.xfail(
-    reason="Real finding: Groups.update_group_by_id uses "
-    "filter_by(id).update(dict) with JSON columns (user_ids, admin_ids, "
-    "permissions) which fails on SQLite. The endpoint returns 400 with "
-    "a caught exception. Needs router fix — not a test issue.",
-    strict=False,
-)
 def test_update_group(authenticated_admin):
     created = authenticated_admin.post(
         "/api/v1/groups/create",

@@ -373,8 +373,11 @@ async def get_ollama_tags(
                 except Exception:
                     detail = f"Ollama: {e}"
 
+            # Note: `if r` is falsy for 4xx/5xx responses (Response.__bool__
+            # returns False for non-2xx), so use explicit `is not None` check
+            # to preserve the upstream status code.
             raise HTTPException(
-                status_code=r.status_code if r else 500,
+                status_code=r.status_code if r is not None else 500,
                 detail=detail if detail else "Self.AI UI: Server Connection Error",
             )
 

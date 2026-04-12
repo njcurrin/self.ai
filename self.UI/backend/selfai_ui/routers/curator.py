@@ -319,6 +319,7 @@ class QueueCuratorJobForm(BaseModel):
     pipeline_config: dict  # full config blob sent to curator at dispatch time
     scheduled_for: Optional[int] = None
     priority: str = "normal"
+    dataset_name: Optional[str] = None
 
 
 @router.post("/queue", response_model=Optional[CuratorJobModel])
@@ -334,6 +335,7 @@ async def queue_curator_job(
             pipeline_id=form_data.pipeline_id,
             scheduled_for=form_data.scheduled_for,
             priority=form_data.priority,
+            dataset_name=form_data.dataset_name,
         ),
     )
     if not job:

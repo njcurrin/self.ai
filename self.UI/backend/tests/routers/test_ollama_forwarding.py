@@ -62,16 +62,10 @@ def test_ollama_tags_forwards_and_returns_upstream_body(
 # ---------------------------------------------------------------------------
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    reason="Router appears to return 500 on upstream 4xx instead of "
-    "passing through the upstream status. Real finding from T-R01 — "
-    "needs investigation in ollama.py exception handling path.",
-    strict=False,
-)
 def test_ollama_tags_passthrough_4xx(
     authenticated_admin, mocked_ollama_responses
 ):
-    """Upstream 404 should be preserved (router raises with upstream status)."""
+    """Upstream 404 is preserved (router raises with upstream status)."""
     mocked_ollama_responses.get(
         f"{mocked_ollama_responses.base_url}/api/tags",
         json={"error": "not found"},

@@ -83,6 +83,27 @@
 - **Bug found & fixed:** Users.get_user_groups → Groups.get_groups_by_member_id (missing method)
 - **Final:** 360 tests passing, 0 failing, 0 xfailed.
 
+### Iteration 5 (ui-router-tests) — 2026-04-12 (/ck:check Round 1 revision)
+- **Scope:** /ck:check Round 1 response — 22 findings (2 P0, 7 P1, 6 P2, 7 P3)
+- **Status:** P0 FIXED; P1 mostly FIXED; some P2/P3 residual
+- **Commits:** 0316bd1, d4b23c2, 546cdac, e70051b, a915ef7, d29b9ee, f2f9ba0
+- **Changes:** T-R01-R03 proxy forwarding (aioresponses + responses), T-R04 impl-tracking correction, T-R05 user_without_workspace_permissions fixture, T-R06-R10 P1 tightening (unknown model, signin, Content-Type, markers, FILE_MAX_SIZE), T-R12 strict respx fixtures, T-R16/R18/R19 AC gap closure (queue ordering, KB membership, windows state), T-R20 not-found pinning (partial), T-R21 psutil importorskip, T-R23 docstring rewrites, T-R27 memory cross-user HTTP assert
+- **Final:** 428 passing, 1 xfailed (documented Ollama 4xx router bug)
+
+### Iteration 6 (ui-router-tests) — 2026-04-12 (/ck:check Round 2 polish)
+- **Scope:** Round 2 findings — 8 new (NF-001..NF-008) + Round 1 residuals
+- **Status:** P0/P1 FIXED; polish items addressed
+- **Commit:** 404ec1b
+- **Changes:** Kit R9 rewrite (respx/aioresponses/responses library-specific), 19 tuple unions pinned, header capture assertion on llamolotl bearer test, pytest.skip replaced with importorskip and hard assertions, no-unmocked-call tightened
+- **Bugs discovered:** Groups.update_group_by_id filter_by+JSON-columns bug (xfailed), OpenAI 4xx→500 wrapping (xfailed)
+- **Final:** 428 passing, 2 xfailed (both real router bugs)
+
+### Iteration 7 (ui-router-tests) — 2026-04-12 (/ck:check Round 3 bug fixes + polish)
+- **Scope:** Fix two xfailed router bugs + Round 3 polish (aioresponses strict, more header capture)
+- **Status:** DONE
+- **Changes:** Groups.update_group_by_id filters dump to known columns (admin_ids was form-only, not a table column); Ollama `r.status_code if r else 500` → `r is not None` (Response.__bool__ is False for 4xx so it fell through to 500); OpenAI router preserves upstream status via HTTPException passthrough; aioresponses_strict helper context manager with "at least one mock called" enforcement; curator forwarding adds URL-captured assertion
+- **Final:** 429 passing, 0 xfailed, 0 failures.
+
 ---
 
 ### Iteration 1 — 2026-04-11

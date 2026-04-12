@@ -7,13 +7,14 @@ aioresponses for mocking.
 
 import pytest
 from aioresponses import aioresponses
+from tests.mocks.external_services import aioresponses_strict
 
 
 @pytest.mark.tier1
 def test_llamolotl_verify_success(authenticated_admin):
     """POST /llamolotl/verify probes upstream /health and returns the body."""
     target = "http://self-llamolotl:8080"
-    with aioresponses() as m:
+    with aioresponses_strict() as m:
         m.get(
             f"{target}/health",
             status=200,
@@ -31,7 +32,7 @@ def test_llamolotl_verify_success(authenticated_admin):
 def test_llamolotl_verify_upstream_error_becomes_500(authenticated_admin):
     """Upstream non-200 is caught and converted to 500."""
     target = "http://self-llamolotl:8080"
-    with aioresponses() as m:
+    with aioresponses_strict() as m:
         m.get(f"{target}/health", status=503, payload={"error": "unavailable"})
         resp = authenticated_admin.post(
             "/llamolotl/verify", json={"url": target, "key": ""}
@@ -55,7 +56,7 @@ def test_llamolotl_verify_with_bearer_key(authenticated_admin):
         captured_headers.update(kwargs.get("headers") or {})
         return CallbackResult(status=200, payload={"status": "ok"})
 
-    with aioresponses() as m:
+    with aioresponses_strict() as m:
         m.get(f"{target}/health", callback=capture_callback)
         resp = authenticated_admin.post(
             "/llamolotl/verify",

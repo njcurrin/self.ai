@@ -16,7 +16,10 @@ Only one UI instance runs dispatch per cycle (RedisLock).
 
 import asyncio
 import logging
+import os
 import time
+import uuid
+from pathlib import Path
 from typing import Optional
 
 import httpx
@@ -26,6 +29,8 @@ from selfai_ui.socket.utils import RedisLock
 from selfai_ui.models.eval_jobs import EvalJob, EvalJobModel, EvalJobs, EvalJobStatusUpdate
 from selfai_ui.models.training import TrainingJob, TrainingJobModel, TrainingJobs, TrainingJobStatusUpdate
 from selfai_ui.models.curator_jobs import CuratorJob, CuratorJobModel, CuratorJobs, CuratorJobStatusUpdate
+from selfai_ui.models.knowledge import Knowledges, KnowledgeForm, KnowledgeFiles
+from selfai_ui.models.files import Files, FileForm
 from selfai_ui.models.job_windows import JobWindowWithSlots, JobWindows
 from selfai_ui.models.benchmark_config import BenchmarkConfigs
 from selfai_ui.internal.db import get_db
@@ -134,6 +139,63 @@ def _expire_stale_training_jobs() -> None:
             db.commit()
 
 
+def _finalize_curator_job(job: CuratorJobModel) -> bool:
+    """After a curator job completes: create a Dataset, register the output file, link them."""
+    try:
+        dataset_name = job.dataset_name or job.pipeline_id[:8]
+
+        knowledge = Knowledges.insert_new_knowledge(
+            user_id=job.user_id,
+            form_data=KnowledgeForm(
+                name=dataset_name,
+                description=f"Curated dataset from pipeline {job.pipeline_id}",
+                data={"dataset": True},
+            ),
+        )
+        if not knowledge:
+            log.error(f"Failed to create dataset for curator job {job.id}")
+            return False
+
+        pipeline_config = (job.meta or {}).get("pipeline_config", {})
+        output_path = pipeline_config.get("output_path", "")
+
+        if not output_path or not os.path.exists(output_path):
+            log.warning(f"Curator output not found at {output_path!r} for job {job.id} — dataset created empty")
+            CuratorJobs.update_created_knowledge_id(job.id, knowledge.id)
+            return True
+
+        output_dir = Path(output_path)
+        output_files = list(output_dir.glob("*")) if output_dir.is_dir() else [output_dir]
+
+        for fpath in output_files:
+            if not fpath.is_file():
+                continue
+            file_record = Files.insert_new_file(
+                user_id=job.user_id,
+                form_data=FileForm(
+                    id=str(uuid.uuid4()),
+                    filename=fpath.name,
+                    path=str(fpath),
+                    meta={
+                        "name": fpath.name,
+                        "content_type": "application/jsonl",
+                        "size": fpath.stat().st_size,
+                    },
+                ),
+            )
+            if file_record:
+                KnowledgeFiles.add_file_to_knowledge(knowledge.id, file_record.id)
+                log.info(f"Registered {fpath.name} in dataset {knowledge.id}")
+
+        CuratorJobs.update_created_knowledge_id(job.id, knowledge.id)
+        log.info(f"Finalized curator job {job.id} → dataset '{dataset_name}' ({knowledge.id})")
+        return True
+
+    except Exception as e:
+        log.error(f"Error finalizing curator job {job.id}: {e}")
+        return False
+
+
 async def _sync_running_curator_jobs() -> None:
     running = CuratorJobs.get_jobs_by_status("running")
     if not running:
@@ -192,6 +254,9 @@ async def _sync_running_curator_jobs() -> None:
                 ),
             )
             log.info(f"Curator job {job.id} synced to '{remote_status}'")
+
+            if remote_status == "completed":
+                _finalize_curator_job(job)
 
 
 ####################################

@@ -223,3 +223,36 @@ def mock_eval_harness_lenient():
         lm_mock = ServiceMock(router, LM_EVAL_BASE_URL)
         bigcode_mock = ServiceMock(router, BIGCODE_EVAL_BASE_URL)
         yield {"lm_eval": lm_mock, "bigcode_eval": bigcode_mock}
+
+
+# ---------------------------------------------------------------------------
+# aioresponses strict helper — enforces "at least one mock was called"
+# ---------------------------------------------------------------------------
+
+from contextlib import contextmanager
+
+
+@contextmanager
+def aioresponses_strict(*args, **kwargs):
+    """aioresponses context manager that fails if no registered mock was called.
+
+    Use in place of `aioresponses()` for forwarding tests:
+
+        with aioresponses_strict() as m:
+            m.get(...)
+            resp = client.get(...)
+            # On exit: fails if m.requests is empty
+    """
+    try:
+        from aioresponses import aioresponses as _aioresponses
+    except ImportError:  # pragma: no cover
+        raise RuntimeError("aioresponses not installed")
+
+    with _aioresponses(*args, **kwargs) as m:
+        yield m
+        if not m.requests:
+            raise AssertionError(
+                "aioresponses: no registered mock was called. "
+                "The test registered mocks but the router never hit upstream. "
+                "Either remove the unused mocks or verify the code path."
+            )

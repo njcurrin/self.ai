@@ -158,12 +158,18 @@ class GroupTable:
     ) -> Optional[GroupModel]:
         try:
             with get_db() as db:
-                db.query(Group).filter_by(id=id).update(
-                    {
-                        **form_data.model_dump(exclude_none=True),
-                        "updated_at": int(time.time()),
-                    }
-                )
+                # Filter the dump to columns that exist on the Group model —
+                # GroupUpdateForm has admin_ids which is NOT a Group column,
+                # so an unfiltered update() fails with a no-such-attribute
+                # error on SQLAlchemy's bulk update path.
+                group_columns = {c.name for c in Group.__table__.columns}
+                update_dict = {
+                    k: v
+                    for k, v in form_data.model_dump(exclude_none=True).items()
+                    if k in group_columns
+                }
+                update_dict["updated_at"] = int(time.time())
+                db.query(Group).filter_by(id=id).update(update_dict)
                 db.commit()
                 return self.get_group_by_id(id=id)
         except Exception as e:

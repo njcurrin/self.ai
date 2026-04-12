@@ -434,12 +434,19 @@ async def get_models(
                     },
                 ) as r:
                     if r.status != 200:
-                        # Extract response error details if available
+                        # Preserve the upstream status code instead of
+                        # converting everything to 500. 4xx from upstream
+                        # should surface as 4xx to the caller.
                         error_detail = f"HTTP Error: {r.status}"
-                        res = await r.json()
-                        if "error" in res:
-                            error_detail = f"External Error: {res['error']}"
-                        raise Exception(error_detail)
+                        try:
+                            res = await r.json()
+                            if "error" in res:
+                                error_detail = f"External Error: {res['error']}"
+                        except Exception:
+                            pass
+                        raise HTTPException(
+                            status_code=r.status, detail=error_detail
+                        )
 
                     response_data = await r.json()
 
@@ -463,6 +470,9 @@ async def get_models(
                         ]
 
                     models = response_data
+            except HTTPException:
+                # Preserve status codes we raised above (e.g. upstream 4xx)
+                raise
             except aiohttp.ClientError as e:
                 # ClientError covers all aiohttp requests issues
                 log.exception(f"Client error: {str(e)}")

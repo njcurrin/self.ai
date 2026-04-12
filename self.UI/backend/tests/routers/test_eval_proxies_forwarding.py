@@ -7,13 +7,14 @@ on the provided URL. Tests use aioresponses to mock the upstream.
 
 import pytest
 from aioresponses import aioresponses
+from tests.mocks.external_services import aioresponses_strict
 
 
 @pytest.mark.tier1
 def test_lm_eval_verify_success(authenticated_admin):
     """A 200 from upstream /health returns the JSON body to the caller."""
     target = "http://self-lm-eval:5000"
-    with aioresponses() as m:
+    with aioresponses_strict() as m:
         m.get(f"{target}/health", status=200, payload={"status": "healthy"})
         resp = authenticated_admin.post(
             "/lm-eval/verify", json={"url": target}
@@ -26,7 +27,7 @@ def test_lm_eval_verify_success(authenticated_admin):
 def test_lm_eval_verify_upstream_non_200_becomes_500(authenticated_admin):
     """Upstream 503 is caught and converted to 500 per router code."""
     target = "http://self-lm-eval:5000"
-    with aioresponses() as m:
+    with aioresponses_strict() as m:
         m.get(f"{target}/health", status=503, payload={"error": "down"})
         resp = authenticated_admin.post(
             "/lm-eval/verify", json={"url": target}
@@ -37,7 +38,7 @@ def test_lm_eval_verify_upstream_non_200_becomes_500(authenticated_admin):
 @pytest.mark.tier1
 def test_bigcode_eval_verify_success(authenticated_admin):
     target = "http://self-bigcode-eval:5001"
-    with aioresponses() as m:
+    with aioresponses_strict() as m:
         m.get(f"{target}/health", status=200, payload={"status": "ok"})
         resp = authenticated_admin.post(
             "/bigcode-eval/verify", json={"url": target}
@@ -48,7 +49,7 @@ def test_bigcode_eval_verify_success(authenticated_admin):
 @pytest.mark.tier1
 def test_bigcode_eval_verify_upstream_non_200_becomes_500(authenticated_admin):
     target = "http://self-bigcode-eval:5001"
-    with aioresponses() as m:
+    with aioresponses_strict() as m:
         m.get(f"{target}/health", status=404, payload={"error": "missing"})
         resp = authenticated_admin.post(
             "/bigcode-eval/verify", json={"url": target}
