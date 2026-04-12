@@ -23,14 +23,61 @@ from sqlalchemy.orm import sessionmaker
 # Use direct assignment (not setdefault) because container env may have
 # empty values that would block setdefault but still fail validation.
 # ---------------------------------------------------------------------------
-os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", "sqlite:///:memory:")
+# Use a file-backed SQLite DB so all connections (alembic, test engine,
+# app engine) see the same database. In-memory DBs are per-connection.
+import tempfile as _tempfile  # noqa: E402
+
+_test_db_file = _tempfile.NamedTemporaryFile(
+    prefix="selfai_test_", suffix=".db", delete=False
+)
+_test_db_file.close()
+os.environ["DATABASE_URL"] = os.environ.get(
+    "TEST_DATABASE_URL", f"sqlite:///{_test_db_file.name}"
+)
 os.environ["WEBUI_SECRET_KEY"] = "test-secret-key-not-for-production"
 os.environ["ENV"] = "test"
 os.environ["WEBUI_AUTH"] = "True"
 os.environ["SKIP_PEEWEE_MIGRATION"] = "true"
 
-from selfai_ui.internal.db import Base, get_db, get_session  # noqa: E402
+from selfai_ui.internal.db import Base, engine as _real_engine, get_db, get_session  # noqa: E402
 from selfai_ui.utils.auth import create_token  # noqa: E402
+
+# Run Alembic migrations against the test DB BEFORE importing selfai_ui.config.
+# This is necessary because selfai_ui.config runs get_config() at module load
+# time, which queries the config table.
+from alembic.config import Config as _AlembicConfig  # noqa: E402
+from alembic import command as _alembic_command  # noqa: E402
+from pathlib import Path as _Path  # noqa: E402
+
+_alembic_ini = _Path("/app/backend/selfai_ui/alembic.ini")
+if not _alembic_ini.exists():
+    _alembic_ini = _Path(__file__).parent.parent / "selfai_ui" / "alembic.ini"
+
+_alembic_cfg = _AlembicConfig(str(_alembic_ini))
+_alembic_cfg.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
+_alembic_cfg.set_main_option(
+    "script_location",
+    str(_Path("/app/backend/selfai_ui/migrations")),
+)
+_alembic_command.upgrade(_alembic_cfg, "head")
+
+# Apply the Peewee-only schema additions (migration 019 on curator_job).
+# This documents the hybrid migration gap — the columns exist in the
+# SQLAlchemy model but only in a Peewee migration file.
+from sqlalchemy import create_engine as _ce, text as _t  # noqa: E402
+
+_patch_engine = _ce(os.environ["DATABASE_URL"])
+with _patch_engine.connect() as _conn:
+    try:
+        _conn.execute(_t("ALTER TABLE curator_job ADD COLUMN dataset_name TEXT"))
+    except Exception:
+        pass  # Column may already exist
+    try:
+        _conn.execute(_t("ALTER TABLE curator_job ADD COLUMN created_knowledge_id TEXT"))
+    except Exception:
+        pass
+    _conn.commit()
+_patch_engine.dispose()
 
 
 # ---------------------------------------------------------------------------
@@ -71,14 +118,14 @@ TRUNCATION_ORDER = [
 
 @pytest.fixture(scope="session")
 def test_engine():
-    """Create a test database engine (session-scoped, shared across all tests)."""
+    """Create a test database engine pointing at the same file-backed SQLite
+    DB that the real engine uses (set via DATABASE_URL above).
+    Alembic already ran, so all tables exist."""
     engine = create_engine(
-        "sqlite:///:memory:",
+        os.environ["DATABASE_URL"],
         connect_args={"check_same_thread": False},
     )
-    Base.metadata.create_all(engine)
     yield engine
-    Base.metadata.drop_all(engine)
     engine.dispose()
 
 
@@ -274,7 +321,6 @@ def test_admin(db_session):
 def authenticated_user(client, test_user):
     """Test client pre-configured with a valid user-role Bearer token."""
     client.headers["Authorization"] = f"Bearer {test_user['token']}"
-    client.headers["Content-Type"] = "application/json"
     return client
 
 

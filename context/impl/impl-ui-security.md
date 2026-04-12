@@ -29,3 +29,17 @@ Build site: context/plans/build-site-ui-security.md
 | T-218 | DONE | authenticated_user and authenticated_admin fixtures with JWT token creation; test_user and test_admin helpers |
 | T-219 | DONE | Startup task isolation via autouse fixture patching all 4 fire-and-forget tasks |
 | T-220 | DONE | Uncommented pytest CI job with tier0+tier1 markers, JUnit XML; added vitest CI job |
+| T-221 | DONE | Model factories in tests/factories.py (User, Auth, Chat, File, Knowledge, Tool, Function, Training/Eval/Curator jobs, JobWindow) |
+| T-222 | DONE | Route auth coverage audit — all routes have auth except 7 allowlisted; found /api/v1/retrieval/ leak and 5 utils endpoints lacking auth |
+| T-223 | DONE | Authorization matrix vertical escalation — 7 admin endpoints tested across anonymous/user/admin roles |
+| T-224 | DONE | Horizontal isolation — user A cannot read/delete/list user B's chats |
+| T-225 | DONE | JWT basic attacks — tampered sig, expired, alg:none, wrong secret, malformed, missing Bearer |
+| T-226 | DONE | JWT secret/role forgery — t0p-s3cr3t rejected, forged admin role rejected |
+| T-227 | DONE | Upload size — 413 on oversized, accepted at/below limit. Fixed files.py to preserve HTTPException status |
+| T-228 | DONE | Upload traversal/MIME — path traversal sanitized, null-byte xfailed (real finding), executable MIME blocked, allowlist works |
+| T-229+T-230 | DONE | Dict endpoint validation — 10 endpoints, empty/extra/wrong-type/deep-nesting tests. 20 xfailed documenting the gap |
+| T-231 | DONE | Role escalation prevention — user cannot escalate via info/settings/profile updates, admin role endpoint rejects users |
+| T-232 | DONE | Config security startup — default JWT secret blocked, empty secret blocked |
+| T-233 | DONE | Config security runtime — headers present, CORS not wildcard, cookie Secure in non-dev |
+| T-234 | DONE | Data exposure /api/config — no google_drive creds, no sensitive keys for unauthenticated |
+| T-235 | DONE | Data exposure errors — no stack traces, no auth mechanism hints in 401/403 |
