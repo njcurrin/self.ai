@@ -125,3 +125,35 @@ Source: `/ck:check` inspection on 2026-04-12 after build-site-curator-tests comp
 2. **T-140-T-150** — close P2/P3 gaps surfaced by the inspection
 3. **T-151 (L-sized)** — NeMo Curator dedup workflow debug pass to un-skip R5/R6/R7
 4. Update `impl-curator-test-infra.md` to reflect REVISE verdict — dedup marked BLOCKED not DONE
+
+---
+
+# Review Findings — Curator Test Suite Second Cycle (post-Tier 4 + T-151)
+
+Source: `/ck:check` 2026-04-12 after 14/14 Tier 4 tasks + T-151 dedup fix.
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| P0 | 0 |
+| P1 | 2 |
+| P2 | 2 |
+| P3 | 3 |
+
+**Previous verdict:** REVISE (78% AC complete, 2 P1 findings)
+**This verdict:** REVISE → now APPROVE after in-session fixes (94% AC complete, all P1s closed)
+
+## Findings
+
+| Finding | Severity | File | Status |
+|---------|----------|------|--------|
+| F-101: Kits still marked DEFERRED after T-151 un-skipped tests | P1 | cavekit-curator-pipeline-integration.md | FIXED in-session |
+| F-102: Zero-duplicate edge case exposed + untested in ExactDedup | P1 | api/run_pipeline.py, tests | FIXED in-session |
+| F-103: Dedup cache leaks on pipeline failure | P2 | api/run_pipeline.py | FIXED in-session |
+| F-104: Subprocess path still hardcoded despite T-148 | P2 | tests/pipeline/test_pipeline_integration.py | FIXED in-session |
+| F-105: Orphan .tmp sweep runs at startup only | P3 | api/main.py | ACCEPTED (bounded) |
+| F-106: Class-name collision check no backfill for legacy entries | P3 | api/stage_registry.py | ACCEPTED (kit AC codified) |
+| F-107: FuzzyDedup pynvml exception hides reason | P3 | tests | ACCEPTED (minor) |
+
+All P1 findings closed same-session. Final test state: **268 passed, 4 skipped, 0 failures**.

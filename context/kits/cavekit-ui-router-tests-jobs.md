@@ -1,0 +1,104 @@
+---
+created: "2026-04-12"
+last_edited: "2026-04-12"
+---
+
+# Cavekit: UI Router Tests — Jobs
+
+## Scope
+
+Lifecycle and correctness tests for job management routers: training (courses and jobs), evaluations (lm-eval and bigcode-eval jobs), and tasks (completion generators for titles, tags, queries, emoji, MoA, autocompletion). Validates job state machines, scheduling and approval flows, status sync from external services (mocked), SSE streaming correctness, and business-logic correctness of task completion payloads. Input validation for raw-dict endpoints is covered by `cavekit-ui-security-tests.md`; this kit covers the functional contract beyond validation.
+
+Source analysis: `context/refs/research-brief-ui-test-suite.md` Sections 1 (coverage gaps), 3 (fire-and-forget background tasks), 4 (respx for external service mocking).
+
+## Requirements
+
+### R1: Training Courses
+
+**Description:** The training courses subrouter must implement CRUD for training courses (reusable training recipe definitions) with user-scoped listing and status transitions.
+
+**Acceptance Criteria:**
+- [ ] Listing training courses returns only courses visible to the caller (own plus any shared or public)
+- [ ] Creating a course with a valid recipe payload persists it and returns the created record
+- [ ] Reading a course by identifier as the owner returns its full recipe
+- [ ] Reading a course owned by a different user returns a not-found or forbidden status when the course is not shared
+- [ ] Updating an owned course's recipe persists the change and is reflected on subsequent reads
+- [ ] Deleting an owned course removes it from subsequent list and read results
+- [ ] The status of a course transitions between its defined states (draft, active, archived, or equivalent) only through documented operations
+
+**Dependencies:** `cavekit-ui-test-infrastructure.md` R2 (fixtures), R3 (TrainingCourse factory if present, otherwise inline)
+
+### R2: Training Jobs
+
+**Description:** The training jobs subrouter must implement job submission against a course, approval/rejection, cancellation, scheduling, and status synchronization from Llamolotl (mocked at HTTP level).
+
+**Acceptance Criteria:**
+- [ ] Submitting a training job referencing a valid course creates a job in the pending state and associates it with the course
+- [ ] Submitting a training job referencing a non-existent course returns an error status
+- [ ] Approving a pending job transitions it to the scheduled or queued state
+- [ ] Rejecting a pending job transitions it to the rejected state and prevents further dispatch
+- [ ] Cancelling a job in any pre-running state transitions it to the cancelled state
+- [ ] Cancelling a running job signals cancellation and transitions to cancelling or cancelled
+- [ ] Scheduling a job with a specific target window or time persists the schedule and is reflected in queue ordering
+- [ ] Syncing status from Llamolotl (mocked) updates the job's state according to the upstream response (pending → queued → running → completed or failed)
+- [ ] Status sync handles upstream errors (4xx, 5xx, timeout) without crashing the router and leaves the job state consistent
+- [ ] Listing training jobs returns only the caller's jobs for a user-scoped call, and all jobs for an admin-scoped call
+
+**Dependencies:** `cavekit-ui-test-infrastructure.md` R2 (fixtures), R3 (TrainingJob factory), R4 (Llamolotl mock)
+
+### R3: Eval Jobs
+
+**Description:** The evaluations router must implement eval job submission for both lm-eval and bigcode-eval types, approval/rejection, cancellation, scheduling, and live SSE streaming of eval events from the harness (mocked).
+
+**Acceptance Criteria:**
+- [ ] Submitting an lm-eval job with a valid task specification creates a job in the pending state with type lm-eval
+- [ ] Submitting a bigcode-eval job with a valid task specification creates a job in the pending state with type bigcode-eval
+- [ ] Submitting an eval job with an unknown type returns an error status
+- [ ] Approving a pending eval job transitions it to scheduled or queued
+- [ ] Rejecting a pending eval job transitions it to rejected
+- [ ] Cancelling an eval job transitions it to cancelled (or cancelling, then cancelled)
+- [ ] Scheduling an eval job against a target window persists the schedule
+- [ ] The SSE event stream for a running eval job yields well-formed event chunks (event-type/data shape) when the harness mock emits events
+- [ ] The SSE stream closes cleanly when the harness mock signals completion
+- [ ] The SSE stream surfaces harness errors as error events without terminating the HTTP connection abnormally
+- [ ] Eval job results persist after completion and are readable via the job's read endpoint
+
+**Dependencies:** `cavekit-ui-test-infrastructure.md` R2 (fixtures), R3 (EvalJob factory), R4 (eval harness mock)
+
+### R4: Tasks (Completions)
+
+**Description:** The tasks router must generate correct chat-completion payloads for each supported task type: title generation, tag generation, query generation, emoji generation, mixture-of-agents (MoA), and autocompletion. Validates that each task builds the right request and forwards it to the chat completions handler (mocked).
+
+**Acceptance Criteria:**
+- [ ] Calling the title-generation task with a conversation payload invokes the chat completions handler with a prompt containing the conversation
+- [ ] Calling the tag-generation task invokes chat completions with a prompt scoped to tag extraction
+- [ ] Calling the query-generation task invokes chat completions with a prompt scoped to query formulation
+- [ ] Calling the emoji-generation task invokes chat completions with a prompt scoped to emoji selection
+- [ ] Calling the MoA task invokes chat completions for each configured agent and aggregates the responses into the final payload
+- [ ] Calling the autocompletion task invokes chat completions with a prompt scoped to completion continuation
+- [ ] Each task forwards the response from the mocked completions handler back to the caller unchanged in content
+- [ ] Each task returns an error status when the mocked completions handler returns an error, without partial data leakage
+
+**Dependencies:** `cavekit-ui-test-infrastructure.md` R2 (fixtures), R4 (chat completions mock)
+
+## Out of Scope
+
+- Authentication enforcement (covered by `cavekit-ui-security-tests.md` R1, R2)
+- Input validation on raw-dict payloads (covered by `cavekit-ui-security-tests.md` R5)
+- Real GPU execution or real model outputs
+- Real Llamolotl service behavior (mocked at HTTP level)
+- Real eval harness execution (mocked at HTTP level)
+- Training or eval result quality (what the model learns or how well it scores)
+- Window scheduling semantics beyond the job's schedule field (covered by `cavekit-ui-router-tests-admin.md` R4)
+- Queue ordering semantics (covered by `cavekit-ui-router-tests-admin.md` R5)
+
+## Cross-References
+
+- See also: `cavekit-ui-test-infrastructure.md` — provides fixtures, factories, and respx service mocks
+- See also: `cavekit-ui-security-tests.md` — covers auth and input validation
+- See also: `cavekit-ui-router-tests-admin.md` — covers windows and queue which job lifecycle interacts with
+- See also: `cavekit-ui-router-tests-proxies.md` — covers the proxy contract between this app and Llamolotl/eval harnesses
+- See also: `cavekit-ui-router-tests-overview.md` — master index
+- Source: `context/refs/research-brief-ui-test-suite.md` — Section 1 (coverage gaps), Section 3 (background tasks), Section 4 (respx)
+
+## Changelog

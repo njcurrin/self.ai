@@ -71,16 +71,16 @@ These tests exercise the actual NeMo Curator pipeline machinery (readers, filter
 
 **Dependencies:** cavekit-curator-test-infra R2 (fixture data, temp workspace), cavekit-curator-test-infra R3 (markers)
 
-### R5: ExactDedup (DEFERRED — upstream workflow integration issue)
+### R5: ExactDedup
 
-**Status:** DEFERRED. Tests are class-level `@pytest.mark.skip`-ed. NeMo
-Curator's `TextDuplicatesRemovalWorkflow` phase-B fails with
-"No match for FieldRef.Name(id)" against the phase-A output schema
-even with `id_field=_curator_dedup_id` + `duplicate_id_field=id`
-(the upstream defaults). The self.curator wrapper in
-`api/run_pipeline.py:run_exact_dedup` is likely missing `input_fields`
-or a similar param. This needs a dedicated NeMo Curator workflow debug
-pass outside the contract-test scope.
+**Status:** ACTIVE. Un-deferred 2026-04-12 (commit 167d807). Two real
+bugs in the self.curator wrapper were the root cause, both now fixed:
+(a) `duplicate_id_field` in the removal workflow must match the
+identification stage's `id_field` — both become `CURATOR_DEDUP_ID_STR`
+when `assign_id=True`, not the workflow default `"id"`; (b) phase-A
+writes parquets to `{output_path}/ExactDuplicateIds/` AND
+`exact_id_generator.json` to `{output_path}/` directly, so
+`ids_to_remove_path` must point at the parquet-only subdir.
 
 **Description:** The exact deduplication workflow identifies and removes duplicate records from a small dataset.
 
@@ -91,13 +91,19 @@ pass outside the contract-test scope.
 - [ ] No records that were unique in the input are removed
 - [ ] The two-phase workflow (ID identification, then removal) completes without error
 - [ ] Output files are written to the specified output path
+- [ ] Input with zero duplicate records produces output equal to input with no errors and no stray empty cache directories (finding F-102)
 
 **Dependencies:** cavekit-curator-test-infra R2 (fixture data, temp workspace), cavekit-curator-test-infra R3 (`integration` marker), cavekit-curator-test-infra R4 (VRAM guard -- dedup may use GPU acceleration)
 
-### R6: FuzzyDedup (DEFERRED — same upstream workflow issue as R5)
+### R6: FuzzyDedup (ACTIVE — gated on multi-GPU host)
 
-**Status:** DEFERRED. Shares the `TextDuplicatesRemovalWorkflow`
-phase-B issue with R5. Also gated on `cudf` availability.
+**Status:** ACTIVE. Dispatch-layer wrapper verified via shared code
+path with R5 (both use the same directory-split + ID-field fix).
+End-to-end test auto-skips on single-GPU hosts because the workflow's
+`ConnectedComponentsStage` requires RAFT/NCCL multi-GPU collectives
+(fails with "NCCL_ERROR: unhandled cuda error" on single-GPU). A
+multi-GPU host is required to verify the full fuzzy pipeline
+end-to-end; the 24GB dev box cannot.
 
 **Description:** The fuzzy deduplication workflow identifies and removes near-duplicate records using MinHash/LSH.
 
@@ -111,9 +117,10 @@ phase-B issue with R5. Also gated on `cudf` availability.
 
 **Dependencies:** cavekit-curator-test-infra R2 (fixture data, temp workspace), cavekit-curator-test-infra R3 (`integration` or `gpu` marker as appropriate), cavekit-curator-test-infra R4 (VRAM guard)
 
-### R7: Mixed Pipeline (DEFERRED — depends on R5/R6 dedup resolution)
+### R7: Mixed Pipeline
 
-**Status:** DEFERRED. Requires a working dedup stage; blocked on R5.
+**Status:** ACTIVE. Un-deferred 2026-04-12 (commit 167d807) alongside
+R5. Mixed pipeline tests pass end-to-end now that dedup works.
 
 **Description:** A pipeline combining streaming stages (filters + modifiers) with a dedup stage processes data through the two-phase execution path: streaming stages write to an intermediate directory, then dedup runs on that intermediate output, and the final result is written to the requested output path.
 
@@ -182,7 +189,8 @@ per dedup run.
 
 **Acceptance Criteria:**
 - [ ] After a successful dedup-containing pipeline run, the `{output_path}_dedup_cache` directory does not exist (cleaned up)
-- [ ] On pipeline failure, cache cleanup is best-effort — not required, but must not crash the error path
+- [ ] Cache and intermediate directories are removed even when the dedup workflow raises an exception (try/finally or symmetric cleanup in except branch) — finding F-103
+- [ ] On pipeline failure, cache cleanup is best-effort — must not crash the error path
 - [ ] `run_pipeline.py` cleans both `{output_path}_pre_dedup` and `{output_path}_dedup_cache` symmetrically
 
 **Dependencies:** R5 or R6 (must reach end-of-dedup to test cleanup)
@@ -227,3 +235,8 @@ all pass directories — they do not exercise the file-path branch.
 - 2026-04-12: R9 AC2/3/4/6 tightened — `malformed JSONL`, `unsupported input extension`, `zero-match filter empty output` explicitly require tests. Added AC8 to address `_detect_filetype` nonexistent-path silent fallthrough (finding F-005).
 - 2026-04-12: Added R11 (dedup cache directory cleanup) — `{output_path}_dedup_cache` is never cleaned up; R7 only covers `_pre_dedup`. (Finding F-015.)
 - 2026-04-12: Added R12 (`_detect_filetype` file-path regression tests) — existing `TestDetectFiletype` only exercises directory branch. (Finding F-004.)
+- 2026-04-12 (post-T-151): R5 un-deferred (ACTIVE) — two wrapper bugs fixed in commit 167d807. Added AC for zero-duplicate edge case (finding F-102).
+- 2026-04-12 (post-T-151): R6 reclassified from DEFERRED → ACTIVE-gated-on-multi-GPU. Dispatch layer verified via shared ExactDedup path; end-to-end requires RAFT/NCCL multi-GPU.
+- 2026-04-12 (post-T-151): R7 un-deferred (ACTIVE). Mixed pipeline passes end-to-end.
+- 2026-04-12: R11 AC extended — cleanup on exception path required (finding F-103).
+- 2026-04-12: R12 (portable paths) carries an additional expectation: test-file subprocess invocations (e.g., `_run_pipeline_subprocess` in test_pipeline_integration.py) must also use portable `_REPO_ROOT / "api"` paths, not hardcoded `/app/api` (finding F-104).

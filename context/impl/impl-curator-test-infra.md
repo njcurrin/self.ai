@@ -14,7 +14,8 @@ Build site: context/plans/build-site-curator-tests.md
 **Tier 3:** effective coverage via run_tests.sh dry-run
 **Tier 4:** 14/14 complete (T-138–T-151). T-151 surfaced two additional real bugs in the dedup workflow wrapper.
 
-**Test results:** 267 passed, 4 skipped, 0 xfail, 0 failures (was 250 pre-revision → 265 after T-138–T-150 → 267 after T-151)
+**Test results:** 268 passed, 4 skipped, 0 xfail, 0 failures (250 → 265 → 267 → **268** across four /ck:check cycles)
+**AC coverage:** 201/214 complete (**94%**), up from 78% in the first review.
 **Fast subset:** 242 passed, 1 skipped
 
 **Bugs fixed:** 9 total discovered-and-fixed by this test suite.

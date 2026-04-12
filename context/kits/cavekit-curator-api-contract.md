@@ -100,6 +100,7 @@ Acceptance criteria below target the actually-exposed stage catalog.
 - [ ] `DELETE /api/text/custom/stages/nonexistent-uuid` returns HTTP 404
 - [ ] `POST /api/text/custom/stages/validate-name` with an available name returns `{available: true}`
 - [ ] `POST /api/text/custom/stages/validate-name` with a builtin stage name returns `{available: false, reason: ...}`
+- [ ] Saving a custom stage whose Python class name collides with an already-registered custom stage is rejected with HTTP 400; the error message references the existing stage id and instructs the user to rename the class (finding F-106 — `_STAGE_REGISTRY` is keyed by `class.__name__`, so silent failures on load would otherwise occur)
 
 **Dependencies:** cavekit-curator-test-infra R2 (TestClient fixture, temp workspace)
 
@@ -291,3 +292,4 @@ The following issues exist on the self.UI side and are documented here for aware
 - 2026-04-12: R10 AC1 expanded to explicitly cover 404/400/422 detail-key presence (previously only 404 was covered).
 - 2026-04-12: Added R12 (custom stage security deferral documentation) — surfaces the unsandboxed `exec_module` risk that was previously only noted in user memory (finding F-016).
 - 2026-04-12: Added R13 (`_poll_jobs` direct invocation test) — closes the vacuous R8 test gap (finding F-002).
+- 2026-04-12 (post-T-151): R3 AC extended — class-name collision rejection codified (finding F-106). Implementation already exists; kit catches up.
