@@ -2,8 +2,10 @@
 Retrieval router tests — config endpoints, settings, auth enforcement.
 
 Processing endpoints (/process/*) touch external vector DB, embedding
-engine, and web fetchers — they're out of scope for unit tests and
-are covered at the E2E level via integration smoke.
+engine, and web fetchers. Those would require mocking VECTOR_DB_CLIENT,
+EMBEDDING_FUNCTION, and firecrawl/playwright crawlers — tracked as
+follow-up work in build-site T-R13/T-R18. This file only tests auth
+gating and config endpoints that exercise no external dependencies.
 """
 
 import pytest

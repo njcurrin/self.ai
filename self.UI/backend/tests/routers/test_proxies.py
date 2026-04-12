@@ -1,11 +1,17 @@
 """
-T-327 through T-334: External service proxy router smoke tests.
+External service proxy router auth-gate tests.
 
-These routers proxy to external services. Detailed streaming/forwarding
-tests would require extensive respx setup; here we focus on:
+Covers:
 - Status/health endpoints (unauthenticated where appropriate)
 - Config get/set (admin-gated)
-- Auth enforcement
+- Auth enforcement on all proxy endpoints
+
+Forwarding and passthrough tests live in separate files per service:
+- test_ollama_forwarding.py — Ollama tags/version/chat via `responses`
+- test_openai_forwarding.py — OpenAI models/chat via `aioresponses`
+
+This file intentionally does NOT mock upstreams because these tests
+are testing the FastAPI auth layer only.
 """
 
 import pytest

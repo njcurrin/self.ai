@@ -16,14 +16,16 @@ def test_resources_admin_only(authenticated_user):
 
 @pytest.mark.tier0
 def test_resources_admin_access(authenticated_admin):
+    """psutil is in requirements.txt so this should always return 200."""
     resp = authenticated_admin.get("/api/system/resources")
-    # May fail with 500 if psutil/nvml not available in container —
-    # either success or graceful failure
-    assert resp.status_code in (200, 500, 503)
-    if resp.status_code == 200:
-        body = resp.json()
-        # SystemResources has some subset of cpu/memory/gpu info
-        assert isinstance(body, dict)
+    if resp.status_code != 200:
+        pytest.skip(
+            f"System resources returned {resp.status_code} — possibly "
+            f"missing psutil in test container. Fix: ensure psutil is "
+            f"installed. Body: {resp.text[:200]}"
+        )
+    body = resp.json()
+    assert isinstance(body, dict)
 
 
 @pytest.mark.tier0
@@ -35,7 +37,10 @@ def test_processes_admin_only(authenticated_user):
 @pytest.mark.tier0
 def test_processes_admin_access(authenticated_admin):
     resp = authenticated_admin.get("/api/system/processes")
-    assert resp.status_code in (200, 500, 503)
-    if resp.status_code == 200:
-        body = resp.json()
-        assert isinstance(body, dict)
+    if resp.status_code != 200:
+        pytest.skip(
+            f"System processes returned {resp.status_code} — possibly "
+            f"missing psutil. Body: {resp.text[:200]}"
+        )
+    body = resp.json()
+    assert isinstance(body, dict)
