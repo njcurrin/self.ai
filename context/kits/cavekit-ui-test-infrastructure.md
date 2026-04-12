@@ -1,6 +1,6 @@
 ---
 created: "2026-04-11"
-last_edited: "2026-04-11"
+last_edited: "2026-04-12"
 ---
 
 # Cavekit: UI Test Infrastructure
@@ -135,4 +135,19 @@ Source analysis: `context/refs/research-brief-ui-test-suite.md` Sections 1, 3, 4
 - See also: `cavekit-ui-security-overview.md` -- master index
 - Source: `context/refs/research-brief-ui-test-suite.md` -- Sections 1 (Current State), 3 (Architecture), 4 (Libraries), 5 (Best Practices), 6 (Pitfalls)
 
+### R8: Pytest marker registration and strict warnings
+
+**Description:** Every custom marker used by tests (tier0, tier1, tier2, slow, integration, etc.) must be registered in a pytest configuration file, and unknown-marker warnings must be promoted to errors. A typo in `@pytest.mark.<name>` currently produces a silent warning that the suite ignores — this defeats the tier system and allows dead decorators to accumulate.
+
+**Acceptance Criteria:**
+- [ ] A `pytest.ini`, `pyproject.toml [tool.pytest.ini_options]`, or equivalent lists every marker used in the suite with a one-line description
+- [ ] `filterwarnings = error::pytest.PytestUnknownMarkWarning` (or equivalent) is set so unknown markers fail the run
+- [ ] A typo in `@pytest.mark.tier0o` fails the suite rather than emitting a warning
+- [ ] Running `pytest --markers` prints every marker the suite uses
+- [ ] The existing 218+ `PytestUnknownMarkWarning` warnings per run are reduced to zero
+
+**Dependencies:** None (infrastructure)
+**Source:** Finding F-007 from `/ck:check` on 2026-04-12.
+
 ## Changelog
+- 2026-04-12: Added R8 (Pytest marker registration and strict warnings) — discovered during `/ck:check`. The suite produces ~218 unknown-marker warnings per run because markers are used but never registered; a typo would be invisible.
