@@ -43,3 +43,14 @@
 - **Fixes:** _detect_filetype path handling, parquet kwarg, dedup id_field params
 - **Validation:** 250 passed, 6 skipped, 0 failures
 - **Next:** Move to self.UI test suite
+
+### Iteration 7 — 2026-04-12
+- **Task:** Tier 4 revisions (T-138–T-150) from /ck:check
+- **Status:** DONE (13/14; T-151 L-sized dedup debug deferred)
+- **Files:** api/main.py, api/run_pipeline.py, api/stage_registry.py, tests/run_tests.sh, 3x sub-package conftests, test_api_contract.py, test_pipeline_integration.py, test_pipeline_nodes.py
+- **Fixes:**
+  - P1: shell quoting in run_tests.sh; _poll_jobs_once helper + 4 real R13 tests
+  - P2: orphan .tmp cleanup, custom stage class-name check, _dedup_cache cleanup, unsupported input extension, malformed JSONL, zero-match filter, portable conftests
+  - P3: Parquet→JSONL IO case, record-count invariant, 400/422 detail-key expansion, concurrent companion test
+- **Validation:** Full suite 265 passed / 6 skipped / 0 failures (was 250). Fast 242 / 1 skipped.
+- **Next:** T-151 (dedup workflow debug) in a dedicated session, or move to self.UI
