@@ -3,3 +3,6 @@
 */data
 notes/
 CLAUDE.md
+
+# Per-environment Traefik routes (contain host-specific domains + cert paths)
+traefik/config/code.toml
