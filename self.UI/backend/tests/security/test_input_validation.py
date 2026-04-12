@@ -31,11 +31,6 @@ DICT_ENDPOINTS = [
 
 @pytest.mark.tier0
 @pytest.mark.security
-@pytest.mark.xfail(
-    reason="Known finding: dict-typed endpoints crash on missing fields. "
-    "Fix: add Pydantic schema to these endpoints.",
-    strict=False,
-)
 @pytest.mark.parametrize("method,path,body", DICT_ENDPOINTS)
 def test_empty_body_no_server_error(authenticated_user, method, path, body):
     """Empty request body must not cause 500."""
@@ -48,10 +43,6 @@ def test_empty_body_no_server_error(authenticated_user, method, path, body):
 
 @pytest.mark.tier0
 @pytest.mark.security
-@pytest.mark.xfail(
-    reason="Known finding: dict endpoints don't validate extra fields.",
-    strict=False,
-)
 @pytest.mark.parametrize("method,path,_", DICT_ENDPOINTS)
 def test_extra_fields_no_server_error(authenticated_user, method, path, _):
     """Unexpected extra fields must not cause 500."""
@@ -68,10 +59,6 @@ def test_extra_fields_no_server_error(authenticated_user, method, path, _):
 
 @pytest.mark.tier0
 @pytest.mark.security
-@pytest.mark.xfail(
-    reason="Known finding: dict endpoints don't validate types.",
-    strict=False,
-)
 @pytest.mark.parametrize("method,path,_", DICT_ENDPOINTS)
 def test_wrong_type_no_server_error(authenticated_user, method, path, _):
     """Wrong-type values (string where int expected) must not cause 500."""
@@ -89,10 +76,6 @@ def test_wrong_type_no_server_error(authenticated_user, method, path, _):
 
 @pytest.mark.tier0
 @pytest.mark.security
-@pytest.mark.xfail(
-    reason="Known finding: dict endpoints don't validate nesting depth.",
-    strict=False,
-)
 @pytest.mark.parametrize("method,path,_", DICT_ENDPOINTS)
 def test_deeply_nested_no_stack_overflow(authenticated_user, method, path, _):
     """Deeply nested objects do not cause stack overflow or timeout."""

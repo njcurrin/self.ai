@@ -77,7 +77,15 @@ def upload_file(
                     detail=f"File type '{content_type}' is not in the allowed list",
                 )
 
-        unsanitized_filename = file.filename
+        unsanitized_filename = file.filename or "unnamed"
+        # Strip null bytes and their URL-encoded variants to prevent
+        # null-byte injection attacks (e.g. "safe.jpg\x00.php")
+        unsanitized_filename = (
+            unsanitized_filename
+            .replace("\x00", "")
+            .replace("%00", "")
+            .replace("%2500", "")
+        )
         filename = os.path.basename(unsanitized_filename)
 
         # replace filename with uuid

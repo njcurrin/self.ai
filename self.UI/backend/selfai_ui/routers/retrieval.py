@@ -218,7 +218,7 @@ class SearchForm(CollectionNameForm):
 
 
 @router.get("/")
-async def get_status(request: Request):
+async def get_status(request: Request, user=Depends(get_admin_user)):
     return {
         "status": True,
         "chunk_size": request.app.state.config.CHUNK_SIZE,

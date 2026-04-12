@@ -1,9 +1,26 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, ConfigDict
+from typing import Any, Optional
 import logging
+
+
+class TaskFormData(BaseModel):
+    """Shared input schema for task completion endpoints.
+
+    All task endpoints require `model`; other fields are endpoint-specific
+    and validated at the handler level.
+    """
+    model_config = ConfigDict(extra="ignore")
+
+    model: str
+    messages: Optional[list[dict]] = None
+    chat_id: Optional[str] = None
+    prompt: Optional[str] = None
+    responses: Optional[list[Any]] = None
+    type: Optional[str] = None
+    stream: Optional[bool] = False
 
 from selfai_ui.utils.chat import generate_chat_completion
 from selfai_ui.utils.task import (
@@ -127,11 +144,11 @@ async def update_task_config(
 
 @router.post("/title/completions")
 async def generate_title(
-    request: Request, form_data: dict, user=Depends(get_verified_user)
+    request: Request, form_data: TaskFormData, user=Depends(get_verified_user)
 ):
     models = request.app.state.MODELS
 
-    model_id = form_data["model"]
+    model_id = form_data.model
     if model_id not in models:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -158,7 +175,7 @@ async def generate_title(
 
     content = title_generation_template(
         template,
-        form_data["messages"],
+        form_data.messages,
         {
             "name": user.name,
             "location": user.info.get("location") if user.info else None,
@@ -178,8 +195,8 @@ async def generate_title(
         ),
         "metadata": {
             "task": str(TASKS.TITLE_GENERATION),
-            "task_body": form_data,
-            "chat_id": form_data.get("chat_id", None),
+            "task_body": form_data.model_dump(),
+            "chat_id": form_data.chat_id,
         },
     }
 
@@ -195,7 +212,7 @@ async def generate_title(
 
 @router.post("/tags/completions")
 async def generate_chat_tags(
-    request: Request, form_data: dict, user=Depends(get_verified_user)
+    request: Request, form_data: TaskFormData, user=Depends(get_verified_user)
 ):
 
     if not request.app.state.config.ENABLE_TAGS_GENERATION:
@@ -206,7 +223,7 @@ async def generate_chat_tags(
 
     models = request.app.state.MODELS
 
-    model_id = form_data["model"]
+    model_id = form_data.model
     if model_id not in models:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -232,7 +249,7 @@ async def generate_chat_tags(
         template = DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE
 
     content = tags_generation_template(
-        template, form_data["messages"], {"name": user.name}
+        template, form_data.messages, {"name": user.name}
     )
 
     payload = {
@@ -241,8 +258,8 @@ async def generate_chat_tags(
         "stream": False,
         "metadata": {
             "task": str(TASKS.TAGS_GENERATION),
-            "task_body": form_data,
-            "chat_id": form_data.get("chat_id", None),
+            "task_body": form_data.model_dump(),
+            "chat_id": form_data.chat_id,
         },
     }
 
@@ -258,10 +275,10 @@ async def generate_chat_tags(
 
 @router.post("/queries/completions")
 async def generate_queries(
-    request: Request, form_data: dict, user=Depends(get_verified_user)
+    request: Request, form_data: TaskFormData, user=Depends(get_verified_user)
 ):
 
-    type = form_data.get("type")
+    type = form_data.type
     if type == "web_search":
         if not request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION:
             raise HTTPException(
@@ -277,7 +294,7 @@ async def generate_queries(
 
     models = request.app.state.MODELS
 
-    model_id = form_data["model"]
+    model_id = form_data.model
     if model_id not in models:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -303,7 +320,7 @@ async def generate_queries(
         template = DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE
 
     content = query_generation_template(
-        template, form_data["messages"], {"name": user.name}
+        template, form_data.messages, {"name": user.name}
     )
 
     payload = {
@@ -312,8 +329,8 @@ async def generate_queries(
         "stream": False,
         "metadata": {
             "task": str(TASKS.QUERY_GENERATION),
-            "task_body": form_data,
-            "chat_id": form_data.get("chat_id", None),
+            "task_body": form_data.model_dump(),
+            "chat_id": form_data.chat_id,
         },
     }
 
@@ -328,7 +345,7 @@ async def generate_queries(
 
 @router.post("/auto/completions")
 async def generate_autocompletion(
-    request: Request, form_data: dict, user=Depends(get_verified_user)
+    request: Request, form_data: TaskFormData, user=Depends(get_verified_user)
 ):
     if not request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION:
         raise HTTPException(
@@ -336,9 +353,9 @@ async def generate_autocompletion(
             detail=f"Autocompletion generation is disabled",
         )
 
-    type = form_data.get("type")
-    prompt = form_data.get("prompt")
-    messages = form_data.get("messages")
+    type = form_data.type
+    prompt = form_data.prompt
+    messages = form_data.messages
 
     if request.app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH > 0:
         if (
@@ -352,7 +369,7 @@ async def generate_autocompletion(
 
     models = request.app.state.MODELS
 
-    model_id = form_data["model"]
+    model_id = form_data.model
     if model_id not in models:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -387,8 +404,8 @@ async def generate_autocompletion(
         "stream": False,
         "metadata": {
             "task": str(TASKS.AUTOCOMPLETE_GENERATION),
-            "task_body": form_data,
-            "chat_id": form_data.get("chat_id", None),
+            "task_body": form_data.model_dump(),
+            "chat_id": form_data.chat_id,
         },
     }
 
@@ -404,12 +421,12 @@ async def generate_autocompletion(
 
 @router.post("/emoji/completions")
 async def generate_emoji(
-    request: Request, form_data: dict, user=Depends(get_verified_user)
+    request: Request, form_data: TaskFormData, user=Depends(get_verified_user)
 ):
 
     models = request.app.state.MODELS
 
-    model_id = form_data["model"]
+    model_id = form_data.model
     if model_id not in models:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -431,7 +448,7 @@ async def generate_emoji(
 
     content = emoji_generation_template(
         template,
-        form_data["prompt"],
+        form_data.prompt,
         {
             "name": user.name,
             "location": user.info.get("location") if user.info else None,
@@ -449,8 +466,8 @@ async def generate_emoji(
                 "max_completion_tokens": 4,
             }
         ),
-        "chat_id": form_data.get("chat_id", None),
-        "metadata": {"task": str(TASKS.EMOJI_GENERATION), "task_body": form_data},
+        "chat_id": form_data.chat_id,
+        "metadata": {"task": str(TASKS.EMOJI_GENERATION), "task_body": form_data.model_dump()},
     }
 
     try:
@@ -464,11 +481,11 @@ async def generate_emoji(
 
 @router.post("/moa/completions")
 async def generate_moa_response(
-    request: Request, form_data: dict, user=Depends(get_verified_user)
+    request: Request, form_data: TaskFormData, user=Depends(get_verified_user)
 ):
 
     models = request.app.state.MODELS
-    model_id = form_data["model"]
+    model_id = form_data.model
 
     if model_id not in models:
         raise HTTPException(
@@ -491,18 +508,18 @@ async def generate_moa_response(
 
     content = moa_response_generation_template(
         template,
-        form_data["prompt"],
-        form_data["responses"],
+        form_data.prompt,
+        form_data.responses,
     )
 
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
-        "stream": form_data.get("stream", False),
+        "stream": form_data.stream,
         "metadata": {
-            "chat_id": form_data.get("chat_id", None),
+            "chat_id": form_data.chat_id,
             "task": str(TASKS.MOA_RESPONSE_GENERATION),
-            "task_body": form_data,
+            "task_body": form_data.model_dump(),
         },
     }
 

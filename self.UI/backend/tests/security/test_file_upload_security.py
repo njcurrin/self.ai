@@ -90,13 +90,8 @@ def test_upload_path_traversal_sanitized(authenticated_user, test_app):
 
 @pytest.mark.tier0
 @pytest.mark.security
-@pytest.mark.xfail(
-    reason="Known finding: null bytes in filename are URL-encoded but not "
-    "stripped. Fix: sanitize %00 and \\x00 in uploaded filenames.",
-    strict=False,
-)
 def test_upload_null_byte_filename_handled(authenticated_user, test_app):
-    """Null bytes in filename must not produce a stored file with .php extension."""
+    """Null bytes in filename must be stripped, not truncate the filename."""
     test_app.state.config.FILE_MAX_SIZE = None
     resp = authenticated_user.post(
         UPLOAD_PATH,
@@ -108,13 +103,14 @@ def test_upload_null_byte_filename_handled(authenticated_user, test_app):
             )
         },
     )
-    # Either rejected or filename sanitized — not stored as .php
+    # Either rejected or filename sanitized. If stored, the filename
+    # must NOT contain a null byte or its URL-encoded variants.
     if resp.status_code == 200:
         body = resp.json()
         filename = body.get("filename", body.get("meta", {}).get("name", ""))
-        assert not filename.endswith(".php"), (
-            f"Null-byte injection resulted in .php filename: {filename}"
-        )
+        assert "\x00" not in filename, "Raw null byte found in stored filename"
+        assert "%00" not in filename, "URL-encoded null byte found in stored filename"
+        assert "%2500" not in filename, "Double-encoded null byte found in stored filename"
 
 
 @pytest.mark.tier0

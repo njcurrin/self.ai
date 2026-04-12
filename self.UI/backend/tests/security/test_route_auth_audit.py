@@ -32,17 +32,11 @@ PUBLIC_ALLOWLIST = {
     # Static assets and root
     "/",
     "/watch",
-    # Discovered unauthenticated endpoints (flagged for review):
-    # TODO(security): /api/v1/retrieval/ leaks embedding config —
-    # should require auth. Tracked in research-brief-ui-test-suite.md.
-    "/api/v1/retrieval/",
     # Signout is public by design (clears the session)
     "/api/v1/auths/signout",
-    # Utility endpoints — arguably ok as public but should be reviewed
+    # Gravatar proxy — email is a weak secret, endpoint just proxies to
+    # gravatar.com. Public access is acceptable.
     "/api/v1/utils/gravatar",
-    "/api/v1/utils/code/format",
-    "/api/v1/utils/markdown",
-    "/api/v1/utils/pdf",
 }
 
 # Prefixes that are externally proxied services — auth handled differently

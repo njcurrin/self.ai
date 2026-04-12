@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from starlette.responses import FileResponse
 from selfai_ui.utils.misc import get_gravatar_url
 from selfai_ui.utils.pdf_generator import PDFGenerator
-from selfai_ui.utils.auth import get_admin_user
+from selfai_ui.utils.auth import get_admin_user, get_verified_user
 
 router = APIRouter()
 
@@ -26,7 +26,7 @@ class CodeFormatRequest(BaseModel):
 
 
 @router.post("/code/format")
-async def format_code(request: CodeFormatRequest):
+async def format_code(request: CodeFormatRequest, user=Depends(get_verified_user)):
     try:
         formatted_code = black.format_str(request.code, mode=black.Mode())
         return {"code": formatted_code}
@@ -43,6 +43,7 @@ class MarkdownForm(BaseModel):
 @router.post("/markdown")
 async def get_html_from_markdown(
     form_data: MarkdownForm,
+    user=Depends(get_verified_user),
 ):
     return {"html": markdown.markdown(form_data.md)}
 
@@ -55,6 +56,7 @@ class ChatForm(BaseModel):
 @router.post("/pdf")
 async def download_chat_as_pdf(
     form_data: ChatTitleMessagesForm,
+    user=Depends(get_verified_user),
 ):
     try:
         pdf_bytes = PDFGenerator(form_data).generate_chat_pdf()
