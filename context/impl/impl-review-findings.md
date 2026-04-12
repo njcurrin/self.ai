@@ -80,3 +80,48 @@ These have been applied to the kits (see Changelog sections):
 6. Fix FILE_MAX_SIZE mutation leak (F-008)
 7. Cover the MISSING state-machine AC (training jobs + eval jobs + queue ordering)
 8. Add kits for over-built routers (users, auths, pipelines, system, utils)
+
+---
+
+# Review Findings — Curator Test Suite Cycle
+
+Source: `/ck:check` inspection on 2026-04-12 after build-site-curator-tests completed.
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| P0 | 0 |
+| P1 | 2 |
+| P2 | 7 |
+| P3 | 7 |
+
+**Verdict:** REVISE. Coverage 148/190 complete (78%), 32 partial (17%), 10 missing (5%). Three full requirements (dedup R5/R6/R7) deferred to upstream workflow debug.
+
+## Findings
+
+| Finding | Severity | File | Status | Revision Task |
+|---------|----------|------|--------|---------------|
+| F-001: run_tests.sh unquoted MARKER_ARG breaks multi-word TEST_MARKERS | P1 | self.curator/tests/run_tests.sh | NEW | T-138 |
+| F-002: R8 tests don't invoke _poll_jobs() — vacuous | P1 | self.curator/tests/api/test_api_contract.py | NEW | T-139 |
+| F-003: Orphan .tmp files on crash (uuid-suffixed, never cleaned) | P2 | self.curator/api/main.py | NEW | T-147 |
+| F-004: _detect_filetype file-path branch untested | P2 | self.curator/tests/nodes/test_pipeline_nodes.py | NEW | T-145 |
+| F-005: _detect_filetype nonexistent path silently returns "parquet" | P2 | self.curator/api/run_pipeline.py | NEW | T-144 |
+| F-006: Dedup skip masks R5/R6/R7 as MISSING not DONE | P2 | impl-curator-test-infra.md | NEW | T-151 |
+| F-007: Concurrent lock test weak (doesn't prove lock, only uniqueness) | P2 | self.curator/tests/api/test_api_contract.py | NEW | T-149 |
+| F-008: TestClient thread-safety undocumented (fragility risk) | P3 | self.curator/tests/api/test_api_contract.py | NEW | — |
+| F-009: R9 missing: malformed JSONL, unsupported input ext, zero-match filter | P2 | self.curator/tests/pipeline/test_pipeline_integration.py | NEW | T-143 |
+| F-010: Parquet→JSONL case missing + record-count invariant untested | P3 | self.curator/tests/pipeline/test_pipeline_integration.py | NEW | T-142 |
+| F-011: Shallow dict() copy in build_pipeline doesn't protect nested mutation | P3 | self.curator/api/run_pipeline.py | NEW | — |
+| F-012: No validation of empty-stages job create (spec gap) | P3 | self.curator/api/main.py | NEW | — |
+| F-013: Duplicate custom-stage class names silently fail with wrong error | P3 | self.curator/api/stage_registry.py | NEW | T-150 |
+| F-014: Sub-package conftests hardcode /app/api (not portable) | P3 | self.curator/tests/{api,nodes,pipeline}/conftest.py | NEW | T-148 |
+| F-015: _dedup_cache directory never cleaned up on success | P3 | self.curator/api/run_pipeline.py | NEW | T-146 |
+| F-016: Custom stage exec_module() = RCE surface; no sandbox, no auth | P2 | self.curator/api/stage_registry.py | NEW | T-140 |
+
+## Recommended Next Steps
+
+1. **T-138 + T-139 (P1 fixes)** — run_tests.sh shell quoting + _poll_jobs direct test
+2. **T-140-T-150** — close P2/P3 gaps surfaced by the inspection
+3. **T-151 (L-sized)** — NeMo Curator dedup workflow debug pass to un-skip R5/R6/R7
+4. Update `impl-curator-test-infra.md` to reflect REVISE verdict — dedup marked BLOCKED not DONE

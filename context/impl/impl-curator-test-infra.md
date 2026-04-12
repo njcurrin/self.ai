@@ -10,12 +10,16 @@ Build site: context/plans/build-site-curator-tests.md
 
 **Tier 0:** 4/4 complete
 **Tier 1:** 4/4 complete
-**Tier 2:** 28/28 complete (15 API contract + 13 pipeline; 3 dedup skipped pending NeMo Curator workflow debug)
+**Tier 2:** 25/28 tasks effectively complete; 3 dedup classes (T-128/T-129/T-130) BLOCKED pending NeMo Curator workflow debug
 **Tier 3:** effective coverage via run_tests.sh dry-run
+**Tier 4:** 14 revision tasks (T-138–T-151) from `/ck:check` 2026-04-12
 
-**Test results:** 250 passed, 6 skipped, 0 xfail, 0 failures
+**Test results (contract):** 250 passed, 6 skipped, 0 xfail, 0 failures
+**AC coverage (kits):** 148 complete (78%), 32 partial (17%), 10 missing (5%) — source: `/ck:check` gap analysis
 
-**Bugs fixed:** 7 discovered-and-fixed by this test suite
+**Verdict from /ck:check:** REVISE — 2 P1 findings, dedup completeness overstated.
+
+**Bugs fixed:** 6 confirmed fixed with regression tests (see `impl-review-findings.md`); bug #7 (dedup id_field params) unverified — its tests are skipped.
 
 ## Task-by-task
 
@@ -49,9 +53,9 @@ Build site: context/plans/build-site-curator-tests.md
 | T-125 | DONE | Stage registry detail (2 tests; consolidated to API-exposed stages) |
 | T-126 | DONE | Streaming pipeline — JSONL through filter + modifier + writer |
 | T-127 | DONE | BUG: text_field propagation FIXED — build_pipeline now copies params dict |
-| T-128 | SKIP | ExactDedup — phase-B removal workflow integration deferred |
-| T-129 | SKIP | FuzzyDedup — same workflow issue, deferred |
-| T-130 | SKIP | Mixed pipeline — includes dedup, blocked on same issue |
+| T-128 | BLOCKED | ExactDedup — phase-B removal workflow fails with field mismatch; R5 actually MISSING not DONE. Revisit via T-151. |
+| T-129 | BLOCKED | FuzzyDedup — same workflow issue; R6 actually MISSING. Revisit via T-151. |
+| T-130 | BLOCKED | Mixed pipeline — depends on R5/R6; R7 actually MISSING. Revisit via T-151. |
 | T-131 | DONE | IO format matrix — 4x format combos + text_field preserved |
 | T-132 | DONE | Error paths (2 fast tests) |
 | T-133 | DONE | Error paths edge — nonzero exit on invalid input |
