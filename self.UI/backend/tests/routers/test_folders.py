@@ -116,4 +116,6 @@ def test_folder_cross_user_isolation(authenticated_user, db_session):
     db_session.commit()
 
     resp = authenticated_user.get(f"/api/v1/folders/{folder_b.id}")
-    assert resp.status_code in (401, 403, 404)
+    # folders.py:97 uses get_folder_by_id_and_user_id which scopes by
+    # user; not-found path raises 404 with NOT_FOUND.
+    assert resp.status_code == 404

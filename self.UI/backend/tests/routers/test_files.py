@@ -43,10 +43,10 @@ def test_upload_list_delete_round_trip(authenticated_user, test_app, monkeypatch
 
 @pytest.mark.tier0
 def test_get_file_not_found(authenticated_user):
-    """Get a non-existent file returns error."""
+    """Get a non-existent file returns 401 (router scopes to user's files)."""
     resp = authenticated_user.get("/api/v1/files/nonexistent-file-id")
-    # Should return 404 or 401 (some endpoints treat not-found as unauthorized)
-    assert resp.status_code in (401, 403, 404)
+    # files.py pattern: unauthorized/not-found returns 401 per router impl
+    assert resp.status_code == 404
 
 
 @pytest.mark.tier0
