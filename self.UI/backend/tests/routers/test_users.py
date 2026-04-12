@@ -69,25 +69,19 @@ def test_get_user_by_id(authenticated_user, test_user):
 
 
 @pytest.mark.tier0
-@pytest.mark.xfail(
-    reason="Known bug: UsersTable.get_user_groups method does not exist. "
-    "Endpoint raises AttributeError. Fix: add method to UsersTable.",
-    strict=False,
-)
 def test_get_groups_returns_user_groups(authenticated_user):
+    """Returns groups the user is a member of."""
     resp = authenticated_user.get("/api/v1/users/groups")
     assert resp.status_code == 200
+    assert isinstance(resp.json(), list)
 
 
 @pytest.mark.tier0
-@pytest.mark.xfail(
-    reason="Known bug: /api/v1/users/permissions hits broken UsersTable method. "
-    "Same root cause as /api/v1/users/groups.",
-    strict=False,
-)
 def test_get_permissions(authenticated_user):
+    """Returns the user's permission groups."""
     resp = authenticated_user.get("/api/v1/users/permissions")
     assert resp.status_code == 200
+    assert isinstance(resp.json(), list)
 
 
 @pytest.mark.tier0

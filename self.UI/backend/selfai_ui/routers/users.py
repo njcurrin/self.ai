@@ -3,6 +3,7 @@ from typing import Optional
 
 from selfai_ui.models.auths import Auths
 from selfai_ui.models.chats import Chats
+from selfai_ui.models.groups import Groups
 from selfai_ui.models.users import (
     UserModel,
     UserRoleUpdateForm,
@@ -45,7 +46,7 @@ async def get_users(
 
 @router.get("/groups")
 async def get_user_groups(user=Depends(get_verified_user)):
-    return Users.get_user_groups(user.id)
+    return Groups.get_groups_by_member_id(user.id)
 
 
 ############################
@@ -55,7 +56,7 @@ async def get_user_groups(user=Depends(get_verified_user)):
 
 @router.get("/permissions")
 async def get_user_permissisions(user=Depends(get_verified_user)):
-    return Users.get_user_groups(user.id)
+    return Groups.get_groups_by_member_id(user.id)
 
 
 ############################
