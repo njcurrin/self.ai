@@ -17,7 +17,10 @@ from selfai_ui.models.files import (
 )
 from selfai_ui.routers.retrieval import process_file, ProcessFileForm
 
-from selfai_ui.config import UPLOAD_DIR
+from selfai_ui.config import (
+    UPLOAD_DIR,
+    FILE_UPLOAD_BLOCKED_MIME_PREFIXES,
+)
 from selfai_ui.env import SRC_LOG_LEVELS
 from selfai_ui.constants import ERROR_MESSAGES
 
@@ -55,6 +58,24 @@ def upload_file(
                     detail=f"File size exceeds the maximum allowed size of {max_size} bytes",
                 )
             file.file.seek(0)
+
+        # MIME type validation
+        content_type = file.content_type or "application/octet-stream"
+        # Check against blocked executable types
+        for blocked_prefix in FILE_UPLOAD_BLOCKED_MIME_PREFIXES:
+            if content_type.startswith(blocked_prefix):
+                raise HTTPException(
+                    status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                    detail=f"File type '{content_type}' is not allowed",
+                )
+        # Check against explicit allowlist if configured
+        mime_allowlist = request.app.state.config.FILE_UPLOAD_MIME_ALLOWLIST
+        if mime_allowlist and len(mime_allowlist) > 0:
+            if content_type not in mime_allowlist:
+                raise HTTPException(
+                    status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                    detail=f"File type '{content_type}' is not in the allowed list",
+                )
 
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)

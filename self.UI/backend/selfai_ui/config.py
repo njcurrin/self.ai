@@ -1051,11 +1051,14 @@ def validate_cors_origin(origin):
 # To test CORS_ALLOW_ORIGIN locally, you can set something like
 # CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
 # in your .env file depending on your frontend port, 5173 in this case.
-CORS_ALLOW_ORIGIN = os.environ.get("CORS_ALLOW_ORIGIN", "*").split(";")
+_cors_env = os.environ.get("CORS_ALLOW_ORIGIN", "")
+CORS_ALLOW_ORIGIN = _cors_env.split(";") if _cors_env else []
 
 if "*" in CORS_ALLOW_ORIGIN:
     log.warning(
-        "\n\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' - NOT RECOMMENDED FOR PRODUCTION DEPLOYMENTS.\n"
+        "\n\nWARNING: CORS_ALLOW_ORIGIN IS SET TO '*' - NOT RECOMMENDED.\n"
+        "Wildcard origins with allow_credentials=True is a security misconfiguration.\n"
+        "Set CORS_ALLOW_ORIGIN to your specific domain(s) instead.\n"
     )
 
 validate_cors_origins(CORS_ALLOW_ORIGIN)
@@ -1407,6 +1410,24 @@ RAG_FILE_MAX_SIZE = PersistentConfig(
         else None
     ),
 )
+
+FILE_UPLOAD_MIME_ALLOWLIST = PersistentConfig(
+    "FILE_UPLOAD_MIME_ALLOWLIST",
+    "rag.file.mime_allowlist",
+    os.environ.get("FILE_UPLOAD_MIME_ALLOWLIST", "").split(",")
+    if os.environ.get("FILE_UPLOAD_MIME_ALLOWLIST")
+    else [],
+)
+
+# Default allowed MIME categories when allowlist is empty (permissive default)
+# If FILE_UPLOAD_MIME_ALLOWLIST is set, only those exact types are allowed.
+# Executable types are always blocked regardless of allowlist.
+FILE_UPLOAD_BLOCKED_MIME_PREFIXES = [
+    "application/x-executable",
+    "application/x-sharedlib",
+    "application/x-msdos-program",
+    "application/x-msdownload",
+]
 
 ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = PersistentConfig(
     "ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION",

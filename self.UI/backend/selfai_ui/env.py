@@ -367,13 +367,22 @@ WEBUI_SESSION_COOKIE_SAME_SITE = os.environ.get(
     os.environ.get("WEBUI_SESSION_COOKIE_SAME_SITE", "lax"),
 )
 
-WEBUI_SESSION_COOKIE_SECURE = os.environ.get(
-    "WEBUI_SESSION_COOKIE_SECURE",
-    os.environ.get("WEBUI_SESSION_COOKIE_SECURE", "false").lower() == "true",
-)
+_cookie_secure_env = os.environ.get("WEBUI_SESSION_COOKIE_SECURE", "")
+if _cookie_secure_env:
+    WEBUI_SESSION_COOKIE_SECURE = _cookie_secure_env.lower() == "true"
+else:
+    # Default to secure cookies in non-dev mode
+    WEBUI_SESSION_COOKIE_SECURE = ENV != "dev"
 
 if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
     raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
+
+if WEBUI_AUTH and WEBUI_SECRET_KEY == "t0p-s3cr3t":
+    raise ValueError(
+        "WEBUI_SECRET_KEY is set to the well-known default 't0p-s3cr3t'. "
+        "This is a critical security risk — anyone can forge admin tokens. "
+        "Set WEBUI_SECRET_KEY to a unique, random value in your environment."
+    )
 
 ENABLE_WEBSOCKET_SUPPORT = (
     os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"

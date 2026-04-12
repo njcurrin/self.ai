@@ -172,6 +172,7 @@ from selfai_ui.config import (
     RAG_RELEVANCE_THRESHOLD,
     RAG_FILE_MAX_COUNT,
     RAG_FILE_MAX_SIZE,
+    FILE_UPLOAD_MIME_ALLOWLIST,
     RAG_OPENAI_API_BASE_URL,
     RAG_OPENAI_API_KEY,
     RAG_OLLAMA_BASE_URL,
@@ -643,6 +644,7 @@ app.state.config.TOP_K = RAG_TOP_K
 app.state.config.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
 app.state.config.FILE_MAX_SIZE = RAG_FILE_MAX_SIZE
 app.state.config.FILE_MAX_COUNT = RAG_FILE_MAX_COUNT
+app.state.config.FILE_UPLOAD_MIME_ALLOWLIST = FILE_UPLOAD_MIME_ALLOWLIST
 
 app.state.config.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
 app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
@@ -866,14 +868,6 @@ class RedirectMiddleware(BaseHTTPMiddleware):
 # Add the middleware to the app
 app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
-
-
-@app.middleware("http")
-async def commit_session_after_request(request: Request, call_next):
-    response = await call_next(request)
-    
-    Session.commit()
-    return response
 
 
 @app.middleware("http")
