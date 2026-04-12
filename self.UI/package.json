@@ -16,7 +16,7 @@
 		"format:backend": "black . --exclude \".venv/|/venv/\"",
 		"i18n:parse": "i18next --config i18next-parser.config.ts && prettier --write \"src/lib/i18n/**/*.{js,json}\"",
 		"cy:open": "cypress open",
-		"test:frontend": "vitest --passWithNoTests",
+		"test:frontend": "vitest --config vitest.config.ts",
 		"pyodide:fetch": "node scripts/prepare-pyodide.js"
 	},
 	"devDependencies": {
@@ -45,7 +45,11 @@
 		"tslib": "^2.4.1",
 		"typescript": "^5.5.4",
 		"vite": "^5.3.5",
-		"vitest": "^1.6.0"
+		"vitest": "^1.6.0",
+		"@testing-library/svelte": "^4.2.0",
+		"@testing-library/jest-dom": "^6.4.0",
+		"jsdom": "^24.1.0",
+		"msw": "^2.3.0"
 	},
 	"type": "module",
 	"dependencies": {

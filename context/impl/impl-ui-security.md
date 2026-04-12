@@ -21,3 +21,6 @@ Build site: context/plans/build-site-ui-security.md
 | T-210 | DONE | Session cookie Secure flag defaults to true in non-dev mode |
 | T-211 | DONE | Added MIME type validation — blocked executable prefixes + configurable allowlist, 415 on reject |
 | T-212 | DONE | Removed dead commit_session_after_request middleware from main.py |
+| T-213 | DONE | Added [tool.pytest.ini_options] to pyproject.toml with markers, strict mode, timeout; added test deps to requirements.txt |
+| T-214 | DONE | Created vitest.config.ts with jsdom, svelte plugin, $app/* mocks; added testing-library/svelte, jest-dom, jsdom, msw to package.json; smoke test for Spinner |
+| T-215 | DONE | Created tests/mocks/external_services.py with respx-based ServiceMock fixtures for Ollama, OpenAI, Llamolotl, Curator, eval harness |

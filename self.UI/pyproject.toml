@@ -152,6 +152,19 @@ exclude = [
 ]
 force-include = { "CHANGELOG.md" = "selfai_ui/CHANGELOG.md", build = "selfai_ui/frontend" }
 
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+markers = [
+    "tier0: unit tests with no external dependencies",
+    "tier1: integration tests requiring database only",
+    "tier2: contract tests requiring real services in Docker",
+    "security: security-focused tests (auth, injection, upload safety)",
+    "slow: tests that take more than 10 seconds",
+    "gpu: tests requiring GPU hardware",
+]
+addopts = "--strict-markers --tb=short -q"
+timeout = 60
+
 [tool.codespell]
 # Ref: https://github.com/codespell-project/codespell#using-a-config-file
 skip = '.git*,*.svg,package-lock.json,i18n,*.lock,*.css,*-bundle.js,locales,example-doc.txt,emoji-shortcodes.json'
