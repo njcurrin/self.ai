@@ -83,6 +83,45 @@ _patch_engine.dispose()
 # ---------------------------------------------------------------------------
 # Table truncation order (respects FK constraints — children before parents)
 # ---------------------------------------------------------------------------
+# Seed benchmarks matching migration d5e6f7a8b9c0
+_SEED_BENCHMARKS = [
+    # lm-eval
+    ("mmlu", "lm-eval"),
+    ("hellaswag", "lm-eval"),
+    ("arc_easy", "lm-eval"),
+    ("arc_challenge", "lm-eval"),
+    ("truthfulqa_mc2", "lm-eval"),
+    ("winogrande", "lm-eval"),
+    ("gsm8k", "lm-eval"),
+    # bigcode
+    ("humaneval", "bigcode"),
+    ("mbpp", "bigcode"),
+    ("apps", "bigcode"),
+    ("multiple_e", "bigcode"),
+    ("ds1000", "bigcode"),
+    ("humanevalpack", "bigcode"),
+    ("mbpp_plus", "bigcode"),
+    ("humaneval_plus", "bigcode"),
+]
+
+
+def _reseed_benchmarks(engine):
+    """Re-seed benchmark_config after truncation."""
+    import uuid as _uuid
+    now = int(time.time())
+    with engine.connect() as conn:
+        for benchmark, eval_type in _SEED_BENCHMARKS:
+            conn.execute(
+                text(
+                    "INSERT OR IGNORE INTO benchmark_config "
+                    "(id, benchmark, eval_type, max_duration_minutes, notes, created_at, updated_at) "
+                    "VALUES (:id, :b, :e, 120, NULL, :t, :t)"
+                ),
+                {"id": str(_uuid.uuid4()), "b": benchmark, "e": eval_type, "t": now},
+            )
+        conn.commit()
+
+
 TRUNCATION_ORDER = [
     "feedback",
     "message_reaction",
@@ -140,6 +179,17 @@ def test_session_factory(test_engine):
 # ---------------------------------------------------------------------------
 # Function-scoped: session + truncation
 # ---------------------------------------------------------------------------
+
+@pytest.fixture
+def seeded_benchmarks(test_engine):
+    """Ensure benchmark_config seed data is present for the test.
+
+    Tests that rely on the seeded benchmarks (from Alembic migration
+    d5e6f7a8b9c0) should request this fixture. Seeds are idempotent.
+    """
+    _reseed_benchmarks(test_engine)
+    yield
+
 
 @pytest.fixture
 def db_session(test_session_factory, test_engine):

@@ -4,7 +4,7 @@ import pytest
 
 
 @pytest.mark.tier0
-def test_list_benchmarks(authenticated_admin):
+def test_list_benchmarks(authenticated_admin, seeded_benchmarks):
     """Alembic migration seeds default benchmarks."""
     resp = authenticated_admin.get("/api/benchmarks")
     assert resp.status_code == 200
@@ -24,7 +24,7 @@ def test_update_benchmark_not_found(authenticated_admin):
 
 
 @pytest.mark.tier0
-def test_update_benchmark_max_duration(authenticated_admin):
+def test_update_benchmark_max_duration(authenticated_admin, seeded_benchmarks):
     listing = authenticated_admin.get("/api/benchmarks").json()
     if not listing:
         pytest.skip("No seeded benchmarks to update")
