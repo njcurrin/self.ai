@@ -54,3 +54,20 @@
   - P3: Parquet→JSONL IO case, record-count invariant, 400/422 detail-key expansion, concurrent companion test
 - **Validation:** Full suite 265 passed / 6 skipped / 0 failures (was 250). Fast 242 / 1 skipped.
 - **Next:** T-151 (dedup workflow debug) in a dedicated session, or move to self.UI
+
+### Iteration 8 — 2026-04-12
+- **Task:** T-151 dedup workflow debug
+- **Status:** DONE — ExactDedup + MixedPipeline un-skipped and passing
+- **Root cause:**
+  1. `duplicate_id_field` was hardcoded to "id" in the removal workflow
+     call. When assign_id=True, identification writes parquets with
+     column `_curator_dedup_id` (not "id"). Upstream tests hand-crafted
+     the ids files with an "id" column, which is why the default works
+     for them but not for us.
+  2. ids_to_remove_path was pointing at the dir containing both
+     parquets AND the exact_id_generator.json. pandas.read_parquet
+     scans every file and chokes on the JSON. Must point at
+     {output_path}/ExactDuplicateIds/ subdir.
+- **Files:** api/run_pipeline.py (run_exact_dedup + run_fuzzy_dedup), tests/pipeline/test_pipeline_integration.py
+- **Validation:** 267 passed, 4 skipped, 0 failures. ExactDedup + MixedPipeline green. FuzzyDedup auto-skips on single-GPU hosts (NCCL requires multi-GPU).
+- **Next:** Curator test suite complete. Move to self.UI (handled separately).

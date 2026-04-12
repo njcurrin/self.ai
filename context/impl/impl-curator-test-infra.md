@@ -12,14 +12,23 @@ Build site: context/plans/build-site-curator-tests.md
 **Tier 1:** 4/4 complete
 **Tier 2:** 25/28 tasks effectively complete; 3 dedup classes (T-128/T-129/T-130) BLOCKED pending NeMo Curator workflow debug
 **Tier 3:** effective coverage via run_tests.sh dry-run
-**Tier 4:** 13/14 complete (T-138–T-150 done); T-151 (dedup workflow debug, L) deferred to separate session
+**Tier 4:** 14/14 complete (T-138–T-151). T-151 surfaced two additional real bugs in the dedup workflow wrapper.
 
-**Test results:** 265 passed, 6 skipped, 0 xfail, 0 failures (was 250 pre-revision)
+**Test results:** 267 passed, 4 skipped, 0 xfail, 0 failures (was 250 pre-revision → 265 after T-138–T-150 → 267 after T-151)
 **Fast subset:** 242 passed, 1 skipped
 
-**Bugs fixed:** 7 confirmed fixed with non-trivial regression tests. Bug #7 (dedup id_field params) still unverified pending T-151.
+**Bugs fixed:** 9 total discovered-and-fixed by this test suite.
+- Bug #1–#4 (original loop): save_jobs race, output_format drop, custom stage cycle, params mutation
+- Bug #5–#7 (first integration run): _detect_filetype file-path, parquet kwarg, dedup id_field (partial)
+- Bug #8 (T-151): duplicate_id_field in removal workflow should match identification's id_field (was "id", must be "_curator_dedup_id" when assign_id=True)
+- Bug #9 (T-151): ids_to_remove_path was pointing at the directory containing both parquets AND exact_id_generator.json; must point at the parquet-only subdirectory ({output_path}/ExactDuplicateIds/)
 
 All /ck:check P1 findings closed. P2/P3 findings closed except F-008 (TestClient thread-safety — low priority, deferred), F-011 (shallow dict copy — latent, acceptable for current stages), F-012 (empty stages list — spec gap, deferred).
+
+**Skip inventory:** 4 legitimate skips:
+- Stream log test (TestClient can't terminate infinite loop; route verified via OpenAPI)
+- FuzzyDedup (NCCL multi-GPU required; 24GB single-GPU host can't run it)
+- 2 integration fixtures marked gpu, auto-skipped by VRAM guard
 
 ## Task-by-task
 
@@ -53,9 +62,9 @@ All /ck:check P1 findings closed. P2/P3 findings closed except F-008 (TestClient
 | T-125 | DONE | Stage registry detail (2 tests; consolidated to API-exposed stages) |
 | T-126 | DONE | Streaming pipeline — JSONL through filter + modifier + writer |
 | T-127 | DONE | BUG: text_field propagation FIXED — build_pipeline now copies params dict |
-| T-128 | BLOCKED | ExactDedup — phase-B removal workflow fails with field mismatch; R5 actually MISSING not DONE. Revisit via T-151. |
-| T-129 | BLOCKED | FuzzyDedup — same workflow issue; R6 actually MISSING. Revisit via T-151. |
-| T-130 | BLOCKED | Mixed pipeline — depends on R5/R6; R7 actually MISSING. Revisit via T-151. |
+| T-128 | DONE | ExactDedup — un-skipped and passing end-to-end (T-151 fixed two workflow wrapper bugs) |
+| T-129 | DONE (env-gated) | FuzzyDedup — workflow wrapper verified same code path as ExactDedup; end-to-end test skipped pending multi-GPU host (NCCL required) |
+| T-130 | DONE | Mixed pipeline — un-skipped and passing end-to-end |
 | T-131 | DONE | IO format matrix — 4x format combos + text_field preserved |
 | T-132 | DONE | Error paths (2 fast tests) |
 | T-133 | DONE | Error paths edge — nonzero exit on invalid input |
