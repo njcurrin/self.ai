@@ -205,7 +205,7 @@
 		{#if html && html.includes('<video')}
 			{@html html}
 		{:else if token.text.includes(`<iframe src="${WEBUI_BASE_URL}/api/v1/files/`)}
-			{@html `${token.text}`}
+			{@html DOMPurify.sanitize(token.text, { ADD_TAGS: ['iframe'], ADD_ATTR: ['src', 'title', 'width', 'frameborder', 'onload'] })}
 		{:else}
 			{token.text}
 		{/if}

@@ -45,6 +45,17 @@ def upload_file(
 ):
     log.info(f"file.content_type: {file.content_type}")
     try:
+        # Enforce server-side file size limit
+        max_size = request.app.state.config.FILE_MAX_SIZE
+        if max_size is not None:
+            contents = file.file.read()
+            if len(contents) > max_size:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=f"File size exceeds the maximum allowed size of {max_size} bytes",
+                )
+            file.file.seek(0)
+
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)
 

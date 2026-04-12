@@ -1376,12 +1376,12 @@ async def get_app_config(request: Request):
                 else {}
             ),
         },
-        "google_drive": {
-            "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
-            "api_key": GOOGLE_DRIVE_API_KEY.value,
-        },
         **(
             {
+                "google_drive": {
+                    "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
+                    "api_key": GOOGLE_DRIVE_API_KEY.value,
+                },
                 "default_models": app.state.config.DEFAULT_MODELS,
                 "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
                 "audio": {
