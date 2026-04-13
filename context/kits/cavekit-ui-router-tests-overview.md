@@ -20,6 +20,7 @@ Source analysis: `context/refs/research-brief-ui-test-suite.md` Sections 1 (cove
 | `cavekit-ui-router-tests-workspace.md` | User-created configuration CRUD: prompts, tools, functions, models | R1–R4 |
 | `cavekit-ui-router-tests-admin.md` | Admin-only surface: groups, configs, benchmarks, windows, queue | R1–R5 |
 | `cavekit-ui-router-tests-jobs.md` | Job lifecycle: training (courses + jobs), evaluations, tasks | R1–R4 |
+| `cavekit-ui-job-state-machines.md` | Shared state machine for GPU-queued jobs: vocabulary, transitions, idempotency, upstream-sync conflict resolution, per-type lifecycles, queue promotion ordering | R1–R7 |
 | `cavekit-ui-router-tests-proxies.md` | External service passthrough: Ollama, OpenAI, Llamolotl, Curator, audio, images, retrieval, lm-eval, bigcode-eval | R1–R8 |
 
 ## Dependency Graph
@@ -32,9 +33,15 @@ cavekit-ui-test-infrastructure.md
    +---> cavekit-ui-router-tests-admin.md
    +---> cavekit-ui-router-tests-jobs.md
    +---> cavekit-ui-router-tests-proxies.md
+   +---> cavekit-ui-job-state-machines.md
+             |
+             +--- relates to: cavekit-ui-router-tests-jobs.md (tightens state-machine portion of R2/R3/R4)
+             +--- relates to: cavekit-ui-router-tests-admin.md (queue endpoint order from R7)
+             +--- relates to: cavekit-ui-router-tests-proxies.md (Llamolotl + harness HTTP contracts)
+             +--- relates to: cavekit-curator-pipeline-integration.md (pipeline downstream dataset write contract)
 ```
 
-All five router-test kits depend exclusively on `cavekit-ui-test-infrastructure.md` (fixtures, factories, mocks). None of the five depend on each other — they are fully parallelizable across multiple contributors or agent threads.
+The five router-test kits depend exclusively on `cavekit-ui-test-infrastructure.md` (fixtures, factories, mocks) and do not depend on each other — they are fully parallelizable across multiple contributors or agent threads. `cavekit-ui-job-state-machines.md` additionally cross-references the jobs, admin, proxies, and curator-pipeline-integration kits to pin the shared state contract that spans them.
 
 ## Cross-Reference Map (to Existing Kits)
 
@@ -78,7 +85,9 @@ In short: the security kit tests the gate; these kits test the room behind the g
 - `cavekit-ui-router-tests-workspace.md`
 - `cavekit-ui-router-tests-admin.md`
 - `cavekit-ui-router-tests-jobs.md`
+- `cavekit-ui-job-state-machines.md`
 - `cavekit-ui-router-tests-proxies.md`
+- `cavekit-curator-pipeline-integration.md` — cross-referenced by `cavekit-ui-job-state-machines.md` R6 for the pipeline downstream dataset write contract
 - Source: `context/refs/research-brief-ui-test-suite.md`
 
 ## Requirements (Cross-Cutting)
@@ -99,3 +108,4 @@ In short: the security kit tests the gate; these kits test the room behind the g
 
 ## Changelog
 - 2026-04-12: Added R1 (Done criteria for router-test tasks) — discovered during `/ck:check` (findings F-002, F-003, F-004, F-005, F-009, F-010).
+- 2026-04-12: Added `cavekit-ui-job-state-machines.md` to the Domain Index; extended Dependency Graph and Cross-References to map its edges to jobs, admin (queue), proxies, and curator-pipeline-integration kits.

@@ -36,7 +36,7 @@ Source analysis: `context/refs/research-brief-ui-test-suite.md` Sections 1 (cove
 - [ ] Submitting a training job referencing a valid course creates a job in the pending state and associates it with the course
 - [ ] Submitting a training job referencing a non-existent course returns an error status
 - [ ] Approving a pending job transitions it to the scheduled or queued state
-- [ ] Rejecting a pending job transitions it to the rejected state and prevents further dispatch
+- [ ] Rejecting a pending job transitions it to cancelled with a rejection marker in the job record (distinguishable from a user-initiated cancel) and prevents further dispatch — see `cavekit-ui-job-state-machines.md` R1 for the canonical state set
 - [ ] Cancelling a job in any pre-running state transitions it to the cancelled state
 - [ ] Cancelling a running job signals cancellation and transitions to cancelling or cancelled
 - [ ] Scheduling a job with a specific target window or time persists the schedule and is reflected in queue ordering
@@ -55,7 +55,7 @@ Source analysis: `context/refs/research-brief-ui-test-suite.md` Sections 1 (cove
 - [ ] Submitting a bigcode-eval job with a valid task specification creates a job in the pending state with type bigcode-eval
 - [ ] Submitting an eval job with an unknown type returns an error status
 - [ ] Approving a pending eval job transitions it to scheduled or queued
-- [ ] Rejecting a pending eval job transitions it to rejected
+- [ ] Rejecting a pending eval job transitions it to cancelled with a rejection marker (see `cavekit-ui-job-state-machines.md` R1 — no distinct "rejected" state)
 - [ ] Cancelling an eval job transitions it to cancelled (or cancelling, then cancelled)
 - [ ] Scheduling an eval job against a target window persists the schedule
 - [ ] The SSE event stream for a running eval job yields well-formed event chunks (event-type/data shape) when the harness mock emits events
@@ -67,17 +67,18 @@ Source analysis: `context/refs/research-brief-ui-test-suite.md` Sections 1 (cove
 
 ### R4: Tasks (Completions)
 
-**Description:** The tasks router must generate correct chat-completion payloads for each supported task type: title generation, tag generation, query generation, emoji generation, mixture-of-agents (MoA), and autocompletion. Validates that each task builds the right request and forwards it to the chat completions handler (mocked).
+**Description:** Each task endpoint (title, tag, query, emoji, autocompletion, MoA) must build a task-specific prompt, forward to the mocked chat completions handler, aggregate multi-agent responses correctly for MoA, and sanitize upstream errors so no raw upstream body leaks into responses.
 
 **Acceptance Criteria:**
-- [ ] Calling the title-generation task with a conversation payload invokes the chat completions handler with a prompt containing the conversation
-- [ ] Calling the tag-generation task invokes chat completions with a prompt scoped to tag extraction
-- [ ] Calling the query-generation task invokes chat completions with a prompt scoped to query formulation
-- [ ] Calling the emoji-generation task invokes chat completions with a prompt scoped to emoji selection
-- [ ] Calling the MoA task invokes chat completions for each configured agent and aggregates the responses into the final payload
-- [ ] Calling the autocompletion task invokes chat completions with a prompt scoped to completion continuation
-- [ ] Each task forwards the response from the mocked completions handler back to the caller unchanged in content
-- [ ] Each task returns an error status when the mocked completions handler returns an error, without partial data leakage
+- [ ] For each of title, tag, query, emoji, autocompletion: the mocked completions handler receives a payload whose prompt substitutes the input conversation or text into the task-specific template, and contains a task-identifying substring unique to that task (title-related text for title calls, tag-related text for tag calls, etc.)
+- [ ] No task template leaks into another task's prompt (a title call never contains tag-template text, and vice versa for all task pairs)
+- [ ] For MoA with N submitted agent responses: the aggregated output contains every submitted response as a substring, in submission order, with no silent drops
+- [ ] For MoA where one agent's mocked completion returns an error: the aggregated output includes the successful responses and identifies the failed agent distinctly (the response body contains a marker or field naming which agent failed); the whole call does not fail because one agent failed
+- [ ] MoA coverage tests include N=1, N=3, and N=5 agents
+- [ ] For each non-MoA task: the chat completion response body from the mocked handler appears unchanged in the task's response body (pass-through content)
+- [ ] For each task when the mocked completions handler returns a 4xx: the task endpoint returns the same 4xx status; when it returns 5xx or times out: the task endpoint returns 500
+- [ ] For error responses: the response `detail` field identifies which task failed (e.g., "title generation failed"), and the raw upstream response body does not appear anywhere in the task endpoint's response bytes
+- [ ] Each single-task endpoint triggers exactly one upstream chat completion call (no fan-out); MoA with N agents triggers exactly N upstream calls
 
 **Dependencies:** `cavekit-ui-test-infrastructure.md` R2 (fixtures), R4 (chat completions mock)
 
@@ -102,3 +103,4 @@ Source analysis: `context/refs/research-brief-ui-test-suite.md` Sections 1 (cove
 - Source: `context/refs/research-brief-ui-test-suite.md` — Section 1 (coverage gaps), Section 3 (background tasks), Section 4 (respx)
 
 ## Changelog
+- 2026-04-12: Tightened R4 (Tasks Completions) with prompt-shape, MoA aggregation, and error-without-leakage contracts — drives T-R15

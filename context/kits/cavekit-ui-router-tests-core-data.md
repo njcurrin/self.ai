@@ -52,6 +52,15 @@ Source analysis: `context/refs/research-brief-ui-test-suite.md` Sections 1 (cove
 - [ ] Adding a reaction to a message records the reaction and associates it with the caller
 - [ ] Removing a reaction previously added by the caller removes only that reaction
 - [ ] Replying to a message in a thread persists the reply and associates it with the parent message
+- [ ] Adding the same reaction (same name) to the same message by the same user twice is a no-op: the reaction store contains exactly one row for the `(user, message, name)` triple; the second call returns 2xx with no state change
+- [ ] When two different users have reacted to the same message with the same name, removing one user's reaction leaves the other user's reaction intact; the aggregated reactions response reflects only the remaining user
+- [ ] The aggregated reactions response for a message contains one entry per distinct reaction name, with `user_ids` listing every reactor for that name and `count` equal to the length of `user_ids`; no user id appears twice within the same name's user_ids
+- [ ] Removing a reaction the caller never added is a 2xx no-op (not a 404); the reaction store is unchanged
+- [ ] A reply message has a non-null parent_id pointing to the replied-to message, and the replied-to message itself has parent_id=null (a reply can only attach to a thread root)
+- [ ] Attempting to reply to a message that itself has a non-null parent_id returns 4xx and no new message is persisted; the store contains no grandchildren under any circumstance
+- [ ] Listing replies for a parent message returns only messages whose parent_id equals the parent's id, in chronological order, and excludes the parent itself
+- [ ] Deleting a parent message with replies cascade-deletes all its replies; after the delete, listing replies returns empty and reading any of the deleted reply ids by id returns 404
+- [ ] Deleting a single reply removes only that reply; the parent and any sibling replies remain
 
 **Dependencies:** `cavekit-ui-test-infrastructure.md` R2 (fixtures), R3 (User factory)
 
@@ -145,3 +154,4 @@ Source analysis: `context/refs/research-brief-ui-test-suite.md` Sections 1 (cove
 - Source: `context/refs/research-brief-ui-test-suite.md` — Section 1 (coverage gaps), Section 3 (architecture)
 
 ## Changelog
+- 2026-04-12: Extended R2 (Channel CRUD) with reaction idempotency, caller-scoping, flat-thread structure, and cascade-delete contracts — drives T-R17
