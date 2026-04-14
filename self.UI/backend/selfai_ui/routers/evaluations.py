@@ -736,7 +736,10 @@ async def cancel_eval_job(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
-    if job.status not in ("pending", "queued", "running"):
+    if job.status == "cancelled":
+        # R2-AC1: cancel-on-cancelled is 2xx no-op
+        return job
+    if job.status not in ("pending", "scheduled", "queued", "running"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Job cannot be cancelled in its current state",
@@ -1090,10 +1093,10 @@ async def reject_eval_job(id: str, user=Depends(get_admin_user)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-    if job.status != "pending":
+    if job.status not in ("pending", "scheduled"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only pending jobs can be rejected",
+            detail="Only pending or scheduled jobs can be rejected",
         )
     return EvalJobs.update_job_status(
         id=id,

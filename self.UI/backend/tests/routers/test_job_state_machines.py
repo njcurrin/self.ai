@@ -138,12 +138,6 @@ def test_cancel_training_job_does_not_set_rejection_marker(
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    reason="ROUTER BUG: reject endpoint only allows status == 'pending'. "
-    "Kit R1-AC8 says reject is valid from pending OR scheduled. "
-    "See training.py:539 `if job.status != 'pending'`",
-    strict=False,
-)
 def test_reject_scheduled_job_allowed_per_kit(
     authenticated_admin, db_session, test_admin
 ):
@@ -163,13 +157,6 @@ def test_reject_scheduled_job_allowed_per_kit(
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    reason="ROUTER BUG: cancel endpoint returns 400 when status is already "
-    "'cancelled' (training.py:310 rejects status not in {pending,scheduled,"
-    "queued,running}). Kit R2-AC1 requires cancel-on-cancelled to be 2xx no-op. "
-    "Idempotent cancel prevents UI race-condition bugs.",
-    strict=False,
-)
 def test_cancel_already_cancelled_is_2xx_noop(
     authenticated_admin, db_session, test_admin
 ):
@@ -371,13 +358,6 @@ def test_cancel_local_transitions_regardless_of_upstream_response(
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    reason="ROUTER BUG: sync endpoint blindly applies upstream status via "
-    "status_map lookup (training.py:658-666). No sticky-terminal protection. "
-    "If local is 'cancelled' and upstream returns 'running', local gets "
-    "flipped back to 'running'. Violates Kit R3-AC1/AC2.",
-    strict=False,
-)
 def test_sync_does_not_resurrect_cancelled_job(
     authenticated_admin, db_session, test_admin, test_app
 ):
@@ -447,14 +427,6 @@ def test_sync_advances_non_terminal_job_to_upstream_status(
 
 
 @pytest.mark.tier1
-@pytest.mark.xfail(
-    reason="ROUTER BUG: sync endpoint only checks upstream 404 "
-    "(training.py:644). For 5xx responses, it attempts to parse the body as "
-    "JSON, reads .get('status', '') which falls back to the existing local "
-    "status, and returns 200. Violates Kit R3-AC4: upstream error must "
-    "surface as error-but-non-crashing 4xx/5xx, not silent 200.",
-    strict=False,
-)
 def test_sync_upstream_5xx_does_not_crash(
     authenticated_admin, db_session, test_admin, test_app
 ):
@@ -494,4 +466,135 @@ def test_sync_upstream_5xx_does_not_crash(
     assert refetch.status_code == 200
     assert refetch.json()["status"] == "running", (
         "Local state must not be mutated when upstream errors"
+    )
+
+
+# ---------------------------------------------------------------------------
+# T-501: Illegal-transition matrix across every transition endpoint.
+# Kit R1-AC8, R1-AC9: every non-allowed (from_state, endpoint) pair returns
+# 4xx and does not mutate stored state.
+#
+# Endpoint legality (training + eval share the same contract):
+#   approve    legal: {pending, scheduled}                         -> queued
+#   reject     legal: {pending, scheduled}                         -> cancelled+marker
+#   cancel     legal: {pending, scheduled, queued, running}        -> cancelled
+#              cancelled -> 2xx no-op (R2-AC1; tested in T-503)
+#              {completed, failed} -> 4xx (tested in T-503)
+#   schedule   legal: {pending, scheduled}                         -> scheduled
+#   unschedule legal: {scheduled}                                  -> pending
+#
+# Pipeline (CuratorJob) has no HTTP transition endpoints — state advances
+# through the GPU queue runner, covered by T-513/T-514 not here.
+# ---------------------------------------------------------------------------
+
+from selfai_ui.models.training import TrainingJobs
+from selfai_ui.models.eval_jobs import EvalJobs
+
+
+_ILLEGAL_APPROVE = ("queued", "running", "completed", "failed", "cancelled")
+_ILLEGAL_REJECT = ("queued", "running", "completed", "failed", "cancelled")
+_ILLEGAL_SCHEDULE = ("queued", "running", "completed", "failed", "cancelled")
+_ILLEGAL_UNSCHEDULE = ("pending", "queued", "running", "completed", "failed", "cancelled")
+
+
+def _make_eval_job(db_session, user_id, status="pending"):
+    return EvalJobFactory.create(db_session, user_id=user_id, status=status)
+
+
+def _fetch_status(job_type, job_id):
+    if job_type == "training":
+        return TrainingJobs.get_job_by_id(id=job_id).status
+    return EvalJobs.get_job_by_id(id=job_id).status
+
+
+def _create_job(job_type, db_session, test_admin, from_state):
+    if job_type == "training":
+        course = TrainingCourseFactory.create(db_session, user_id=test_admin["id"])
+        return _make_training_job(db_session, test_admin["id"], course.id, from_state)
+    return _make_eval_job(db_session, test_admin["id"], from_state)
+
+
+def _endpoint_url(job_type, job_id, verb):
+    base = "/api/v1/training/jobs" if job_type == "training" else "/api/v1/evaluations/jobs"
+    return f"{base}/{job_id}/{verb}"
+
+
+def _post_transition(client, job_type, job_id, verb):
+    url = _endpoint_url(job_type, job_id, verb)
+    if verb == "schedule":
+        # Schedule requires a future timestamp body; send one so the
+        # state-gate is the only thing that can reject us.
+        return client.post(url, json={"scheduled_for": int(time.time()) + 3600})
+    return client.post(url)
+
+
+@pytest.mark.tier1
+@pytest.mark.parametrize("job_type", ["training", "eval"])
+@pytest.mark.parametrize("from_state", _ILLEGAL_APPROVE)
+def test_approve_from_illegal_state_returns_4xx_no_mutation(
+    authenticated_admin, db_session, test_admin, job_type, from_state
+):
+    """R1-AC9 + R2-AC3: approve from any non-{pending,scheduled} state is 4xx, state unchanged."""
+    job = _create_job(job_type, db_session, test_admin, from_state)
+
+    resp = _post_transition(authenticated_admin, job_type, job.id, "approve")
+    assert 400 <= resp.status_code < 500, (
+        f"{job_type} approve from {from_state!r}: expected 4xx, got {resp.status_code}"
+    )
+    assert _fetch_status(job_type, job.id) == from_state, (
+        f"{job_type} approve from {from_state!r} mutated state"
+    )
+
+
+@pytest.mark.tier1
+@pytest.mark.parametrize("job_type", ["training", "eval"])
+@pytest.mark.parametrize("from_state", _ILLEGAL_REJECT)
+def test_reject_from_illegal_state_returns_4xx_no_mutation(
+    authenticated_admin, db_session, test_admin, job_type, from_state
+):
+    """R1-AC9 + R2-AC2: reject from any non-{pending,scheduled} state is 4xx, state unchanged."""
+    job = _create_job(job_type, db_session, test_admin, from_state)
+
+    resp = _post_transition(authenticated_admin, job_type, job.id, "reject")
+    assert 400 <= resp.status_code < 500, (
+        f"{job_type} reject from {from_state!r}: expected 4xx, got {resp.status_code}"
+    )
+    assert _fetch_status(job_type, job.id) == from_state, (
+        f"{job_type} reject from {from_state!r} mutated state"
+    )
+
+
+@pytest.mark.tier1
+@pytest.mark.parametrize("job_type", ["training", "eval"])
+@pytest.mark.parametrize("from_state", _ILLEGAL_SCHEDULE)
+def test_schedule_from_illegal_state_returns_4xx_no_mutation(
+    authenticated_admin, db_session, test_admin, job_type, from_state
+):
+    """R1-AC9: schedule from any non-{pending,scheduled} state is 4xx, state unchanged."""
+    job = _create_job(job_type, db_session, test_admin, from_state)
+
+    resp = _post_transition(authenticated_admin, job_type, job.id, "schedule")
+    assert 400 <= resp.status_code < 500, (
+        f"{job_type} schedule from {from_state!r}: expected 4xx, got {resp.status_code}"
+    )
+    assert _fetch_status(job_type, job.id) == from_state, (
+        f"{job_type} schedule from {from_state!r} mutated state"
+    )
+
+
+@pytest.mark.tier1
+@pytest.mark.parametrize("job_type", ["training", "eval"])
+@pytest.mark.parametrize("from_state", _ILLEGAL_UNSCHEDULE)
+def test_unschedule_from_illegal_state_returns_4xx_no_mutation(
+    authenticated_admin, db_session, test_admin, job_type, from_state
+):
+    """R1-AC9: unschedule from any non-scheduled state is 4xx, state unchanged."""
+    job = _create_job(job_type, db_session, test_admin, from_state)
+
+    resp = _post_transition(authenticated_admin, job_type, job.id, "unschedule")
+    assert 400 <= resp.status_code < 500, (
+        f"{job_type} unschedule from {from_state!r}: expected 4xx, got {resp.status_code}"
+    )
+    assert _fetch_status(job_type, job.id) == from_state, (
+        f"{job_type} unschedule from {from_state!r} mutated state"
     )

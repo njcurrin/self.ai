@@ -307,6 +307,9 @@ async def cancel_job(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
+    if job.status == "cancelled":
+        # R2-AC1: cancel-on-cancelled is 2xx no-op
+        return job
     if job.status not in ("pending", "scheduled", "queued", "running"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -536,10 +539,10 @@ async def reject_job(id: str, user=Depends(get_admin_user)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-    if job.status != "pending":
+    if job.status not in ("pending", "scheduled"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only pending jobs can be rejected",
+            detail="Only pending or scheduled jobs can be rejected",
         )
     return TrainingJobs.update_job_status(
         id=id,
@@ -579,6 +582,9 @@ async def sync_job_status(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+    if job.status in ("completed", "failed", "cancelled"):
+        # R3-AC1/AC2: terminal local state is sticky; never rewind from upstream
+        return job
     if not job.llamolotl_job_id or job.llamolotl_url_idx is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -607,6 +613,12 @@ async def sync_job_status(
                         raise HTTPException(
                             status_code=status.HTTP_404_NOT_FOUND,
                             detail="Heretic task not found",
+                        )
+                    if resp.status >= 400:
+                        # R3-AC4: surface upstream error; don't silently 200
+                        raise HTTPException(
+                            status_code=status.HTTP_502_BAD_GATEWAY,
+                            detail=f"Llamolotl returned {resp.status}",
                         )
                     heretic_task = await resp.json()
         except HTTPException:
@@ -645,6 +657,12 @@ async def sync_job_status(
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
                         detail="Llamolotl job not found",
+                    )
+                if resp.status >= 400:
+                    # R3-AC4: surface upstream error; don't silently 200
+                    raise HTTPException(
+                        status_code=status.HTTP_502_BAD_GATEWAY,
+                        detail=f"Llamolotl returned {resp.status}",
                     )
                 llamolotl_job = await resp.json()
     except HTTPException:
