@@ -11,10 +11,10 @@ self.llamolotl — inference and training backbone of the self.ai platform. Dual
 ## Domain Index
 | Domain | Cavekit File | Requirements | Status | Description |
 |--------|-----------|-------------|--------|-------------|
-| Training | cavekit-llamolotl-training.md | 7 | DONE | Job lifecycle, config, datasets, PEFT, DeepSpeed, checkpointing, progress |
-| Inference | cavekit-llamolotl-inference.md | 5 | DONE | llama-server, models, LoRA hot-swap, chat templates, health |
-| Pipeline | cavekit-llamolotl-pipeline.md | 6 | DONE | LoRA merge, HF→GGUF, quantization, bake, task lifecycle |
-| Platform | cavekit-llamolotl-platform.md | 6 | DONE | Heretic removal, logging, exceptions, health, tests, decomposition |
+| Training | cavekit-training.md | 7 | DONE | Job lifecycle, config, datasets, PEFT, DeepSpeed, checkpointing, progress |
+| Inference | cavekit-inference.md | 5 | DONE | llama-server, models, LoRA hot-swap, chat templates, health |
+| Pipeline | cavekit-pipeline.md | 6 | DONE | LoRA merge, HF→GGUF, quantization, bake, task lifecycle |
+| Platform | cavekit-platform.md | 6 | DONE | Heretic removal, logging, exceptions, health, tests, decomposition |
 
 ## Cross-Reference Map
 | Domain A | Interacts With | Interaction Type |
