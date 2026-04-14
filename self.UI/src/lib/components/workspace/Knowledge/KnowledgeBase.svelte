@@ -90,6 +90,7 @@
 	let pipelineConnections = [];
 	let pipelineModalMode: 'save' | 'load' = 'save';
 	let pendingRun = false;
+	let datasetName: string = '';
 
 
 	$: pipelineConfigs = (knowledge?.files ?? [])
@@ -294,7 +295,8 @@
 					text_field: textField,
 					output_format: outputFormat,
 					stages,
-				}
+				},
+				dataset_name: datasetName || knowledge.name,
 			});
 			toast.success(`Job queued: ${job.id}`);
 		} catch (e) {
@@ -1206,6 +1208,12 @@
 					>
 						{$i18n.t('Save')}
 					</button>
+					<input
+						type="text"
+						placeholder={knowledge.name}
+						bind:value={datasetName}
+						class="text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-transparent"
+					/>
 					<button
 						class="bg-violet-600 hover:bg-violet-700 text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
 						on:click={scheduleHandler}

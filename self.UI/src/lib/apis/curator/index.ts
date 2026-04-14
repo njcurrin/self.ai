@@ -186,6 +186,7 @@ type QueueCuratorJobRequest = {
 	pipeline_config: CurationJobCreate;
 	scheduled_for?: number | null;
 	priority?: string;
+	dataset_name?: string;
 };
 
 export const queueCuratorJob = (token: string = '', req: QueueCuratorJobRequest) =>
